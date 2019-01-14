@@ -1,2 +1,2 @@
 # PyDemo
-Python的联系项目
+Python的练习项目
