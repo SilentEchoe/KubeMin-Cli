@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# 爬虫爬取过程中的中间件
 # Define here the models for your spider middleware
 #
 # See documentation in:
@@ -8,7 +8,7 @@
 from scrapy import signals
 
 
-class DemoSpiderMiddleware(object):
+class QuotetutorialSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the spider middleware does not modify the
     # passed objects.
@@ -56,7 +56,7 @@ class DemoSpiderMiddleware(object):
         spider.logger.info('Spider opened: %s' % spider.name)
 
 
-class DemoDownloaderMiddleware(object):
+class QuotetutorialDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
     # scrapy acts as if the downloader middleware does not modify the
     # passed objects.

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+# 用于保存数据的数据结构
 # Define here the models for your scraped items
 #
 # See documentation in:
@@ -8,7 +8,10 @@
 import scrapy
 
 
-class DemoItem(scrapy.Item):
+class QuoteItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
-    pass
+    text = scrapy.Field()
+    author = scrapy.Field()
+    tags = scrapy.Field()
+
