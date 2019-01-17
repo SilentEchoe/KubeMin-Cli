@@ -1,12 +1,25 @@
 #!/user/bin/env python3
 # -*- coding: utf-8 -*-
+import  re
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from pyquery import PyQuery as qp
 
 
-html = urlopen('http://www.pythonscraping.com/pages/page1.html')
-html = html.read().decode("utf-8")
-bsobj = qp(url='http://www.pythonscraping.com/pages/page1.html')
-print(bsobj('h1'))
+#html = urlopen('http://www.pythonscraping.com/pages/page1.html')
+#html = html.read().decode("utf-8")
+#bsobj = qp(url='http://www.pythonscraping.com/pages/page1.html')
+#print(bsobj('h1'))
+
+html = urlopen("http://en.wikipedia.org/wiki/kevin_Bacon")
+bsobj = BeautifulSoup(html)
+for link in bsobj.findAll("a"):
+    if 'href' in link.attrs:
+        print(link.attrs['href'])
+
+
+
+
+
+
 
