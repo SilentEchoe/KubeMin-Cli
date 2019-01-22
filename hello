@@ -1,4 +1,27 @@
+#!/usr/bin/env python3
+# 第一行注释可以直接在Unix/Linux/Mac
+# -*- coding: utf-8 -*-
+# 使用标准UTF-8编码
 
+""" a test module """
+
+__author__ = 'kai wang'
+
+import sys
+
+
+def test():
+    args = sys.argv
+    if len(args) == 1:
+        print('Hello, world!')
+    elif len(args) == 2:
+        print('Hello, %s!' % args[1])
+    else:
+        print('Too many arguments!')
+
+
+if __name__ == '__main__':
+    test()
 
 
 def lazy_sum(*args):
@@ -40,7 +63,13 @@ def log(func):
 def now():
     print('2015-3-25')
 
+
 now()
 
-def inpass():
-    
+
+def intpass(x, base=2):
+    return int(x, base)
+
+
+a = intpass('1000000')
+print(a)
