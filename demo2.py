@@ -17,17 +17,24 @@ file = open(filePath, 'r', encoding='utf-8')
 jsonObj = json.load(file)
 jsonObj = jsonObj.get("RECORDS")
 count = 0
+
+def decode(s):
+    return ''.join([chr(i) for i in [int(b, 2) for b in s.split(' ')]])
+
+
+def encode(s):
+    return ' '.join([bin(ord(c)).replace('0b', '') for c in s])
+
 while count < len(jsonObj):
     _fileName = jsonObj[count]['modal_name']
     _base64Obj = jsonObj[count]['bin_base64']
-    input_file = open(binPath, 'w')
-    h = binascii.b2a_hex(_base64Obj)
-
-    decoded = base64.b64decode(_base64Obj)
-    jm = base64.b64decode(_base64Obj)
-    print(bin(int(jm, 16)))
+    # base64 转字符串
+    _strbase64 = base64.b64decode(_base64Obj)
+    print(_strbase64)
+    _base64to2 = encode(_base64Obj)
+    print(_base64to2)
     output_file = open(binPath, 'w')
-    output_file.write(str(decoded))
+    output_file.write(_base64to2)
     output_file.close()
 
     print(_base64Obj)
