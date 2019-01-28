@@ -73,3 +73,5 @@ def intpass(x, base=2):
 
 a = intpass('1000000')
 print(a)
+
+
