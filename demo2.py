@@ -5,11 +5,15 @@
 
 """ a test module """
 
-import os
-import sys
 import json
 import base64
-import binascii
+import clr
+import sys
+
+sys.path.append("D:\myclass")
+clr.AddReference('PythonNetTest')
+from PythonNetTest import *
+instance = BinFile()
 
 filePath = 'D:/Python_git/quotetutorial/user_ warehouse.json'
 binPath = 'D:/Python_git/quotetutorial/bin1.bin'
@@ -18,6 +22,7 @@ jsonObj = json.load(file)
 jsonObj = jsonObj.get("RECORDS")
 count = 0
 
+
 def decode(s):
     return ''.join([chr(i) for i in [int(b, 2) for b in s.split(' ')]])
 
@@ -25,19 +30,12 @@ def decode(s):
 def encode(s):
     return ' '.join([bin(ord(c)).replace('0b', '') for c in s])
 
+
 while count < len(jsonObj):
     _fileName = jsonObj[count]['modal_name']
     _base64Obj = jsonObj[count]['bin_base64']
-    # base64 转字符串
-    _strbase64 = base64.b64decode(_base64Obj)
-    print(_strbase64)
-    _base64to2 = encode(_base64Obj)
-    print(_base64to2)
-    output_file = open(binPath, 'w')
-    output_file.write(_base64to2)
-    output_file.close()
-
-    print(_base64Obj)
+    _bytebase64 = instance.Base64ToBytes(_base64Obj)
+    instance.WriteByteToFile(_bytebase64, binPath)
     count = count + 1
 
 print('END')

@@ -11,18 +11,6 @@
             "user_id": "511151124",
             "top_time": "",
             "top": "0"
-        },
-        {
-            "id": "284",
-            "modal_name": "SFP-10G-BX",
-            "create_date": "23/1/2019 07:10:37",
-            "compatible_type": "Cisco",
-            "vendor_name": "FiberStore",
-            "bin_sn": "F172CO00011",
-            "bin_base64": "AwQHIAAAACAAAQAGZwAKZAAAAABGaWJlclN0b3JlICAgICAgAAAAAFNGUC0xMEctQlggICAgICAgICAgBPYAngAaAABGMTcyQ08wMDAxMSAgICAgMTcwMjA1ICBo8APoAAAIFPcXtE8YjAmdI8WM0IYgaAAAAAAAAAAAAK2TsVIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAElQVUlCV01SQUExMC0yOTUxLTAxVjAxIAEARgAAAAD8AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAqqpTRlAtMTBHLUJYVS1JICAgICAgIDE2ICAgICAgICAglx4oLi4xNCk2AAAAAAAAAAAAAAAAAGYAAP//////////",
-            "user_id": "191156109",
-            "top_time": "",
-            "top": "0"
         }
     ]
 }
