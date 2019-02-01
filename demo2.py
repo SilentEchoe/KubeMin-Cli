@@ -34,8 +34,8 @@ def encode(s):
 while count < len(jsonObj):
     _fileName = jsonObj[count]['modal_name']
     _base64Obj = jsonObj[count]['bin_base64']
-    _bytebase64 = instance.Base64ToBytes(_base64Obj)
-    instance.WriteByteToFile(_bytebase64, binPath)
+    _byTo64 = instance.Base64ToBytes(_base64Obj)
+    instance.WriteByteToFile(_byTo64, binPath)
     count = count + 1
 
 print('END')
