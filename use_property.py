@@ -8,6 +8,7 @@ class Student(object):
     def score(self):
         return self._score
 
+
     def score(self, value):
         if not isinstance(value, int):
             raise ValueError('score must be an integer!')
@@ -16,9 +17,9 @@ class Student(object):
         self._score = value
 
 
-
-
 s = Student()
 s.score(60)
 print(str(s.score))
+
+
 
