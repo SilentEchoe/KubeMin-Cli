@@ -1,0 +1,71 @@
+git add                                                        添加文件提交到暂存区
+git rm raindow -r -f                                     删除文件夹
+git commit -m "add distributed"                  暂存区的所有修改提交到分支
+git push -u origin master                             将本地文件推送到主干
+git status                                                     查看仓库当前状态
+git diff                                                         查看差异/difference
+git diff 比较的是工作区文件与暂存区文件的区别（上次git add 的内容）
+git diff --cached 比较的是暂存区的文件与仓库分支里（上次git commit 后的内容）的区别
+git log                                                          查看提交的版本日志
+git log --pretty=oneline                               查看提交的版本日志
+git reset --hard HEAD^                                回退上一个版本
+注释：Git必须知道当前版本是哪个版本，在Git中，用HEAD表示当前版本，也就是最新的提交1094adb...（注意我的提交ID和你的肯定不一样），上一个版本就是HEAD^，上上一个版本就是HEAD^^，当然往上100个版本写100个^比较容易数不过来，所以写成HEAD~100。
+
+git reset --hard 1094a                                 1094a 为append GPL的commit id 版本指定回退
+git reflog                                                     记录每一次命令
+
+git checkout -- readme.txt意思就是，把readme.txt文件在工作区的修改全部撤销
+一种是readme.txt自修改后还没有被放到暂存区，现在，撤销修改就回到和版本库一模一样的状态；
+一种是readme.txt已经添加到暂存区后，又作了修改，现在，撤销修改就回到添加到暂存区后的状态。
+总之，就是让这个文件回到最近一次git commit或git add时的状态。
+
+git checkout -- file命令中的--很重要，没有--，就变成了“切换到另一个分支”的命令，我们在后面的分支管理中会再次遇到git checkout命令。
+
+git rm test.txt                                              git 中删除文件
+git checkout -- test.txt                                 如有错删，还原test.txt文件
+             
+注释：如果一个文件已经被提交到版本库，那么你永远不用担心误删，但是要小心，你只能恢复文件到最新版本，你会丢失最近一次提交后你修改的内容。
+
+git branch                                                   查看分支
+
+git checkout -b dev       
+git checkout命令加上-b参数表示创建并切换，相当于以下两条命令：
+git branch dev                                             创建分支
+git checkout dev                                          切换分支
+git merge dev                                              合并分支
+git branch -d dev                                         删除分支
+
+
+git log --graph --pretty=oneline --abbrev-commit 查看分支的合并情况
+git log --graph                                                       分支合并图产品。
+
+git stash                                                       工作现场储存
+git stash list                                                  查看工作区域位置
+git stash apply恢复，但是恢复后，藏匿内容并不删除，需要你用git stash drop来删除
+git stash pop 恢复的同时把藏匿内容也删了
+git stash apply stash@{0}                              恢复到指定藏匿处
+
+
+git branch -D feature-vulcan                         删除分支feature-vulcan(没有合并的分支，删除了找不到)
+
+git pull                                                          拉取
+git remote                                                     查看远程库的信息
+git remote -v                                                 查看更详细的远程仓信息
+git push origin master                                   推送分支
+git clone git@github.com:michaelliao/learngit.git      克隆
+git branch --set-upstream-to=origin/dev dev          本地分支与远程库建立连接
+
+git log --pretty=oneline --abbrev-commit       所有commit的历史记录
+git show <tagname>查看标签信息
+
+git push origin v1.0                                         推送标签
+
+首先，试图可以用git push origin <branch-name>推送自己的修改;
+
+如果推送失败，则因为远程分支比你的本地更新，先需要用git pull试图合并;
+
+如果合并有冲突，则解决冲突，并在本地提交;
+
+没有冲突或者解决掉冲突后，再用git push origin <branch-name>推送就能成功！
+
+如果git pull提示no tracking information，则说明本地分支和远程分支的链接关系没有创建，用命令git branch --set-upstream-to <branch-name> origin/<branch-name>。

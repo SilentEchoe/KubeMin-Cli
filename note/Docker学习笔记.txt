@@ -1,0 +1,66 @@
+安装Docker:
+1.sudo yum install -y yum-utils device-mapper-persistent-data lvm2
+2.sudo yum-config-manager --enable extras
+3.sudo yum-config-manager \ --add-repo \ https://download.docker.com/linux/centos/docker-ce.repo
+4.sudo yum install docker
+
+//安装镜像 设置端口 
+docker run -p 5050 --name nginx -it ubuntu /bin/bash
+docker run -p 5001 --name webapitwo -it centos /bin/bash
+
+启动docker
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+
+添加开机自启
+systemctl enable docker
+
+查看安装效果
+sudo docker run microsoft/dotnet-samples
+
+查看Docker 版本
+docker version
+
+搜索可用的镜像版本
+docker search tutorial
+
+常用命令：
+docker ps：列出所有正在运行的容器
+docker image ls：列出所有的镜像
+docker stop <name>：暂停容器do
+docker rm <name>：删除容器
+
+要删除全部image的话
+docker rmi $(docker images -q)
+
+安装Vim
+apt-get install vim-gtk
+
+//打开docker 中nginx 的配置文件目录
+cd /etc/nginx/sites-enabled/
+
+//向容器中上传文件
+docker cp Default.html ba73618561a6:/mnt/www/html/Default.html
+
+
+alaways-run
+
+进入容器
+docker attach 44fc0f0582d9   
+// 安装yum
+sudo apt-get install yum
+alias yum='sudo apt-get '
+//安装.net 环境
+sudo apt-get install apt-transport-https
+sudo apt-get update
+sudo apt-get install dotnet-sdk-2.1.4  
+
+// 文件映射
+docker run -it -v /home/dock/Downloads:/usr/Downloads ubuntu64 /bin/bash
+
+sh -c 'echo -e "[packages-microsoft-com-prod]\nname=packages-microsoft-com-prod \nbaseurl= https://packages.microsoft.com/yumrepos/microsoft-rhel7.3-prod\nenabled=1\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc" > /etc/yum.repos.d/dotnetdev.repo'
+
+
+
+
+sudo systemctl start  docker

@@ -1,0 +1,2 @@
+Redis Æô¶¯£ºredis-server.exe redis.conf 
+redis-cli.exe -h 192.168.31.130 -p 6379
