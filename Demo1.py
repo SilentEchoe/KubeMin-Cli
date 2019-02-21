@@ -31,6 +31,9 @@ os.path.splitext('/path/to/file.txt')
 print(os.path.splitext('/path/to/file.txt'))
 
 
+# shutil 为OS模块的补充
+
+
 
 
 
