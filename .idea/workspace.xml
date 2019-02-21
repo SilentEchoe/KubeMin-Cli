@@ -5,6 +5,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/PickleTest.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Demo1.py" beforeDir="false" afterPath="$PROJECT_DIR$/Demo1.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -40,7 +42,7 @@
           <entry key="jl" value="1" />
           <entry key="json" value="2" />
           <entry key="md" value="1" />
-          <entry key="py" value="31" />
+          <entry key="py" value="32" />
           <entry key="start" value="2" />
         </counts>
       </usages-collector>
@@ -49,7 +51,7 @@
           <entry key="JSON" value="2" />
           <entry key="Markdown" value="1" />
           <entry key="PLAIN_TEXT" value="3" />
-          <entry key="Python" value="38" />
+          <entry key="Python" value="39" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
@@ -57,14 +59,14 @@
           <entry key="OOP" value="622" />
           <entry key="cfg" value="6" />
           <entry key="hello" value="1209" />
-          <entry key="py" value="4240" />
+          <entry key="py" value="4617" />
           <entry key="start" value="683" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="6" />
-          <entry key="Python" value="6754" />
+          <entry key="Python" value="7131" />
         </counts>
       </usages-collector>
     </session>
@@ -125,13 +127,25 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Demo1.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="207">
               <caret line="34" lean-forward="true" selection-start-line="34" selection-end-line="34" />
               <folding>
                 <element signature="e#0#23#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/PickleTest.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="77">
+              <caret line="32" column="42" lean-forward="true" selection-start-line="32" selection-start-column="42" selection-end-line="32" selection-end-column="42" />
+              <folding>
+                <element signature="e#0#13#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -194,6 +208,7 @@
         <option value="$PROJECT_DIR$/use_property.py" />
         <option value="$PROJECT_DIR$/quotetutorial/special_str.py" />
         <option value="$PROJECT_DIR$/Demo1.py" />
+        <option value="$PROJECT_DIR$/PickleTest.py" />
       </list>
     </option>
   </component>
@@ -265,7 +280,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.Demo1">
+  <component name="RunManager" selected="Python.PickleTest">
     <configuration name="Demo1" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Python_git" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -287,7 +302,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="OOP" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="PickleTest" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Python_git" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -295,11 +310,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/quotetutorial" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/quotetutorial/OOP" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/PickleTest.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -394,19 +409,19 @@
     </configuration>
     <list>
       <item itemvalue="Python.Unnamed" />
-      <item itemvalue="Python.OOP" />
       <item itemvalue="Python.get_type" />
       <item itemvalue="Python.use_property" />
       <item itemvalue="Python.special_str" />
       <item itemvalue="Python.Demo1" />
+      <item itemvalue="Python.PickleTest" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.PickleTest" />
         <item itemvalue="Python.Demo1" />
         <item itemvalue="Python.special_str" />
         <item itemvalue="Python.use_property" />
         <item itemvalue="Python.get_type" />
-        <item itemvalue="Python.OOP" />
       </list>
     </recent_temporary>
   </component>
@@ -581,6 +596,16 @@
           <caret line="34" lean-forward="true" selection-start-line="34" selection-end-line="34" />
           <folding>
             <element signature="e#0#23#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/PickleTest.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="77">
+          <caret line="32" column="42" lean-forward="true" selection-start-line="32" selection-start-column="42" selection-end-line="32" selection-end-column="42" />
+          <folding>
+            <element signature="e#0#13#0" expanded="true" />
           </folding>
         </state>
       </provider>
