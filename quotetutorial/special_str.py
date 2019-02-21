@@ -25,3 +25,7 @@ class Weekday(Enum):
 
 day1 = Weekday.Mon
 print(Weekday.Tue.value)
+
+
+
+

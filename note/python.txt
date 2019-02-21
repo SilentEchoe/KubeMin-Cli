@@ -38,4 +38,29 @@ PythonÖÐ£¬±äÁ¿ÃûÀàËÆ__xxx__µÄ£¬Ò²¾ÍÊÇÒÔË«ÏÂ»®Ïß¿ªÍ·£¬²¢ÇÒÒÔË«ÏÂ»®Ïß½áÎ²µÄ£¬ÊÇÌØÊ
 
 PythonÄÚÖÃµÄ@property×°ÊÎÆ÷¾ÍÊÇ¸ºÔð°ÑÒ»¸ö·½·¨±ä³ÉÊôÐÔµ÷ÓÃµÄ
 
+PythonÒì³£´¦Àí£º
+¿ÉÒÔÊ¹ÓÃ¶à¸öExcept ²¶»ñ²»Í¬ÀàÐÍµÄ´íÎó
+
+Python ÎÄ¼þ²Ù×÷
+¶ÁÈ¡ÎÄ¼þµÄÊ±ºò£¬¡®r¡¯»á°´ÕÕ±àÂë¸ñÊ½½øÐÐ½âÎö£¬read() ²Ù×÷·µ»ØµÄÊÇStr
+'rb' Ò²¼´ binary mode£¬read()²Ù×÷·µ»ØµÄÊÇbytes
+Òª¶ÁÈ¡·ÇUTF-8±àÂëµÄÎÄ±¾ÎÄ¼þ£¬ÐèÒª¸øopen()º¯Êý´«Èëencoding²ÎÊý,ÀýÈç¶ÁÈ¡GBK ±àÂëÎÄ¼þ
+f = open(_path, 'r', encoding = 'gbk' )
+Óöµ½ÓÐÐ©±àÂë²»¹æ·¶µÄÎÄ¼þ£¬Äã¿ÉÄÜ»áÓöµ½UnicodeDecodeError£¬ÒòÎªÔÚÎÄ±¾ÎÄ¼þÖÐ¿ÉÄÜ¼ÐÔÓÁËÒ»Ð©·Ç·¨±àÂëµÄ×Ö·û¡£Óöµ½ÕâÖÖÇé¿ö£¬open()º¯Êý»¹½ÓÊÕÒ»¸öerrors²ÎÊý£¬±íÊ¾Èç¹ûÓöµ½±àÂë´íÎóºóÈçºÎ´¦Àí¡£×î¼òµ¥µÄ·½Ê½ÊÇÖ±½ÓºöÂÔ£º
+f = open('/Users/michael/gbk.txt', 'r', encoding='gbk', errors='ignore')
+
+Ð´ÎÄ¼þÊ±£¬Ê¹ÓÃ¡®w¡¯»ò ¡®wb¡¯±êÊ¶Ð´ÎÄ±¾»¹ÊÇÐ´¶þ½øÖÆÎÄ¼þ
+ÒªÐ´ÈëÌØ¶¨±àÂëµÄÎÄ±¾ÎÄ¼þÊ±£¬´«Èë encoding ²ÎÊý£¬½«×Ö·û´®×Ô¶¯×ª»»³ÉÖ¸¶¨±àÂë
+ÒÔ'w'Ä£Ê½Ð´ÈëÎÄ¼þÊ±£¬Èç¹ûÎÄ¼þÒÑ´æÔÚ£¬»áÖ±½Ó¸²¸Ç£¨Ïàµ±ÓÚÉ¾µôºóÐÂÐ´ÈëÒ»¸öÎÄ¼þ£©¡£Èç¹ûÏ£Íû×·¼Óµ½ÎÄ¼þÄ©Î²£¬¿ÉÒÔ´«Èë'a'ÒÔ×·¼Ó£¨append£©Ä£Ê½Ð´Èë¡£
+
+
+PythonÔÚÄÚ´æÖÐ¶ÁÐ´,Ê¹ÓÃStringIO,Ð´Èë·½Ê½ÓëÎÄ¼þÏàÍ¬
+Ê¹ÓÃ£¬GetValue() ·½·¨¶ÁÈ¡
+BytesIO ²Ù×÷¶þ½øÖÆÊý¾Ý
+
+
 scrapy crawl dmoz  Æô¶¯Spider  Ö´ÐÐÅÀ³æ/ÐèÒª½øÈëÏîÄ¿µÄ¸ùÄ¿Â¼
+
+
+
+
