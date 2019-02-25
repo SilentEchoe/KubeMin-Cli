@@ -19,7 +19,7 @@ def read(q):
         print('Get %s from queue.' % value)
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     # 父进程创建Queue, 并传给各个子进程
     q = Queue()
     pw = Process(target=write, args=(q,))
