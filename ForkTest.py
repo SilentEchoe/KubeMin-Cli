@@ -16,17 +16,17 @@ import os, time, random
 #    print('I (%s) just created a child process (%s).' % (os.getpid(), pid))
 
 # 子进程要执行的代码
-def run_proc(name):
-    print('Run child process %s (%s)...' % (name, os.getpid()))
+# def run_proc(name):
+#    print('Run child process %s (%s)...' % (name, os.getpid()))
 
 
-if __name__ == '__main__':
-    print('Parent process %s.' % os.getpid())
-    p = Process(target=run_proc, args=('test',))
-    print('Child process will start.')
-    p.start()
-    p.join()
-    print('Child process end.')
+#if __name__ == '__main__':
+#    print('Parent process %s.' % os.getpid())
+#    p = Process(target=run_proc, args=('test',))
+#    print('Child process will start.')
+#    p.start()
+#    p.join()
+#    print('Child process end.')
 
 
 # Pool
@@ -38,10 +38,10 @@ def long_time_task(name):
     print('Task %s runs %0.2f seconds.' % (name, (end-start)))
 
 
-if __name__=='__main__':
+if __name__ == '__main__':
     print('Parent process %s.' % os.getpid())
     p = Pool(4)
-    for i in  range(5):
+    for i in range(5):
         p.apply_async(long_time_task, args=(i,))
     print('Waiting for all subprocesses done...')
     p.close()
@@ -53,8 +53,8 @@ if __name__=='__main__':
 # r = subprocess.call(['nslookup', 'www.python.org'])
 # print('Exit code:', r)
 
-print('$ nslookup')
-p = subprocess.Popen(['nslookup'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-output, err = p.communicate(b'set q=mx\npython.org\nexit\n')
-print(output.decode('utf-8'))
-print('Exit code:', p.returncode)
+#print('$ nslookup')
+#p = subprocess.Popen(['nslookup'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+#output, err = p.communicate(b'set q=mx\npython.org\nexit\n')
+#print(output.decode('utf-8'))
+#print('Exit code:', p.returncode)
