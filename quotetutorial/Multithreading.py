@@ -1,4 +1,5 @@
-import time, threading
+import time
+import threading
 
 
 # 新线程执行的代码：
