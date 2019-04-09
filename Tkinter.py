@@ -1,4 +1,5 @@
 from tkinter import *
+import tkinter.messagebox as messagebox
 
 
 class Application(Frame):
@@ -10,8 +11,16 @@ class Application(Frame):
         def createWidgets(self):
             self.helloLabel = Label(self, text='Hello, World')
             self.helloLabel.pack()
+            self.nameInput = Entry(self)
+            self.nameInput.pack()
+            self.alerButton = Button(self, text='Hello', command=self.hello)
+            self.alerButton.pack()
             self.quitButton = Button(self, text='Quit', command=self.quit)
             self.quitButton.pack()
+
+        def hello(self):
+            name = self.nameInput.get() or 'world'
+            messagebox.showinfo('Message', 'Hello,%s' % name)
 
 
 app = Application()
