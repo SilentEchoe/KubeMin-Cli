@@ -2,11 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Test/RedisToPy.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test/SignalRTest.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test/aiohttp.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Test/property.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Test/ASYNCIO" beforeDir="false" afterPath="$PROJECT_DIR$/Test/ASYNCIO" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/SignalRTest.py" beforeDir="false" afterPath="$PROJECT_DIR$/Test/SignalRTest.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -43,7 +41,7 @@
           <entry key="jl" value="1" />
           <entry key="json" value="2" />
           <entry key="md" value="1" />
-          <entry key="py" value="52" />
+          <entry key="py" value="53" />
           <entry key="start" value="3" />
         </counts>
       </usages-collector>
@@ -52,7 +50,7 @@
           <entry key="JSON" value="2" />
           <entry key="Markdown" value="1" />
           <entry key="PLAIN_TEXT" value="3" />
-          <entry key="Python" value="62" />
+          <entry key="Python" value="63" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
@@ -61,25 +59,34 @@
           <entry key="OOP" value="622" />
           <entry key="cfg" value="6" />
           <entry key="hello" value="1209" />
-          <entry key="py" value="10652" />
+          <entry key="py" value="11007" />
           <entry key="start" value="683" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="6" />
-          <entry key="Python" value="13489" />
+          <entry key="Python" value="13844" />
         </counts>
       </usages-collector>
     </session>
   </component>
   <component name="FileEditorManager">
     <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Test/SignalRTest.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="390">
-              <caret line="15" column="28" lean-forward="true" selection-start-line="15" selection-start-column="28" selection-end-line="15" selection-end-column="28" />
+            <state relative-caret-position="416">
+              <caret line="22" column="10" lean-forward="true" selection-start-line="22" selection-start-column="10" selection-end-line="22" selection-end-column="10" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Test/property.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="334">
+              <caret line="29" lean-forward="true" selection-start-line="29" selection-end-line="29" />
             </state>
           </provider>
         </entry>
@@ -152,12 +159,13 @@
         <option value="$PROJECT_DIR$/Test/aiohttp.py" />
         <option value="$PROJECT_DIR$/Test/RedisToPy.py" />
         <option value="$PROJECT_DIR$/Test/SignalRTest.py" />
+        <option value="$PROJECT_DIR$/Test/property.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="-1132" />
-    <option name="y" value="-91" />
+    <option name="x" value="-985" />
+    <option name="y" value="-140" />
     <option name="width" value="1112" />
     <option name="height" value="1056" />
   </component>
@@ -232,7 +240,7 @@
       </list>
     </option>
   </component>
-  <component name="RunManager" selected="Python.SignalRTest">
+  <component name="RunManager" selected="Python.property">
     <configuration name="ASYNCIO" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Python_git" />
       <option name="INTERPRETER_OPTIONS" value="" />
@@ -317,7 +325,7 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
-    <configuration name="dmoz_spider" type="PythonConfigurationType" factoryName="Python" temporary="true">
+    <configuration name="property" type="PythonConfigurationType" factoryName="Python" temporary="true">
       <module name="Python_git" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -325,11 +333,11 @@
         <env name="PYTHONUNBUFFERED" value="1" />
       </envs>
       <option name="SDK_HOME" value="" />
-      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/tutorial/tutorial/spiders" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/Test" />
       <option name="IS_MODULE_SDK" value="true" />
       <option name="ADD_CONTENT_ROOTS" value="true" />
       <option name="ADD_SOURCE_ROOTS" value="true" />
-      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/tutorial/tutorial/spiders/dmoz_spider.py" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/Test/property.py" />
       <option name="PARAMETERS" value="" />
       <option name="SHOW_COMMAND_LINE" value="false" />
       <option name="EMULATE_TERMINAL" value="false" />
@@ -361,19 +369,19 @@
     </configuration>
     <list>
       <item itemvalue="Python.Unnamed" />
-      <item itemvalue="Python.dmoz_spider" />
       <item itemvalue="Python.__init__" />
       <item itemvalue="Python.server" />
       <item itemvalue="Python.ASYNCIO" />
       <item itemvalue="Python.SignalRTest" />
+      <item itemvalue="Python.property" />
     </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.property" />
         <item itemvalue="Python.SignalRTest" />
         <item itemvalue="Python.ASYNCIO" />
         <item itemvalue="Python.__init__" />
         <item itemvalue="Python.server" />
-        <item itemvalue="Python.dmoz_spider" />
       </list>
     </recent_temporary>
   </component>
@@ -400,7 +408,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1132" y="-91" width="1112" height="1056" extended-state="0" />
+    <frame x="-985" y="-140" width="1112" height="1056" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.2811918" />
@@ -408,13 +416,13 @@
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" weight="0.3296582" />
-      <window_info anchor="bottom" id="Run" order="2" weight="0.19294377" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.2712238" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.3988604" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.0893054" />
       <window_info anchor="bottom" id="Version Control" order="7" show_stripe_button="false" />
-      <window_info active="true" anchor="bottom" id="Terminal" order="8" visible="true" weight="0.31201765" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.31201765" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
       <window_info anchor="bottom" id="Python Console" order="10" weight="0.3296582" />
       <window_info anchor="bottom" id="Thumbnails" order="11" weight="0.32941177" />
@@ -427,7 +435,6 @@
     <option name="myLimit" value="2678400000" />
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/__init__.py" />
     <entry file="file://$PROJECT_DIR$/Demo/items.py" />
     <entry file="file://$PROJECT_DIR$/scrapy.cfg" />
     <entry file="file://$PROJECT_DIR$/Demo/spiders/quotes.py" />
@@ -540,8 +547,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Test/SignalRTest.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="390">
-          <caret line="15" column="28" lean-forward="true" selection-start-line="15" selection-start-column="28" selection-end-line="15" selection-end-column="28" />
+        <state relative-caret-position="416">
+          <caret line="22" column="10" lean-forward="true" selection-start-line="22" selection-start-column="10" selection-end-line="22" selection-end-column="10" />
         </state>
       </provider>
     </entry>
@@ -549,6 +556,13 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="20280">
           <caret line="782" selection-start-line="782" selection-end-line="782" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Test/property.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="334">
+          <caret line="29" lean-forward="true" selection-start-line="29" selection-end-line="29" />
         </state>
       </provider>
     </entry>

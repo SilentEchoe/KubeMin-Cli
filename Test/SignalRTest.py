@@ -12,10 +12,20 @@ class Student(object):
         else:
             print('%s正在观看电影.' % self.name)
 
+
 def main():
     bart = Student('王凯', 38)
     bart.study('Python程序设计')
     bart.watch_movie()
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
 
 
 
