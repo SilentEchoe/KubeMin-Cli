@@ -1,5 +1,8 @@
-from  random import randint
+from multiprocessing import Process
+from os import getpid
+from random import randint
 from time import time, sleep
+
 
 def download_task(filename):
     print('开始下载%s...' % filename)
@@ -10,7 +13,12 @@ def download_task(filename):
 
 def main():
     start = time()
-    download_task('')
+    p1 = Process(target=download_task, args=('Python从入门到住院.pdf',))
+    p1.start()
+    p2 = Process(target=download_task, args=('Python从入门到住院2.pdf',))
+    p2.start()
+    p1.join()
+    p2.join()
     end = time()
     print('总共耗费了%.2f秒.' % (end - start))
 
