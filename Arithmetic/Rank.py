@@ -7,4 +7,4 @@ def select_sort(origin_items, comp=lambda x, y: x < y):
             if comp(items[j], items[min_index]):
                 min_index = j
             items[i], items[min_index] = items[min_index], items[i]
-    return  items
+    return items
