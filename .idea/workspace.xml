@@ -4,10 +4,7 @@
     <bookmark url="file://$PROJECT_DIR$/Test/pygameTest.py" line="5" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Django/oa/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/Django/oa/settings.py" afterDir="false" />
-    </list>
+    <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -159,7 +156,7 @@
         <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="249">
-              <caret line="105" column="6" lean-forward="true" selection-start-line="105" selection-start-column="6" selection-end-line="105" selection-end-column="6" />
+              <caret line="105" column="6" selection-start-line="105" selection-start-column="6" selection-end-line="105" selection-end-column="6" />
             </state>
           </provider>
         </entry>
@@ -244,9 +241,9 @@
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="-1044" />
-    <option name="y" value="-93" />
+  <component name="ProjectFrameBounds" extendedState="1">
+    <option name="x" value="-1411" />
+    <option name="y" value="-95" />
     <option name="width" value="1112" />
     <option name="height" value="1056" />
   </component>
@@ -288,7 +285,7 @@
               <item name="Python_git" type="b2602c69:ProjectViewProjectNode" />
               <item name="Python_git" type="462c0819:PsiDirectoryNode" />
               <item name="Django" type="462c0819:PsiDirectoryNode" />
-              <item name="oa" type="462c0819:PsiDirectoryNode" />
+              <item name="hrs" type="462c0819:PsiDirectoryNode" />
             </path>
           </expand>
           <select />
@@ -495,8 +492,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-1044" y="-93" width="1112" height="1056" extended-state="0" />
-    <editor active="true" />
+    <frame x="-1411" y="-95" width="1112" height="1056" extended-state="1" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2811918" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -711,7 +707,7 @@
     <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="249">
-          <caret line="105" column="6" lean-forward="true" selection-start-line="105" selection-start-column="6" selection-end-line="105" selection-end-column="6" />
+          <caret line="105" column="6" selection-start-line="105" selection-start-column="6" selection-end-line="105" selection-end-column="6" />
         </state>
       </provider>
     </entry>
