@@ -5,9 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Django/templates/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Django/hrs/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/Django/hrs/views.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Django/oa/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/Django/oa/settings.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -65,14 +62,14 @@
           <entry key="OOP" value="622" />
           <entry key="cfg" value="6" />
           <entry key="hello" value="1209" />
-          <entry key="py" value="12935" />
+          <entry key="py" value="12936" />
           <entry key="start" value="683" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="6" />
-          <entry key="Python" value="15772" />
+          <entry key="Python" value="15773" />
         </counts>
       </usages-collector>
     </session>
@@ -117,8 +114,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="347">
-              <caret line="56" column="35" selection-start-line="56" selection-start-column="35" selection-end-line="56" selection-end-column="35" />
+            <state relative-caret-position="269">
+              <caret line="53" column="13" lean-forward="true" selection-start-line="53" selection-start-column="13" selection-end-line="53" selection-end-column="13" />
             </state>
           </provider>
         </entry>
@@ -254,8 +251,8 @@
     </option>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="-948" />
-    <option name="y" value="-90" />
+    <option name="x" value="-1177" />
+    <option name="y" value="-146" />
     <option name="width" value="1112" />
     <option name="height" value="1056" />
   </component>
@@ -517,7 +514,7 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-948" y="-90" width="1112" height="1056" extended-state="0" />
+    <frame x="-1177" y="-146" width="1112" height="1056" extended-state="0" />
     <editor active="true" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.2811918" />
@@ -767,8 +764,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="347">
-          <caret line="56" column="35" selection-start-line="56" selection-start-column="35" selection-end-line="56" selection-end-column="35" />
+        <state relative-caret-position="269">
+          <caret line="53" column="13" lean-forward="true" selection-start-line="53" selection-start-column="13" selection-end-line="53" selection-end-column="13" />
         </state>
       </provider>
     </entry>
