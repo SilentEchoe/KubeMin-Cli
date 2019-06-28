@@ -75,8 +75,12 @@ WSGI_APPLICATION = 'oa.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'fs',
+        'HOST': '54.245.72.232',
+        'PORT': 13307,
+        'USER': 'fsbox',
+        'PASSWORD': 'tzZ=xx20cfmI',
     }
 }
 
