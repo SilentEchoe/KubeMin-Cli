@@ -76,11 +76,11 @@ WSGI_APPLICATION = 'oa.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'fs',
-        'HOST': '54.245.72.232',
-        'PORT': 13307,
-        'USER': 'fsbox',
-        'PASSWORD': 'tzZ=xx20cfmI',
+        'NAME': '',
+        'HOST': '',
+        'PORT': 123,
+        'USER': '',
+        'PASSWORD': '',
     }
 }
 
