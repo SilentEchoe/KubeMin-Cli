@@ -1,8 +1,1 @@
-import subprocess
-
-
-#P = subprocess.call('dotnet -v', shell=True)
-
-l = subprocess.call('dotnet -v', shell=True,stdin=subprocess.PIPE, stdout=0ww  )
-print(l)
-
+import subprocessimport tkinter as tkp = subprocess.call\    ('mono -v',shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)root = tk.Tk()root.attributes('-alpha', 0.0)root.iconify()window = tk.Toplevel(root)window.geometry("100x100")window.overrideredirect(1)close = tk.Button(window, text=p, command = lambda: root.destroy())close.pack(fill=tk.BOTH, expand=1)window.mainloop()
