@@ -1,14 +1,20 @@
-import tkinter as tk
+import subprocess
+import Tkinter as tk
+from tkMessageBox import *
+
+p = subprocess.call\
+    ('mono -v',shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
 
 root = tk.Tk()
-root.attributes('-alpha', 0.0) #For icon
-#root.lower()
-root.iconify()
-window = tk.Toplevel(root)
-window.geometry("100x100") #Whatever size
-window.overrideredirect(1) #Remove border
-#window.attributes('-topmost', 1)
-#Whatever buttons, etc 
-close = tk.Button(window, text = "Close Window", command = lambda: root.destroy())
-close.pack(fill = tk.BOTH, expand = 1)
-window.mainloop()
+
+
+def on_closing():
+    if showwarning("Quit", "Do you want to quit?"):
+        root.destroy()
+
+
+root.protocol("WM_DELETE_WINDOW", on_closing)
+root.mainloop()
+
+
