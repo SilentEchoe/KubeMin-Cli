@@ -2,12 +2,435 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/Test/18.gif" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/Test/yuan.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/Python_git.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/Python_git.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Test/Gui.py" beforeDir="false" afterPath="$PROJECT_DIR$/Test/Gui.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/db.sqlite3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/apps.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/migrations/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/tests.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/urls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/hrs/views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/manage.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/oa/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/oa/settings.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/oa/urls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/oa/wsgi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/templates/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/easy_install.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/DESCRIPTION.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/INSTALLER" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/METADATA" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/RECORD" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/WHEEL" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/entry_points.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/metadata.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip-9.0.1.dist-info/top_level.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/__main__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/appdirs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/_cmd.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/adapter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/cache.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/caches/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/caches/file_cache.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/caches/redis_cache.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/controller.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/filewrapper.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/heuristics.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/serialize.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/cachecontrol/wrapper.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/ansi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/ansitowin32.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/initialise.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/win32.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/colorama/winterm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/misc.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/shutil.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/sysconfig.cfg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/sysconfig.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/_backport/tarfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/database.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/index.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/locators.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/manifest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/markers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/metadata.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/resources.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/scripts.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/t32.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/t64.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/util.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/version.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/w32.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/w64.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distlib/wheel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/distro.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_ihatexml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_inputstream.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_tokenizer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_trie/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_trie/_base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_trie/datrie.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_trie/py.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/_utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/constants.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/alphabeticalattributes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/inject_meta_charset.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/lint.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/optionaltags.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/sanitizer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/filters/whitespace.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/html5parser.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/serializer.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treeadapters/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treeadapters/genshi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treeadapters/sax.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treebuilders/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treebuilders/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treebuilders/dom.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treebuilders/etree.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treebuilders/etree_lxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/base.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/dom.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/etree.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/etree_lxml.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/html5lib/treewalkers/genshi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/ipaddress.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/linklockfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/mkdirlockfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/pidlockfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/sqlitelockfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/lockfile/symlinklockfile.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/ordereddict.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/__about__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/_compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/_structures.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/markers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/requirements.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/specifiers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/packaging/version.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/pkg_resources/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/progress/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/progress/bar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/progress/counter.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/progress/helpers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/progress/spinner.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/pyparsing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/re-vendor.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/adapters.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/api.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/auth.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/cacert.pem" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/certs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/cookies.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/exceptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/hooks.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/big5freq.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/big5prober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/chardetect.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/chardistribution.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/charsetgroupprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/charsetprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/codingstatemachine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/constants.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/cp949prober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/escprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/escsm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/eucjpprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/euckrfreq.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/euckrprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/euctwfreq.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/euctwprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/gb2312freq.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/gb2312prober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/hebrewprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/jisfreq.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/jpcntx.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langbulgarianmodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langcyrillicmodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langgreekmodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langhebrewmodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langhungarianmodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/langthaimodel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/latin1prober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/mbcharsetprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/mbcsgroupprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/mbcssm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/sbcharsetprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/sbcsgroupprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/sjisprober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/universaldetector.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/chardet/utf8prober.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/_collections.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/connection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/connectionpool.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/contrib/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/contrib/appengine.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/contrib/ntlmpool.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/contrib/pyopenssl.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/contrib/socks.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/exceptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/fields.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/filepost.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/packages/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/packages/ordered_dict.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/packages/six.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/packages/ssl_match_hostname/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/packages/ssl_match_hostname/_implementation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/poolmanager.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/request.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/response.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/connection.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/request.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/response.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/retry.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/ssl_.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/timeout.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/packages/urllib3/util/url.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/sessions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/status_codes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/structures.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/requests/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/retrying.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/six.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/webencodings/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/webencodings/labels.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/webencodings/mklabels.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/webencodings/tests.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/_vendor/webencodings/x_user_defined.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/basecommand.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/baseparser.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/cmdoptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/completion.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/download.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/freeze.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/hash.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/help.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/install.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/list.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/search.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/show.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/uninstall.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/commands/wheel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/compat/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/compat/dictconfig.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/download.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/exceptions.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/index.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/locations.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/models/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/models/index.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/operations/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/operations/check.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/operations/freeze.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/pep425tags.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/req/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/req/req_file.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/req/req_install.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/req/req_set.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/req/req_uninstall.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/status_codes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/appdirs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/build.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/deprecation.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/encoding.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/filesystem.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/glibc.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/hashes.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/logging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/outdated.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/packaging.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/setuptools_build.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/utils/ui.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/vcs/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/vcs/bazaar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/vcs/git.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/vcs/mercurial.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/vcs/subversion.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pip/wheel.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/appdirs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/__about__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/_compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/_structures.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/markers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/requirements.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/specifiers.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/packaging/version.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/pyparsing.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/_vendor/six.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/pkg_resources/extern/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/DESCRIPTION.rst" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/INSTALLER" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/METADATA" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/RECORD" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/WHEEL" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/dependency_links.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/entry_points.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/metadata.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/top_level.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools-28.8.0.dist-info/zip-safe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/archive_util.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/cli-32.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/cli-64.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/cli.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/alias.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/bdist_egg.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/bdist_rpm.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/bdist_wininst.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/build_ext.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/build_py.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/develop.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/easy_install.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/egg_info.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/install.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/install_egg_info.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/install_lib.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/install_scripts.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/launcher manifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/py36compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/register.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/rotate.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/saveopts.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/sdist.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/setopt.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/test.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/upload.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/command/upload_docs.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/depends.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/dist.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/extension.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/extern/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/glob.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/gui-32.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/gui-64.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/gui.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/launch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/lib2to3_ex.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/monkey.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/msvc.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/namespaces.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/package_index.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/py26compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/py27compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/py31compat.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/sandbox.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/script (dev).tmpl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/script.tmpl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/site-patch.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/ssl_support.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/unicode_utils.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/version.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/site-packages/setuptools/windows_support.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Lib/tcl8.6/init.tcl" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/Activate.ps1" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_asyncio.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_bz2.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_ctypes.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_ctypes_test.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_decimal.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_elementtree.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_hashlib.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_lzma.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_msi.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_multiprocessing.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_overlapped.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_socket.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_sqlite3.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_ssl.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_testbuffer.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_testcapi.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_testconsole.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_testimportmultiple.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_testmultiphase.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/_tkinter.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/activate" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/activate.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/deactivate.bat" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/easy_install-3.6.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/easy_install.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/pip.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/pip3.6.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/pip3.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/pyexpat.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/python.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/python3.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/python36.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/pythonw.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/select.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/sqlite3.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/tcl86t.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/tk86t.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/unicodedata.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/vcruntime140.dll" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/Scripts/winsound.pyd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Django/venv/pyvenv.cfg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/18.gif" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/EmailTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/ExcelTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/FSboxSatar.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/FSboxSatar.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/Gui.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/Gui.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/Multiprocess.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/RabbitMQTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/RedisToPy.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/SignalR" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/SignalRTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/Test.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/aiohttp.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/Analysis-00.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/EXE-00.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/Gui.exe.manifest" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/PKG-00.pkg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/PKG-00.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/PYZ-00.pyz" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/PYZ-00.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/Tree-00.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/Tree-01.toc" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/warn-Gui.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/build/Gui/xref-Gui.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/dist/Gui.exe" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/fileRW.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/fslog.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/property.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/pygameTest.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/server.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Test/yuan.py" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -19,7 +442,7 @@
     <session id="258491734">
       <usages-collector id="statistics.lifecycle.project">
         <counts>
-          <entry key="project.closed" value="51" />
+          <entry key="project.closed" value="52" />
           <entry key="project.open.time.10" value="4" />
           <entry key="project.open.time.11" value="4" />
           <entry key="project.open.time.12" value="3" />
@@ -43,13 +466,14 @@
           <entry key="SignalR" value="2" />
           <entry key="binfile" value="3" />
           <entry key="cfg" value="2" />
+          <entry key="gif" value="1" />
           <entry key="hello" value="2" />
           <entry key="html" value="1" />
           <entry key="ico" value="1" />
           <entry key="jl" value="1" />
           <entry key="json" value="2" />
           <entry key="md" value="1" />
-          <entry key="py" value="121" />
+          <entry key="py" value="122" />
           <entry key="spec" value="3" />
           <entry key="sqlite3" value="1" />
           <entry key="start" value="3" />
@@ -58,11 +482,11 @@
       <usages-collector id="statistics.file.types.open">
         <counts>
           <entry key="HTML" value="1" />
-          <entry key="Image" value="1" />
+          <entry key="Image" value="2" />
           <entry key="JSON" value="2" />
           <entry key="Markdown" value="1" />
           <entry key="PLAIN_TEXT" value="7" />
-          <entry key="Python" value="135" />
+          <entry key="Python" value="136" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
@@ -72,100 +496,20 @@
           <entry key="SignalR" value="3" />
           <entry key="cfg" value="6" />
           <entry key="hello" value="1209" />
-          <entry key="py" value="13914" />
+          <entry key="py" value="13926" />
           <entry key="start" value="683" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
           <entry key="PLAIN_TEXT" value="6" />
-          <entry key="Python" value="16754" />
+          <entry key="Python" value="16766" />
         </counts>
       </usages-collector>
     </session>
   </component>
   <component name="FileEditorManager">
-    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300">
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/FSboxSatar.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="156">
-              <caret line="7" column="42" selection-start-line="7" selection-start-column="42" selection-end-line="7" selection-end-column="42" />
-              <folding>
-                <element signature="e#0#21#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/fileRW.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="156">
-              <caret line="6" selection-start-line="6" selection-end-line="6" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/__init__.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="130">
-              <caret line="5" selection-start-line="5" selection-end-line="5" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/fslog.ico">
-          <provider selected="true" editor-type-id="images" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/FSboxSatar.spec">
-          <provider selected="true" editor-type-id="text-editor" />
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Test/Gui.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="442">
-              <caret line="17" column="18" selection-start-line="17" selection-start-column="18" selection-end-line="17" selection-end-column="18" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Django/manage.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="260">
-              <caret line="11" column="26" lean-forward="true" selection-start-line="11" selection-start-column="26" selection-end-line="11" selection-end-column="26" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/Test/yuan.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="312">
-              <caret line="12" column="18" lean-forward="true" selection-start-line="12" selection-start-column="18" selection-end-line="12" selection-end-column="18" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="2132">
-              <caret line="82" column="21" selection-start-line="82" selection-start-column="21" selection-end-line="82" selection-end-column="21" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-    </leaf>
+    <leaf SIDE_TABS_SIZE_LIMIT_KEY="300" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -278,16 +622,6 @@
               <item name="Python_git" type="b2602c69:ProjectViewProjectNode" />
               <item name="Python_git" type="462c0819:PsiDirectoryNode" />
             </path>
-            <path>
-              <item name="Python_git" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Python_git" type="462c0819:PsiDirectoryNode" />
-              <item name="Test" type="462c0819:PsiDirectoryNode" />
-            </path>
-            <path>
-              <item name="Python_git" type="b2602c69:ProjectViewProjectNode" />
-              <item name="Python_git" type="462c0819:PsiDirectoryNode" />
-              <item name="tutorial" type="462c0819:PsiDirectoryNode" />
-            </path>
           </expand>
           <select />
         </subPane>
@@ -309,6 +643,10 @@
     </option>
   </component>
   <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\Python_git" />
+      <recent name="D:\Python_git\Django" />
+    </key>
     <key name="CopyFile.RECENT_KEYS">
       <recent name="D:\Python_git\Test" />
       <recent name="D:\Python_git\quotetutorial" />
@@ -495,7 +833,6 @@
   </component>
   <component name="ToolWindowManager">
     <frame x="-8" y="-8" width="1382" height="744" extended-state="6" />
-    <editor active="true" />
     <layout>
       <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.22470239" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
@@ -524,11 +861,6 @@
     <breakpoint-manager>
       <breakpoints>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/Test/__init__.py</url>
-          <line>3</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/Test/RabbitMQTest.py</url>
           <line>3</line>
           <option name="timeStamp" value="2" />
@@ -537,7 +869,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/binfile.py" />
     <entry file="file://$PROJECT_DIR$/tutorial/tutorial/settings.py">
       <provider selected="true" editor-type-id="text-editor" />
     </entry>
@@ -747,10 +1078,34 @@
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Test/subprocess.py" />
+    <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="2132">
+          <caret line="82" column="21" selection-start-line="82" selection-start-column="21" selection-end-line="82" selection-end-column="21" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Django/manage.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="260">
+          <caret line="11" column="26" selection-start-line="11" selection-start-column="26" selection-end-line="11" selection-end-column="26" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Test/yuan.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="312">
+          <caret line="12" column="18" lean-forward="true" selection-start-line="12" selection-start-column="18" selection-end-line="12" selection-end-column="18" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/Test/FSboxSatar.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="156">
-          <caret line="7" column="42" selection-start-line="7" selection-start-column="42" selection-end-line="7" selection-end-column="42" />
+        <state relative-caret-position="130">
+          <caret line="5" lean-forward="true" selection-start-line="5" selection-end-line="5" />
           <folding>
             <element signature="e#0#21#0" expanded="true" />
           </folding>
@@ -761,13 +1116,6 @@
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="156">
           <caret line="6" selection-start-line="6" selection-end-line="6" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Test/__init__.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="130">
-          <caret line="5" selection-start-line="5" selection-end-line="5" />
         </state>
       </provider>
     </entry>
@@ -784,27 +1132,13 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/Django/oa/settings.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="2132">
-          <caret line="82" column="21" selection-start-line="82" selection-start-column="21" selection-end-line="82" selection-end-column="21" />
-        </state>
-      </provider>
+    <entry file="file://$PROJECT_DIR$/Test/18.gif">
+      <provider selected="true" editor-type-id="images" />
     </entry>
-    <entry file="file://$PROJECT_DIR$/Django/manage.py">
+    <entry file="file://$PROJECT_DIR$/Test/__init__.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="260">
-          <caret line="11" column="26" lean-forward="true" selection-start-line="11" selection-start-column="26" selection-end-line="11" selection-end-column="26" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Test/yuan.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="312">
-          <caret line="12" column="18" lean-forward="true" selection-start-line="12" selection-start-column="18" selection-end-line="12" selection-end-column="18" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="130">
+          <caret line="5" lean-forward="true" selection-start-line="5" selection-end-line="5" />
         </state>
       </provider>
     </entry>
