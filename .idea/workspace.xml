@@ -2,9 +2,8 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="3a60d2ad-c523-41d9-9296-513de174a945" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/app.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/Dockerfile" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DockerApi.py" beforeDir="false" afterPath="$PROJECT_DIR$/DockerApi.py" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -36,6 +35,7 @@
       <usages-collector id="statistics.file.extensions.open">
         <counts>
           <entry key="ASYNCIO" value="3" />
+          <entry key="Dockerfile" value="1" />
           <entry key="OOP" value="1" />
           <entry key="SignalR" value="2" />
           <entry key="binfile" value="3" />
@@ -59,7 +59,7 @@
           <entry key="Image" value="2" />
           <entry key="JSON" value="2" />
           <entry key="Markdown" value="1" />
-          <entry key="PLAIN_TEXT" value="7" />
+          <entry key="PLAIN_TEXT" value="8" />
           <entry key="Python" value="138" />
         </counts>
       </usages-collector>
@@ -93,7 +93,7 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/app.py">
           <provider selected="true" editor-type-id="text-editor">
             <state relative-caret-position="338">
@@ -101,6 +101,15 @@
               <folding>
                 <element signature="e#0#23#0" expanded="true" />
               </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/Dockerfile">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="104">
+              <caret line="4" column="24" selection-start-line="4" selection-start-column="24" selection-end-line="4" selection-end-column="24" />
             </state>
           </provider>
         </entry>
@@ -128,7 +137,6 @@
   <component name="IdeDocumentHistory">
     <option name="CHANGED_PATHS">
       <list>
-        <option value="$PROJECT_DIR$/quotetutorial/OOP" />
         <option value="$PROJECT_DIR$/quotetutorial/get_type.py" />
         <option value="$PROJECT_DIR$/use_property.py" />
         <option value="$PROJECT_DIR$/quotetutorial/special_str.py" />
@@ -179,6 +187,7 @@
         <option value="$PROJECT_DIR$/Test/yuan.py" />
         <option value="$PROJECT_DIR$/DockerApi.py" />
         <option value="$PROJECT_DIR$/app.py" />
+        <option value="$PROJECT_DIR$/Dockerfile" />
       </list>
     </option>
   </component>
@@ -239,13 +248,14 @@
     </option>
   </component>
   <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\Python_git" />
+      <recent name="D:\Python_git\Test" />
+      <recent name="D:\Python_git\quotetutorial" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="D:\Python_git" />
       <recent name="D:\Python_git\Django" />
-    </key>
-    <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\Python_git\Test" />
-      <recent name="D:\Python_git\quotetutorial" />
     </key>
   </component>
   <component name="RunDashboard">
@@ -466,7 +476,6 @@
     </breakpoint-manager>
   </component>
   <component name="editorHistoryManager">
-    <entry file="file://$PROJECT_DIR$/tutorial/tutorial/items.py" />
     <entry file="file://$PROJECT_DIR$/tutorial/tutorial/spiders/__init__.py" />
     <entry file="file://$PROJECT_DIR$/Test/pygame.py" />
     <entry file="file://$USER_HOME$/AppData/Roaming/Python/Python36/site-packages/django/bin/django-admin.py" />
@@ -547,6 +556,13 @@
           <folding>
             <element signature="e#0#23#0" expanded="true" />
           </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Dockerfile">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="104">
+          <caret line="4" column="24" selection-start-line="4" selection-start-column="24" selection-end-line="4" selection-end-column="24" />
         </state>
       </provider>
     </entry>
