@@ -1,2 +1,1 @@
-# PyDemo
-Python的练习项目
+# Go和Python 的练习项目
