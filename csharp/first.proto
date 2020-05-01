@@ -1,0 +1,7 @@
+syntax = "proto3";
+
+message FirstMessage{
+    int32 id =1;
+    string name = 2;
+    bool is_male =3;
+}

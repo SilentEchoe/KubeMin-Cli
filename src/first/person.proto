@@ -1,0 +1,15 @@
+syntax = "proto3";
+
+
+// protoc --proto_path src/ --go_out=src/ src/first/person.proto
+
+package example.firts;
+
+option go_package ="firstpb";
+
+message PersonMessage {
+    int32 id = 1;
+    bool is_adult = 2;
+    string name = 3;
+    repeated int32 luck_numvers = 4;
+}
