@@ -10,8 +10,21 @@ message Employee {
     int32 no = 2;
     string firstName = 3;
     string lastName = 4;
-    float salary = 5;
+
+    MonthSalary monthSalay =6;
+
+    reserved 5;
+    reserved "salary";
+
+
 }
+
+
+message MonthSalary{
+    float basic = 1;
+    float bonus = 2;
+}
+
 
 message GetByNoRequest{
     int32 no = 1;
@@ -43,5 +56,4 @@ service EmployeeService{
     rpc AddPhoto(stream AddPhotoRequest) returns (AddPhotoResponse);
     rpc Save(EmployeeRequest) returns (EmployeeResponse);
     rpc SaveAll(stream EmployeeRequest) returns (stream EmployeeResponse);
-
 }
