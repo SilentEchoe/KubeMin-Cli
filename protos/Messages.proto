@@ -3,8 +3,9 @@ syntax = "proto3";
 
 //option csharp_namespace = "GrpcServer.Web.Protos";
 option go_package = "pb";
-import "Enums.proto";
 import "goole/protobuf/timestamp.proto";
+import "Enums.proto";
+
 
 message Employee {
     int32 id = 1;
