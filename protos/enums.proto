@@ -1,4 +1,4 @@
-syntax = "protos3";
+syntax = "proto3";
 
 
 option go_package = "pb";

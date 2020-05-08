@@ -1,10 +1,10 @@
 syntax = "proto3";
 
 
-//option csharp_namespace = "GrpcServer.Web.Protos";
+option csharp_namespace = "GrpcServer.Web.Protos";
 option go_package = "pb";
-import "goole/protobuf/timestamp.proto";
-import "Enums.proto";
+
+import "enums.proto";
 
 
 message Employee {
@@ -15,11 +15,10 @@ message Employee {
 
     MonthSalary monthSalay =6;
     EmployeeStatus status = 7;
-    google.protobuf.Timestamp lastModfied =8;
+
 
     reserved 5;
     reserved "salary";
-
 
 }
 
