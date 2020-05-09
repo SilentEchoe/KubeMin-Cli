@@ -1,7 +1,8 @@
 package main
 
 import (
-	"LearningNotes-GoMicro/pb"
+	"grpc-server/pb"
+	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -18,7 +19,7 @@ func main()  {
 	if err!=nil {
 		log.Fatalln(err.Error())
 	}
-	creds, err := credentials.NewClientTLSFromFile("cert.pem","ket.pem")
+	creds, err := credentials.NewServerTLSFromFile("cert.pem","key.pem")
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -47,8 +48,18 @@ func (s *employeeService) SaveAll(pb.EmployeeService_SaveAllServer) error {
 	panic("implement me")
 }
 
-func (s *employeeService) GetByNo(context.Context, *pb.GetByNoRequest) (*pb.EmployeeResponse, error)  {
-	return  nil , nil
+func (s *employeeService) GetByNo(ctx context.Context, req *pb.GetByNoRequest) (*pb.EmployeeResponse, error)  {
+
+	for _, e:= range employees {
+		if req.No == e.No {
+			return &pb.EmployeeResponse{
+				Employee: &e,
+			}, nil
+		}
+	}
+
+
+	return  nil , errors.New("Employee not found")
 }
 
 

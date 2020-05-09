@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+
+option go_package = "pb";
+
+enum EmployeeStatus {
+    NORMAL = 0;
+    ON_VACATION = 1;
+    RESIGNED = 2;
+    RETIRED = 3;
+}

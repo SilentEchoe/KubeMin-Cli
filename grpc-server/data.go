@@ -1,6 +1,6 @@
 package main
 
-import "LearningNotes-GoMicro/pb"
+import "grpc-server/pb"
 
 var  employees = []pb.Employee {
 	{
