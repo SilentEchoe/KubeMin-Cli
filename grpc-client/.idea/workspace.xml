@@ -2,9 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="74460442-871e-45a7-a08d-64c7c61de6a8" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/wlop.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../grpc-server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -35,7 +36,7 @@
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/protos" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -45,8 +46,8 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
-      <recent name="D:\PrivateProjects\src\LearningNotes-GoMicro\grpc-client\protos" />
       <recent name="D:\PrivateProjects\src\LearningNotes-GoMicro\grpc-client" />
+      <recent name="D:\PrivateProjects\src\LearningNotes-GoMicro\grpc-client\protos" />
       <recent name="D:\PrivateProjects\src\grpc-client" />
     </key>
   </component>
@@ -69,5 +70,9 @@
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
     <state x="697" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1589888067537" />
+    <state x="1286" y="280" width="672" height="678" key="search.everywhere.popup" timestamp="1589895562991">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="1286" y="280" width="672" height="678" key="search.everywhere.popup/0.0.1920.1040@0.0.1920.1040" timestamp="1589895562991" />
   </component>
 </project>
