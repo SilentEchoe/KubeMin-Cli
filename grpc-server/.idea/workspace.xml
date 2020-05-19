@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="c4fa13f0-ee18-45fe-b650-9112b847ff10" name="Default Changelist" comment="" />
+    <list default="true" id="c4fa13f0-ee18-45fe-b650-9112b847ff10" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../grpc-client/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../grpc-client/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -19,6 +23,7 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="ProjectId" id="1bcJKjxqZlNnxxwCOvqMRE0nV9A" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showExcludedFiles" value="true" />
@@ -31,7 +36,7 @@
     <property name="go.import.settings.migrated" value="true" />
     <property name="go.sdk.automatically.set" value="true" />
     <property name="go.tried.to.enable.integration.vgo.integrator" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../grpc-client" />
     <property name="node.js.detected.package.eslint" value="true" />
     <property name="node.js.detected.package.tslint" value="true" />
     <property name="node.js.path.for.package.eslint" value="project" />
@@ -60,9 +65,10 @@
       <screen x="400" y="-1080" width="1920" height="1040" />
     </state>
     <state x="1099" y="-757" key="#com.intellij.fileTypes.FileTypeChooser/0.0.1463.874/400.-1080.1920.1040@400.-1080.1920.1040" timestamp="1588926503393" />
-    <state x="755" y="280" key="FileChooserDialogImpl" timestamp="1589886246175">
+    <state x="755" y="280" key="FileChooserDialogImpl" timestamp="1589888857059">
       <screen x="0" y="0" width="1920" height="1040" />
     </state>
+    <state x="755" y="280" key="FileChooserDialogImpl/0.0.1920.1040@0.0.1920.1040" timestamp="1589888857059" />
     <state x="755" y="280" key="FileChooserDialogImpl/1920.-223.1463.891/0.0.1920.1040@0.0.1920.1040" timestamp="1589886246175" />
     <state x="623" y="225" width="882" height="679" key="search.everywhere.popup" timestamp="1589372166327">
       <screen x="0" y="0" width="1920" height="1040" />

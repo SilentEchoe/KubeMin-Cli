@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="74460442-871e-45a7-a08d-64c7c61de6a8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/../grpc-server/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" afterDir="false" />
@@ -44,6 +42,7 @@
   </component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="D:\PrivateProjects\src\LearningNotes-GoMicro\grpc-client" />
       <recent name="D:\PrivateProjects\src\grpc-client" />
     </key>
   </component>
@@ -59,5 +58,9 @@
       <screen x="400" y="-1080" width="1920" height="1040" />
     </state>
     <state x="952" y="-902" key="#Go_Modules_(vgo)/0.0.1463.874/400.-1080.1920.1040@400.-1080.1920.1040" timestamp="1588925751036" />
+    <state x="697" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1589888067537">
+      <screen x="0" y="0" width="1920" height="1040" />
+    </state>
+    <state x="697" y="178" key="#com.intellij.execution.impl.EditConfigurationsDialog/0.0.1920.1040@0.0.1920.1040" timestamp="1589888067537" />
   </component>
 </project>
