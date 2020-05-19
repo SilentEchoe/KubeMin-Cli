@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-
+//protoc --proto_path=./protos/ ./protos/*.proto --go_out=plugins=grpc:./pb
 option csharp_namespace = "GrpcServer.Web.Protos";
 option go_package = "pb";
 
@@ -55,7 +55,7 @@ message EmployeeRequest{
 // 定义方法
 service EmployeeService{
     rpc GetByNo(GetByNoRequest) returns (EmployeeResponse);
-    rpc GetAll(GetAllRequest) returns (EmployeeResponse);
+    rpc GetAll(GetAllRequest) returns (stream EmployeeResponse);
     rpc AddPhoto(stream AddPhotoRequest) returns (AddPhotoResponse);
     rpc Save(EmployeeRequest) returns (EmployeeResponse);
     rpc SaveAll(stream EmployeeRequest) returns (stream EmployeeResponse);

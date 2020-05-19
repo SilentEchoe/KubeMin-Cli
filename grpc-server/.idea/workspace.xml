@@ -2,9 +2,17 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="c4fa13f0-ee18-45fe-b650-9112b847ff10" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/../grpc-client/.idea/grpc-client.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/.idea/grpc-client.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-client/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-client/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../grpc-client/pb/enums.pb.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../grpc-client/pb/messages.pb.go" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../grpc-client/protos/messages.proto" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-client/protos/messages.proto" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/grpc-server.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/grpc-server.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pb/messages.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/pb/messages.pb.go" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/protos/messages.proto" beforeDir="false" afterPath="$PROJECT_DIR$/protos/messages.proto" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -23,13 +31,16 @@
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/.." />
   </component>
   <component name="ProjectId" id="1bcJKjxqZlNnxxwCOvqMRE0nV9A" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showExcludedFiles" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
   <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
     <property name="DefaultGoTemplateProperty" value="Go File" />
     <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
     <property name="WebServerToolWindowFactoryState" value="false" />
@@ -51,6 +62,9 @@
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
   </component>
   <component name="VgoProject">
     <integration-enabled>true</integration-enabled>

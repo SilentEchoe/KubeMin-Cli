@@ -36,8 +36,11 @@ func main()  {
 
 type employeeService struct {}
 
-func (s *employeeService) GetAll(context.Context, *pb.GetAllRequest) (*pb.EmployeeResponse, error) {
-	panic("implement me")
+func (s *employeeService) GetAll(req *pb.GetAllRequest,stream pb.EmployeeService_GetAllServer) error {
+	for _, e := range  employees {
+		stream.Send(& pb.EmployeeResponse{Employee: &e})
+	}
+	return  nil
 }
 
 func (s *employeeService) AddPhoto(pb.EmployeeService_AddPhotoServer) error {

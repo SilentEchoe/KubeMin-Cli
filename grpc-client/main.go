@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"grpc-client/pb"
+	"io"
 	"log"
 )
 
@@ -23,9 +24,30 @@ func main()  {
 	}
 	defer conn.Close()
 	client := pb.NewEmployeeServiceClient(conn)
-	getByNo(client)
+	//getByNo(client)
+	getAll(client)
+}
+
+func getAll(client pb.EmployeeServiceClient)  {
+	stream , err := client.GetAll(context.Background(),&pb.GetAllRequest{})
+	if err!=nil {
+		log.Fatal(err.Error())
+	}
+
+	for{
+		res ,err :=stream.Recv()
+		if err == io.EOF {
+			break;
+		}
+		if err!=nil {
+			log.Fatal(err.Error())
+		}
+
+		fmt.Println(res.Employee)
+	}
 
 }
+
 
 func getByNo(client pb.EmployeeServiceClient)  {
 	res,err := client.GetByNo(context.Background(), &pb.GetByNoRequest{No:1994})
