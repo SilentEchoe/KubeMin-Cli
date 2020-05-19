@@ -2,17 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="74460442-871e-45a7-a08d-64c7c61de6a8" name="Default Changelist" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/grpc-client.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/grpc-client.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pb/enums.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/pb/messages.pb.go" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/protos/messages.proto" beforeDir="false" afterPath="$PROJECT_DIR$/protos/messages.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../grpc-server/.idea/grpc-server.iml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/.idea/grpc-server.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/main.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../grpc-server/pb/messages.pb.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/pb/messages.pb.go" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../grpc-server/protos/messages.proto" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/protos/messages.proto" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

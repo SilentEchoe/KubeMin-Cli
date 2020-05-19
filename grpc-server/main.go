@@ -1,11 +1,14 @@
 package main
 
 import (
+	"fmt"
+	"google.golang.org/grpc/metadata"
 	"grpc-server/pb"
 	"errors"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"io"
 	"log"
 	"net"
 )
@@ -28,7 +31,7 @@ func main()  {
 	pb.RegisterEmployeeServiceServer(server, new(employeeService))
 
 
-	log.Println("Grpc Server started...")
+	log.Println("Grpc Server started... " + port)
 	server.Serve(Listen)
 
 
@@ -43,7 +46,32 @@ func (s *employeeService) GetAll(req *pb.GetAllRequest,stream pb.EmployeeService
 	return  nil
 }
 
-func (s *employeeService) AddPhoto(pb.EmployeeService_AddPhotoServer) error {
+func (s *employeeService) AddPhoto(stream pb.EmployeeService_AddPhotoServer) error {
+
+	md, ok := metadata.FromIncomingContext(stream.Context())
+
+	if ok{
+		// 服务端收到的KEY 一定要是小写
+		fmt.Println("Employee: %s\n", md["no"][0])
+	}
+
+	img := []byte{}
+	for {
+		data, err := stream.Recv()
+		// 判断客户端是否关闭
+		if err == io.EOF {
+			fmt.Printf("File Size: %d\n ", len(img))
+		return  stream.SendAndClose(& pb.AddPhotoResponse{IsOk:true})
+		}
+		if err !=nil {
+			return err
+		}
+
+		fmt.Printf("File receuved:%d\n",len(data.Data))
+		img = append(img,data.Data...)
+
+	}
+
 	panic("implement me")
 }
 
