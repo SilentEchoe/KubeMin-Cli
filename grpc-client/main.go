@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"grpc-client/pb"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
@@ -21,12 +22,16 @@ func main()  {
 		log.Fatal(err.Error())
 	}
 	defer conn.Close()
-	client =  pb.NewEmployeeServiceClient(conn)
-
+	client :=  pb.NewEmployeeServiceClient(conn)
+	getByNo(client)
 
 }
 
-func GetByNo(client pb.EmployeeServiceClient)  {
-	res,err := client.GetByNo(context.Background(),)
+func getByNo(client pb.EmployeeServiceClient)  {
+	res,err := client.GetByNo(context.Background(),&pb.GetByNoRequest{No:1999})
+	if err!=nil {
+		log.Fatal(err.Error())
+	}
+	fmt.Println(res.Employee)
 }
 
