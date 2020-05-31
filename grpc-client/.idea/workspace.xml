@@ -2,10 +2,9 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="74460442-871e-45a7-a08d-64c7c61de6a8" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/wlop.jpg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/main.go" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../grpc-server/main.go" beforeDir="false" afterPath="$PROJECT_DIR$/../grpc-server/main.go" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

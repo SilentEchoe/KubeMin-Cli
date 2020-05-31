@@ -67,6 +67,7 @@ func (s *employeeService) AddPhoto(stream pb.EmployeeService_AddPhotoServer) err
 			return err
 		}
 
+
 		fmt.Printf("File receuved:%d\n",len(data.Data))
 		img = append(img,data.Data...)
 
