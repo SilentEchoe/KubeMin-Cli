@@ -10,7 +10,6 @@ require (
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/protobuf v1.4.2 // indirect
-	github.com/lucas-clemente/quic-go v0.16.1 // indirect
 	github.com/micro/go-micro v1.18.0
 	github.com/miekg/dns v1.1.29 // indirect
 	github.com/nats-io/jwt v1.0.1 // indirect
@@ -29,5 +28,7 @@ require (
 	honnef.co/go/tools v0.0.1-2020.1.4 // indirect
 
 )
+
+//replace github.com/lucas-clemente/quic-go => github.com/lucas-clemente/quic-go v0.14.1
 
 replace google.golang.org/grpc => google.golang.org/grpc v1.26.0

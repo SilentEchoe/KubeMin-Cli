@@ -285,6 +285,7 @@ github.com/liquidweb/liquidweb-go v1.6.0/go.mod h1:UDcVnAMDkZxpw4Y7NOHkqoeiGacVL
 github.com/lucas-clemente/quic-go v0.12.1/go.mod h1:UXJJPE4RfFef/xPO5wQm0tITK8gNfqwTxjbE7s3Vb8s=
 github.com/lucas-clemente/quic-go v0.13.1 h1:CxtJTXQIh2aboCPk0M6vf530XOov6DZjVBiSE3nSj8s=
 github.com/lucas-clemente/quic-go v0.13.1/go.mod h1:Vn3/Fb0/77b02SGhQk36KzOUmXgVpFfizUfW5WMaqyU=
+github.com/lucas-clemente/quic-go v0.14.1/go.mod h1:Vn3/Fb0/77b02SGhQk36KzOUmXgVpFfizUfW5WMaqyU=
 github.com/lucas-clemente/quic-go v0.16.1 h1:hleW5QcJCNjGS10ggod6tQQy7XjVtagS6UIdzBMAWpg=
 github.com/lucas-clemente/quic-go v0.16.1/go.mod h1:I0+fcNTdb9eS1ZcjQZbDVPGchJ86chcIxPALn9lEJqE=
 github.com/lunixbochs/vtclean v1.0.0/go.mod h1:pHhQNgMf3btfWnGBVipUOjRYhoOsdGqdm/+2c2E2WMI=
