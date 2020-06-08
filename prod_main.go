@@ -13,7 +13,7 @@ import (
 
 func main()  {
 	consulReg := consul.NewRegistry(
-		registry.Addrs("182.168.29.135:8500"),
+		registry.Addrs("http://127.0.0.1:8500/"),
 		)
 
 	ginRouter := gin.Default()
