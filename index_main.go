@@ -13,8 +13,11 @@ func main()  {
 
 	ginRouter := gin.Default()
 	ginRouter.Handle("GET","/", func(context *gin.Context) {
+
+		data:= make([]interface{},0)
+
 		context.JSON(200,gin.H{
-			"data":"index",
+			"data":data,
 		})
 	})
 
