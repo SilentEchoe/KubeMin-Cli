@@ -13,7 +13,7 @@ import (
 
 func main()  {
 	consulReg := consul.NewRegistry(
-		registry.Addrs("http://127.0.0.1:8500/"),
+		registry.Addrs("http://127.0.0.1:8300/"),
 		)
 
 	ginRouter := gin.Default()
@@ -31,11 +31,11 @@ func main()  {
 
 	server := web.NewService(
 		web.Name("prodservice"),
-		web.Address(":8001"),
+		//web.Address(":8001"),
 		web.Handler(ginRouter),
 		web.Registry(consulReg),
 		)
-	server.Init()
+	//server.Init()
 	server.Run()
 
 
