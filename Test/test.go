@@ -17,7 +17,7 @@ func main()  {
 		log.Fatal(err)
 	}
 
-	// 随机取
+	// 随机获取
 	next := selector.Random(getService)
 	node,err :=  next()
 	if err != nil {

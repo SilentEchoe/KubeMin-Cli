@@ -35,6 +35,9 @@ func main()  {
 		web.Handler(ginRouter),
 		web.Registry(consulReg),
 		)
+	server.Init()
 	server.Run()
+
+
 
 }
