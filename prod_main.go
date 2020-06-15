@@ -1,6 +1,7 @@
 package main
 
 import (
+	"LearningNotes-GoMicro/Helper"
 	"LearningNotes-GoMicro/ProdService"
 	"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro/web"
@@ -20,9 +21,15 @@ func main()  {
 	v1Group := ginRouter.Group("/v1")
 	{
 		v1Group.Handle("POST","/prods",  func(context *gin.Context) {
+			var pr Helper.ProdsRequest
+			err := context.Bind(&pr)
+			if err != nil || pr.Size <=0 {
+				pr= Helper.ProdsRequest{Size:2}
+			}
+			
 			context.JSON(200,
 				gin.H{
-				"data":ProdService.NewProdList(5)})
+				"data":ProdService.NewProdList(pr.Size)})
 		})
 	}
 
@@ -37,7 +44,11 @@ func main()  {
 		web.Handler(ginRouter),
 		web.Registry(consulReg),
 		)
-	//server.Init()
+
+
+
+
+	server.Init()
 	server.Run()
 
 

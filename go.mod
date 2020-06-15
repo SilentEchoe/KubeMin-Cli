@@ -6,7 +6,6 @@ require (
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
-	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-log/log v0.2.0 // indirect
@@ -24,7 +23,6 @@ require (
 	github.com/json-iterator/go v1.1.10 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucas-clemente/quic-go v0.17.1 // indirect
-	github.com/marten-seemann/qtls v0.9.1 // indirect
 	github.com/micro/go-micro v1.18.0
 	github.com/micro/go-plugins/client/http v0.0.0-20200119172437-4fe21aa238fd
 	github.com/micro/go-plugins/registry/consul v0.0.0-20200119172437-4fe21aa238fd

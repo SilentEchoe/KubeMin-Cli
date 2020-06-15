@@ -9,6 +9,7 @@ import (
 	"github.com/micro/go-micro/client/selector"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-plugins/registry/consul"
+
 	myhttp "github.com/micro/go-plugins/client/http"
 
 	"io/ioutil"
@@ -31,13 +32,16 @@ func main()  {
 }
 
 func callAPI2(s selector.Selector)  {
+
 	myClient := myhttp.NewClient(
+
 		client.Selector(s),
 		client.ContentType("application/json"),
 		)
-	req := myClient.NewRequest("prodservice","/v1/prods",map[string]string{})
-
-	var rsp map[string] interface{}
+	fmt.Println(myClient.String())
+	req := myClient.NewRequest("prodservice","/v1/prods",map[string]int {"Size":4})
+	fmt.Println(req)
+	var rsp map[string]interface{}
 	err := myClient.Call(context.Background(),req,&rsp)
 	if err!=nil {
 		log.Fatal(err)
