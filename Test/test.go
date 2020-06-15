@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"github.com/micro/go-micro/client"
+	"log"
+
 	"github.com/micro/go-micro/client/selector"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-plugins/registry/consul"
+	myhttp "github.com/micro/go-plugins/client/http"
+
 	"io/ioutil"
-	"log"
+
 	"net/http"
 
-	"time"
 
 )
 
@@ -17,32 +22,28 @@ func main()  {
 	consulReg := consul.NewRegistry(
 		registry.Addrs("http://127.0.0.1:8500/"),
 	)
+	mySelector := selector.NewSelector(
+		selector.Registry(consulReg),
+		selector.SetStrategy(selector.RoundRobin),
+		)
 
+	callAPI2(mySelector)
+}
 
-	for {
-		getService,err := consulReg.GetService("prodservice")
-		if err != nil {
-			log.Fatal(err)
-		}
-		// 随机获取
-		//next := selector.Random(getService)
+func callAPI2(s selector.Selector)  {
+	myClient := myhttp.NewClient(
+		client.Selector(s),
+		client.ContentType("application/json"),
+		)
+	req := myClient.NewRequest("prodservice","/v1/prods",map[string]string{})
 
-		next := selector.RoundRobin(getService)
-		node,err :=  next()
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		callRes,err := callAPI(node.Address,"/v1/prods","GET")
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println(callRes)
-		time.Sleep(time.Second*1)
+	var rsp map[string] interface{}
+	err := myClient.Call(context.Background(),req,&rsp)
+	if err!=nil {
+		log.Fatal(err)
 	}
 
-
+	fmt.Println(rsp["data"])
 
 }
 
