@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro/registry/etcd"
 	"github.com/micro/go-micro/web"
+	"time"
 
 	"github.com/micro/go-micro/registry"
 
@@ -13,8 +14,8 @@ import (
 )
 
 func main()  {
-	etcdReg := etcd.NewRegistry(
-		registry.Addrs("http://127.0.0.1:2379/"),
+	consulReg := etcd.NewRegistry(
+		registry.Addrs("http://127.0.0.1:8500/"),
 	)
 
 	ginRouter := gin.Default()
@@ -38,16 +39,15 @@ func main()  {
 		context.String(200,"user api")
 	})
 
-	server := web.NewService(
-		web.Name("prodservice"),
+	server := web.NewService( //go-micro很灵性的实现了注册和反注册，我们启动后直接ctrl+c退出这个server，它会自动帮我们实现反注册
+		web.Name("httpprodservice"), //注册进consul服务中的service名字
+		web.Address(":8088"), //注册进consul服务中的端口,也是这里我们gin的server地址
+		web.Handler(ginRouter),  //web.Handler()返回一个Option，我们直接把ginRouter穿进去，就可以和gin完美的结合
 		web.Metadata(map[string]string{"protocol" : "http"}),
-		//web.Address(":8001"),
-		web.Handler(ginRouter),
-		web.Registry(etcdReg),
+		web.Registry(consulReg), //注册到哪个服务器伤的consul中
+		web.RegisterTTL(time.Second*30),
+		web.RegisterInterval(time.Second*15),
 	)
-
-
-
 
 	server.Init()
 	server.Run()

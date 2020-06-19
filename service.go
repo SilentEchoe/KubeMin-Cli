@@ -1,6 +1,8 @@
 package main
 
 import (
+	"LearningNotes-GoMicro/Helper"
+	"LearningNotes-GoMicro/ProdService"
 	"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/web"
@@ -22,15 +24,16 @@ func main() {
 
 	v1Group := ginRouter.Group("/v1")
 	{
-		v1Group.Handle("POST", "/prods", func(context *gin.Context) {
-			//rq := Helper.NewRequest()
-			//context.bind(rq) //使用自定义的结构体解析post表单
-			context.JSON(
-				200,
+		v1Group.Handle("POST","/prods",  func(context *gin.Context) {
+			var pr Helper.ProdsRequest
+			err := context.Bind(&pr)
+			if err != nil || pr.Size <=0 {
+				pr= Helper.ProdsRequest{Size:2}
+			}
+
+			context.JSON(200,
 				gin.H{
-					"data":2,
-				},
-			)
+					"data":ProdService.NewProdList(pr.Size)})
 		})
 	}
 
