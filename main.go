@@ -40,6 +40,7 @@ func main()  {
 
 	server := web.NewService(
 		web.Name("prodservice"),
+		web.Metadata(map[string]string{"protocol" : "http"}),
 		//web.Address(":8001"),
 		web.Handler(ginRouter),
 		web.Registry(etcdReg),
