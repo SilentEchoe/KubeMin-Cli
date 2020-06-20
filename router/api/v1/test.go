@@ -25,7 +25,7 @@ func GetTestList (c *gin.Context)  {
 		pr= Helper.ProdsRequest{Size:2}
 	}
 	code = e.SUCCESS
-	ProdService.NewProdList(pr.Size)
+	data["list"] =  ProdService.NewProdList(pr.Size)
 	c.JSON(http.StatusOK, gin.H{
 		"code": code,
 		"msg":  e.GetMsg(code),

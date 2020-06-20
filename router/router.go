@@ -8,7 +8,7 @@ import (
 	//"github.com/swaggo/gin-swagger"
 	//"github.com/swaggo/gin-swagger/swaggerFiles"
 
-	"LearningNotes-GoMicro/routers/api/v1"
+	"LearningNotes-GoMicro/router/api/v1"
 )
 
 func InitRouter() *gin.Engine {
@@ -24,7 +24,7 @@ func InitRouter() *gin.Engine {
 	//jwt.JWT()
 	apiv1.Use()
 	{
-		//查询bin文件
+		//测试接口
 		apiv1.POST("/test", v1.GetTestList)
 	}
 
