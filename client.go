@@ -4,29 +4,27 @@ import (
 	"context"
 	"fmt"
 	"github.com/micro/go-micro/registry"
-	"github.com/micro/go-plugins/registry/consul"
+	"github.com/micro/go-micro/registry/etcd"
+	//"github.com/micro/go-plugins/registry/consul"
 
 	"github.com/micro/go-micro/client"
 	"log"
 
 	"github.com/micro/go-micro/client/selector"
-	//"github.com/micro/go-micro/registry/etcd"
-
-
 	myhttp "github.com/micro/go-plugins/client/http"
 
 
 )
 
 func main() {
-	consulReg := consul.NewRegistry(
+	/*consulReg := consul.NewRegistry(
 		registry.Addrs("http://127.0.0.1:8500"),
-	)
+	)*/
 
-	//etcdReg := etcd.NewRegistry(registry.Addrs("http://127.0.0.1:8500"))
+	etcdReg := etcd.NewRegistry(registry.Addrs("127.0.0.1:2380"))
 
 	mySelector := selector.NewSelector(
-		selector.Registry(consulReg),
+		selector.Registry(etcdReg),
 		selector.SetStrategy(selector.RoundRobin),
 	)
 
@@ -37,7 +35,6 @@ func main() {
 func callAPI(s selector.Selector)  {
 
 	myClient := myhttp.NewClient(
-
 		client.Selector(s),
 		client.ContentType("application/json"),
 	)

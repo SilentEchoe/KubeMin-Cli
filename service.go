@@ -5,15 +5,20 @@ import (
 	"LearningNotes-GoMicro/ProdService"
 	"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro/registry"
+	"github.com/micro/go-micro/registry/etcd"
 	"github.com/micro/go-micro/web"
-	"github.com/micro/go-plugins/registry/consul"
 	"time"
 )
 
 func main() {
-	consulReg := consul.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
+	/*consulReg := consul.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
 		registry.Addrs("127.0.0.1:8500"),
+	)*/
+
+	etcdReg := etcd.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
+		registry.Addrs("127.0.0.1:2380"),
 	)
+
 	ginRouter := gin.Default()
 	ginRouter.Handle("GET", "/user", func(context *gin.Context) {
 		context.String(200, "user api")
@@ -44,7 +49,7 @@ func main() {
 		web.Address(":8088"), //注册进consul服务中的端口,也是这里我们gin的server地址
 		web.Handler(ginRouter),  //web.Handler()返回一个Option，我们直接把ginRouter穿进去，就可以和gin完美的结合
 		web.Metadata(map[string]string{"protocol" : "http"}),
-		web.Registry(consulReg), //注册到哪个服务器伤的consul中
+		web.Registry(etcdReg), //注册到哪个服务器伤的consul中
 		web.RegisterTTL(time.Second*30),
 		web.RegisterInterval(time.Second*15),
 	)
