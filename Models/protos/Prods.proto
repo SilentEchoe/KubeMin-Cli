@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+//protoc --proto_path=./protos/ ./protos/*.proto --go_out=plugins=grpc:./pb
+option csharp_namespace = "GrpcServer.Web.Protos";
+option go_package = "Models";
+
+
+message ProdModel{
+    int32 ProdID = 1;
+    string ProdName = 2;
+}
+
+message ProdsRequest{
+    int32 size = 1;
+}
+
+message ProdListResponse{
+    repeated ProdModel data=1;
+}
+
+
+// 定义方法
+service ProdService{
+    rpc GetProds(ProdsRequest) returns (ProdListResponse);
+
+}
