@@ -21,8 +21,10 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type ProdModel struct {
-	ProdID               int32    `protobuf:"varint,1,opt,name=ProdID,proto3" json:"ProdID,omitempty"`
-	ProdName             string   `protobuf:"bytes,2,opt,name=ProdName,proto3" json:"ProdName,omitempty"`
+	// @inject_tag: json:"pid"
+	ProdID int32 `protobuf:"varint,1,opt,name=ProdID,proto3" json:"pid"`
+	// @inject_tag: json:"pname"
+	ProdName             string   `protobuf:"bytes,2,opt,name=ProdName,proto3" json:"pname"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`

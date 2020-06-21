@@ -6,6 +6,7 @@ require (
 	github.com/armon/go-metrics v0.3.3 // indirect
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/favadi/protoc-go-inject-tag v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-log/log v0.2.0 // indirect
