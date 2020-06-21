@@ -1,6 +1,7 @@
 package main
 
 import (
+	"LearningNotes-GoMicro/Models"
 	"context"
 	"fmt"
 	"github.com/micro/go-micro/registry"
@@ -39,15 +40,20 @@ func callAPI(s selector.Selector)  {
 		client.ContentType("application/json"),
 	)
 	fmt.Println(myClient.String())
-	req := myClient.NewRequest("httpprodservice","/v1/prods",map[string]int {"size":4})
-	fmt.Println(req)
-	var rsp map[string]interface{}
+	//req := myClient.NewRequest("httpprodservice","/v1/prods",map[string]int {"size":4})
+	req := myClient.NewRequest("httpprodservice","/v1/prods",
+		Models.ProdsRequest{Size: 6})
+
+	var rsp Models.ProdListResponse
+
+	//var rsp map[string]interface{}
 	err := myClient.Call(context.Background(),req,&rsp)
+
 	if err!=nil {
 		log.Fatal(err)
 	}
-
-	fmt.Println(rsp["data"])
+	fmt.Print(rsp)
+	fmt.Println(rsp.GetData())
 
 }
 
