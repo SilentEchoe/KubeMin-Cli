@@ -46,7 +46,7 @@ func main() {
 	//其实下面这段代码的意义就是启动服务的同时把服务注册进consul中，做的是服务发现
 	server := web.NewService( //go-micro很灵性的实现了注册和反注册，我们启动后直接ctrl+c退出这个server，它会自动帮我们实现反注册
 		web.Name("httpprodservice"), //注册进consul服务中的service名字
-		web.Address(":8088"), //注册进consul服务中的端口,也是这里我们gin的server地址
+		web.Address(":8081"), //注册进consul服务中的端口,也是这里我们gin的server地址
 		web.Handler(ginRouter),  //web.Handler()返回一个Option，我们直接把ginRouter穿进去，就可以和gin完美的结合
 		web.Metadata(map[string]string{"protocol" : "http"}),
 		web.Registry(etcdReg), //注册到哪个服务器伤的consul中

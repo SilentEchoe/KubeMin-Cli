@@ -41,7 +41,7 @@ func callAPI(s selector.Selector)  {
 	)
 	fmt.Println(myClient.String())
 	//req := myClient.NewRequest("httpprodservice","/v1/prods",map[string]int {"size":4})
-	req := myClient.NewRequest("httpprodservice","/v1/prods",
+	req := myClient.NewRequest("httpprodservice","/api/v1/test",
 		Models.ProdsRequest{Size: 6})
 
 	var rsp Models.ProdListResponse

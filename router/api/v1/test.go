@@ -1,12 +1,12 @@
 package v1
 
 import (
-	"LearningNotes-GoMicro/pkg/e"
+	//"LearningNotes-GoMicro/pkg/e"
 
 	"LearningNotes-GoMicro/Helper"
 	"LearningNotes-GoMicro/ProdService"
 	"github.com/gin-gonic/gin"
-	"net/http"
+	//"net/http"
 )
 
 // @Summary 测试接口
@@ -18,19 +18,25 @@ func GetTestList (c *gin.Context)  {
 
 	data := make(map[string]interface{})
 	//maps := make(map[string]interface{})
-	code := e.ERROR
+	//code := e.ERROR
 	var pr Helper.ProdsRequest
 	err := c.Bind(&pr)
 	if err != nil || pr.Size <=0 {
 		pr= Helper.ProdsRequest{Size:2}
 	}
-	code = e.SUCCESS
+	//code = e.SUCCESS
 	data["list"] =  ProdService.NewProdList(pr.Size)
-	c.JSON(http.StatusOK, gin.H{
+
+	c.JSON(200,
+		gin.H{
+			"data":ProdService.NewProdList(pr.Size)})
+
+
+	/*c.JSON(http.StatusOK, gin.H{
 		"code": code,
 		"msg":  e.GetMsg(code),
-		"data": data,
-	})
+		"data": ProdService.NewProdList(pr.Size),
+	})*/
 
 
 }
