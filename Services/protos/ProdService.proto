@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package Services;
+
+import "Models.proto";
+
+message ProdsRequest{
+    int32 size =1;
+}
+
+message ProdListResponse{
+    repeated ProdModel data =1;
+}
+
+service ProdService{
+    rpc getProdsList(ProdsRequest) returns(ProdListResponse);
+}
