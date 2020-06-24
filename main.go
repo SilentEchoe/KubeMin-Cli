@@ -20,30 +20,6 @@ func main() {
 		registry.Addrs("127.0.0.1:2380"),
 	)
 
-	/*ginRouter := gin.Default()
-	ginRouter.Handle("GET", "/user", func(context *gin.Context) {
-		context.String(200, "user api")
-	})
-	ginRouter.Handle("GET", "/news", func(context *gin.Context) {
-		context.String(200, "news api")
-	})
-
-	v1Group := ginRouter.Group("/v1")
-	{
-		v1Group.Handle("POST","/prods",  func(context *gin.Context) {
-			var pr Helper.ProdsRequest
-			err := context.Bind(&pr)
-			if err != nil || pr.Size <=0 {
-				pr= Helper.ProdsRequest{Size:2}
-			}
-
-			context.JSON(200,
-				gin.H{
-					"data":ProdService.NewProdList(pr.Size)})
-		})
-	}*/
-
-
 	//其实下面这段代码的意义就是启动服务的同时把服务注册进consul中，做的是服务发现
 	server := web.NewService( //go-micro很灵性的实现了注册和反注册，我们启动后直接ctrl+c退出这个server，它会自动帮我们实现反注册
 		web.Name("httpprodservice"), //注册进consul服务中的service名字
