@@ -1,61 +1,30 @@
 package main
 
 import (
-	"LearningNotes-GoMicro/Models"
-	"context"
-	"fmt"
+	"LearningNotes-GoMicro/ServiceImpl"
+	"LearningNotes-GoMicro/Services"
+	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry"
-	"github.com/micro/go-micro/registry/etcd"
 	"github.com/micro/go-plugins/registry/consul"
-
-	//"github.com/micro/go-plugins/registry/consul"
-
-	"github.com/micro/go-micro/client"
-	"log"
-
-	"github.com/micro/go-micro/client/selector"
-	myhttp "github.com/micro/go-plugins/client/http"
-
-
 )
 
-func main() {
+func main()  {
+
 	consulReg := consul.NewRegistry(
 		registry.Addrs("http://127.0.0.1:8500"),
 	)
 
-	//etcdReg := etcd.NewRegistry(registry.Addrs("127.0.0.1:2380"))
+	prodService := micro.NewService(
+		micro.Name("prodservice"),
+		micro.Address(":8011"),
 
-	mySelector := selector.NewSelector(
-		selector.Registry(consulReg),
-		selector.SetStrategy(selector.RoundRobin),
-	)
+		micro.Registry(consulReg),
+		)
 
-	callAPI(mySelector)
+	/*myService := micro.NewService(micro.Name("prodservice.client"))
+	prodService := Services.*/
 
+	prodService.Init()
+	Services.RegisterProdServiceHandler(prodService.Server(),new(ServiceImpl.ProdService))
+	prodService.Run()
 }
-
-func callAPI(s selector.Selector)  {
-
-	myClient := myhttp.NewClient(
-		client.Selector(s),
-		client.ContentType("application/json"),
-	)
-	fmt.Println(myClient.String())
-	req := myClient.NewRequest("httpprodservice","/api/v1/test",
-		Models.ProdsRequest{Size: 6})
-
-	var rsp Models.ProdListResponse
-
-	//var rsp map[string]interface{}
-	err := myClient.Call(context.Background(),req,&rsp)
-
-	if err!=nil {
-		log.Fatal(err)
-	}
-	fmt.Print(rsp)
-	fmt.Println(rsp.GetData())
-
-}
-
-

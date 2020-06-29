@@ -3,9 +3,15 @@ package main
 import (
 	"LearningNotes-GoMicro/Helper"
 	"LearningNotes-GoMicro/ProdService"
+	"LearningNotes-GoMicro/ServiceImpl"
+	"LearningNotes-GoMicro/Services"
+	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/registry/etcd"
+	"github.com/micro/go-micro/server"
+
 	"github.com/micro/go-micro/web"
 	"time"
 )
@@ -18,30 +24,7 @@ func main() {
 	etcdReg := etcd.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
 		registry.Addrs("127.0.0.1:2380"),
 	)
-
 	ginRouter := gin.Default()
-	ginRouter.Handle("GET", "/user", func(context *gin.Context) {
-		context.String(200, "user api")
-	})
-	ginRouter.Handle("GET", "/news", func(context *gin.Context) {
-		context.String(200, "news api")
-	})
-
-	v1Group := ginRouter.Group("/v1")
-	{
-		v1Group.Handle("POST","/prods",  func(context *gin.Context) {
-			var pr Helper.ProdsRequest
-			err := context.Bind(&pr)
-			if err != nil || pr.Size <=0 {
-				pr= Helper.ProdsRequest{Size:2}
-			}
-
-			context.JSON(200,
-				gin.H{
-					"data":ProdService.NewProdList(pr.Size)})
-		})
-	}
-
 
 	//其实下面这段代码的意义就是启动服务的同时把服务注册进consul中，做的是服务发现
 	server := web.NewService( //go-micro很灵性的实现了注册和反注册，我们启动后直接ctrl+c退出这个server，它会自动帮我们实现反注册
@@ -53,6 +36,39 @@ func main() {
 		web.RegisterTTL(time.Second*30),
 		web.RegisterInterval(time.Second*15),
 	)
+	myService := micro.NewService(micro.Name("prodservice.client"))
+	prodService := Services.NewProdService("prodservice",myService.Client())
+
+
+	v1Group := ginRouter.Group("/v1")
+	{
+		v1Group.Handle("POST","/prods",  func(ginCtx *gin.Context) {
+			/*var pr Helper.ProdsRequest
+			err := context.Bind(&pr)
+			if err != nil || pr.Size <=0 {
+				pr= Helper.ProdsRequest{Size:2}
+			}*/
+
+			var prodReq Services.ProdsRequest
+			err := ginCtx.Bind(&prodReq)
+			if err !=nil {
+				ginCtx.JSON(500,gin.H{"status":err.Error()})
+			}else {
+			 prodRes,_ :=	prodService.GetProdsList(context.Background(),&prodReq)
+
+				ginCtx.JSON(200,
+					gin.H{
+						"data":prodRes.Data})
+			})
+			}
+
+
+	}
+
+
+
+
+
 	server.Init() //加了这句就可以使用命令行的形式去设置我们一些启动的配置
 	server.Run()
 }
