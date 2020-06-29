@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/registry/etcd"
+	"github.com/micro/go-plugins/registry/consul"
+
 	//"github.com/micro/go-plugins/registry/consul"
 
 	"github.com/micro/go-micro/client"
@@ -18,14 +20,14 @@ import (
 )
 
 func main() {
-	/*consulReg := consul.NewRegistry(
+	consulReg := consul.NewRegistry(
 		registry.Addrs("http://127.0.0.1:8500"),
-	)*/
+	)
 
-	etcdReg := etcd.NewRegistry(registry.Addrs("127.0.0.1:2380"))
+	//etcdReg := etcd.NewRegistry(registry.Addrs("127.0.0.1:2380"))
 
 	mySelector := selector.NewSelector(
-		selector.Registry(etcdReg),
+		selector.Registry(consulReg),
 		selector.SetStrategy(selector.RoundRobin),
 	)
 

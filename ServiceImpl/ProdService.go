@@ -5,12 +5,11 @@ import (
 	Service "LearningNotes-GoMicro/Services"
 	"context"
 	"strconv"
-
 )
 
-type  ProdService struct {
+type  ProdService struct {}
 
-}
+
 func (*ProdService) GetProdsList(ctx context.Context,in *Service.ProdsRequest,res *Service.ProdListResponse) error{
 	models := make([]*Service.ProdModel,0)
 	var i int32
