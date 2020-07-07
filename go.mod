@@ -4,12 +4,14 @@ go 1.13
 
 require (
 	github.com/armon/go-metrics v0.3.3 // indirect
-	github.com/astaxie/beego v1.12.2 // indirect
+	github.com/astaxie/beego v1.12.2
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/dgrijalva/jwt-go v3.2.0+incompatible
 	github.com/favadi/protoc-go-inject-tag v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
+	github.com/go-ini/ini v1.44.0
 	github.com/go-log/log v0.2.0 // indirect
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
@@ -21,7 +23,7 @@ require (
 	github.com/hashicorp/go-hclog v0.14.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/serf v0.9.2 // indirect
-	github.com/jinzhu/gorm v1.9.14 // indirect
+	github.com/jinzhu/gorm v1.9.14
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucas-clemente/quic-go v0.17.1 // indirect
 	github.com/micro/go-micro v1.18.0
