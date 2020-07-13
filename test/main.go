@@ -1,13 +1,12 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
-	{
-		Test()
-	}
-
-	fmt.Println("main ends")
+	defer fmt.Println("in main")
+	panic("panic again and again")
 }
 
 // Test is TestFunch()
