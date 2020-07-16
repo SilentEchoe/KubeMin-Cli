@@ -2,11 +2,17 @@ package Weblib
 
 import (
 	"LearningNotes-GoMicro/Services"
+
 	"github.com/gin-gonic/gin"
+
 	"fmt"
+
+	"context"
 )
 
 func GetProdsList(ginCtx *gin.Context)  {
+	prodService:=ginCtx.Keys["prodservice"].(Services.ProdService)
+
 	var prodReq Services.ProdsRequest
 	err := ginCtx.Bind(&prodReq)
 	if err !=nil {
