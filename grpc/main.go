@@ -13,9 +13,8 @@ import (
 
 	"github.com/micro/go-micro/client/selector"
 	myhttp "github.com/micro/go-plugins/client/http"
-
-
 )
+
 
 func main() {
 	consulReg := consul.NewRegistry(
