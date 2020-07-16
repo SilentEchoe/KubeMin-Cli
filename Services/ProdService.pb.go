@@ -21,7 +21,8 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion3 // please upgrade the proto package
 
 type ProdsRequest struct {
-	Size                 int32    `protobuf:"varint,1,opt,name=size,proto3" json:"size,omitempty"`
+	// @inject_tag: json:"size",form:"size"
+	Size                 int32    `protobuf:"varint,1,opt,name=size,proto3" json:"size" form:"size"`
 	XXX_NoUnkeyedLiteral struct{} `json:"-"`
 	XXX_unrecognized     []byte   `json:"-"`
 	XXX_sizecache        int32    `json:"-"`

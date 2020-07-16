@@ -2,12 +2,12 @@ package main
 
 import (
 	"LearningNotes-GoMicro/Services"
+	"LearningNotes-GoMicro/Weblib"
 	//"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/web"
 	"github.com/micro/go-plugins/registry/consul"
-	"LearningNotes-GoMicro/Weblib"
 )
 
 func main() {
@@ -18,11 +18,11 @@ func main() {
 	myService := micro.NewService(micro.Name("prodservice.client"))
 
 	prodService := Services.NewProdService("prodservice",myService.Client())
-
+	print(prodService)
     httpServer := web.NewService(
 		web.Name("httpprodservice"), //注册进consul服务中的service名字
 		web.Address(":8001"), //注册进consul服务中的端口,也是这里我们gin的server地址
-		web.Handler(Weblib.NewGinRouter()),
+		web.Handler(Weblib.NewGinRouter(prodService)),
 		web.Registry(consulReg),
     	)
 
