@@ -1,15 +1,13 @@
 package main
 
 import (
-
 	"LearningNotes-GoMicro/Services"
-	"context"
-	"fmt"
-	"github.com/gin-gonic/gin"
+	//"github.com/gin-gonic/gin"
 	"github.com/micro/go-micro"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/web"
 	"github.com/micro/go-plugins/registry/consul"
+	"LearningNotes-GoMicro/Weblib"
 )
 
 func main() {
@@ -17,35 +15,19 @@ func main() {
 		registry.Addrs("127.0.0.1:8500"),
 	)
 
+	myService := micro.NewService(micro.Name("prodservice.client"))
 
-	ginRouter := gin.Default()
+	prodService := Services.NewProdService("prodservice",myService.Client())
+
     httpServer := web.NewService(
 		web.Name("httpprodservice"), //注册进consul服务中的service名字
 		web.Address(":8001"), //注册进consul服务中的端口,也是这里我们gin的server地址
-		web.Handler(ginRouter),
+		web.Handler(Weblib.NewGinRouter()),
 		web.Registry(consulReg),
     	)
 
-	myService := micro.NewService(micro.Name("prodservice.client"))
-	fmt.Print(myService)
-	prodService := Services.NewProdService("prodservice",myService.Client())
-	fmt.Print(prodService)
-	v1Group := ginRouter.Group("/v1")
-	{
-		v1Group.Handle("POST","/prods",  func(ginCtx *gin.Context) {
-			var prodReq Services.ProdsRequest
-			err := ginCtx.Bind(&prodReq)
-			if err !=nil {
-				fmt.Println(err)
-				ginCtx.JSON(500,gin.H{"status":err.Error()})
-			}else {
-				prodRes,_ :=	prodService.GetProdsList(context.Background(),&prodReq)
-
-				ginCtx.JSON(200,gin.H{"data":prodRes.Data})
-			}
 
 
-		})}
 
 	httpServer.Init() //加了这句就可以使用命令行的形式去设置我们一些启动的配置
 	httpServer.Run()
