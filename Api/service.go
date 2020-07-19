@@ -60,7 +60,7 @@ func main() {
 				ginCtx.JSON(500,gin.H{"status":err.Error()})
 			}else {
 			 prodRes,_ :=	prodService.GetProdsList(context.Background(),&prodReq)
-
+			 	fmt.Println(prodRes.Data)
 				ginCtx.JSON(200,gin.H{"data":prodRes.Data})
 			}
 
