@@ -1,9 +1,0 @@
-syntax = "proto3";
-package Services;
-
-message ProdModel{
-    // @inject_tag: json:"pid"
-    int32 ProdID = 1;
-    // @inject_tag: json:"pname"
-    string ProdName = 2;
-}
