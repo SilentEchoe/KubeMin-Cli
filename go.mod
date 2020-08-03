@@ -11,7 +11,7 @@ require (
 	github.com/favadi/protoc-go-inject-tag v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
-	github.com/go-ini/ini v1.44.0
+	github.com/go-ini/ini v1.57.0
 	github.com/go-log/log v0.2.0 // indirect
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
 	github.com/gogo/protobuf v1.3.1 // indirect
