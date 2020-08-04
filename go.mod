@@ -7,7 +7,9 @@ require (
 	github.com/astaxie/beego v1.12.2
 	github.com/coreos/etcd v3.3.22+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
+	github.com/denisenkom/go-mssqldb v0.0.0-20191124224453-732737034ffd // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
+	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
 	github.com/favadi/protoc-go-inject-tag v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
 	github.com/gin-gonic/gin v1.6.3
@@ -23,7 +25,9 @@ require (
 	github.com/hashicorp/go-hclog v0.14.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/serf v0.9.2 // indirect
-	github.com/jinzhu/gorm v1.9.15
+	github.com/jinzhu/gorm v1.9.2
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.0.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucas-clemente/quic-go v0.17.1 // indirect
 	github.com/micro/go-micro v1.18.0
@@ -38,6 +42,8 @@ require (
 	github.com/nats-io/nkeys v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
+	github.com/unknwon/com v1.0.1 // indirect
+
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.15.0 // indirect
 	golang.org/x/crypto v0.0.0-20200604202706-70a84ac30bf9 // indirect

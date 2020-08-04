@@ -5,7 +5,7 @@ import (
 
 	jwt "github.com/dgrijalva/jwt-go"
 
-	"LearningNotes-Go/pkg/setting"
+	"LearningNotes-GoMicro/pkg/setting"
 )
 
 var jwtSecret = []byte(setting.JwtSecret)
