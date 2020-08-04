@@ -23,7 +23,7 @@ require (
 	github.com/hashicorp/go-hclog v0.14.1 // indirect
 	github.com/hashicorp/go-immutable-radix v1.2.0 // indirect
 	github.com/hashicorp/serf v0.9.2 // indirect
-	github.com/jinzhu/gorm v1.9.14
+	github.com/jinzhu/gorm v1.9.15
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucas-clemente/quic-go v0.17.1 // indirect
 	github.com/micro/go-micro v1.18.0
