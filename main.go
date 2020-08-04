@@ -1,13 +1,31 @@
 package main
 
-import "github.com/gin-gonic/gin"
+import (
+	"LearningNotes-GoMicro/routers"
+	"github.com/micro/go-micro/registry"
+	"github.com/micro/go-micro/web"
+	"github.com/micro/go-plugins/registry/consul"
+)
+
+
 
 func main() {
-	r := gin.Default()
-	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200,gin.H{
-			"messgae":"pong",
-		})
-	})
-	r.Run()
+	consulReg := consul.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
+		registry.Addrs("127.0.0.1:8500"),
+	)
+
+	ginRouter := routers.InitRouter()
+
+	httpServer := web.NewService(
+		//注册进consul服务中的service名字
+		web.Name("httpprodservice"),
+		//web.Handler()返回一个Option，我们直接把ginRouter穿进去，就可以和gin完美的结合
+		web.Handler(ginRouter),
+		//注册进consul服务中的端口,也是这里我们gin的server地址
+		web.Address(":8001"),
+		web.Registry(consulReg),
+	)
+
+	httpServer.Init() //加了这句就可以使用命令行的形式去设置我们一些启动的配置
+	httpServer.Run()
 }
