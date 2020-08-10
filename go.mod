@@ -42,7 +42,7 @@ require (
 	github.com/nats-io/nkeys v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
-	github.com/unknwon/com v1.0.1 // indirect
+	github.com/unknwon/com v1.0.1
 
 	go.etcd.io/bbolt v1.3.4 // indirect
 	go.uber.org/zap v1.15.0 // indirect
