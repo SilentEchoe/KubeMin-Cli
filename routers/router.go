@@ -20,7 +20,7 @@ func InitRouter() *gin.Engine {
 	apiv1.Use()
 	{
 		//获取标签列表
-		apiv1.GET("/tags", v1.GetNotices)
+		apiv1.GET("/notices", v1.GetNotices)
 
 	}
 
