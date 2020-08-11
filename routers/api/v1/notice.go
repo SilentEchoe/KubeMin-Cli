@@ -36,7 +36,7 @@ func GetNotices(c *gin.Context) {
 	code := e.SUCCESS
 
 	data["lists"] = models.GetNotices(util.GetPage(c), setting.PageSize, maps)
-	//data["total"] = models.GetTagTotal(maps)
+	data["total"] = models.GetNoticeTotal(maps)
 
 	c.JSON(http.StatusOK, gin.H{
 		"code" : code,
