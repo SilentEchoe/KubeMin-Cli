@@ -47,7 +47,7 @@ func init() {
 	}
 
 	gorm.DefaultTableNameHandler = func (db *gorm.DB, defaultTableName string) string  {
-		return tablePrefix + defaultTableName;
+		return tablePrefix + defaultTableName
 	}
 
 	db.SingularTable(true)

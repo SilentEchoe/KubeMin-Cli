@@ -3,12 +3,8 @@ package models
 type notice struct {
 	Model
 
-	ID string `json:"Id"`
-	cnTitle string `json:"cnTitle"`
-	enTitle string `json:"enTitle"`
-	cnContent string `json:"cnContent"`
-	enContent string `json:"enContent"`
-	publishState int `json:"state"`
+	Cntitle    string `gorm:"type:text;column:cnTitle"`
+	PublishState int `gorm:"type:text;column:publishState";json:"publishState"`
 }
 
 func GetNotices(pageNum int, pageSize int, maps interface {}) (notices []notice) {
