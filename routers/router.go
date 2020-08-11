@@ -1,6 +1,7 @@
 package routers
 
 import (
+	"LearningNotes-GoMicro/routers/api"
 	"github.com/gin-gonic/gin"
 
 	"LearningNotes-GoMicro/routers/api/v1"
@@ -13,7 +14,7 @@ func InitRouter() *gin.Engine {
 
 	r.Use(gin.Recovery())
 
-	//r.GET("/auth", api.GetAuth)
+	r.GET("/auth", api.GetAuth)
 	//r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	apiv1 := r.Group("/api/v1")
 	//jwt.JWT()

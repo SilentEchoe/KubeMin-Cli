@@ -56,8 +56,6 @@ func AddNotices(c *gin.Context)  {
 	valid.Required(cnTitle, "cnTitle").Message("公告标题不能为空")
 	code := e.INVALID_PARAMS
 
-
-
 	if ! valid.HasErrors() {
 		code = e.SUCCESS
 		models.AddNotices(cnTitle,enTitle)
@@ -71,4 +69,12 @@ func AddNotices(c *gin.Context)  {
 
 
 
+}
+
+func EditNotice(c *gin.Context)  {
+	
+}
+
+func DeleteNoticeByID(c *gin.Context)  {
+	
 }

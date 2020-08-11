@@ -29,3 +29,26 @@ func AddNotices(cntitle string,entitle string ) bool  {
 	})
 	return  true
 }
+
+func ExistNoticeByID(id int) bool  {
+	var notice Notice
+	db.Select("id").Where("id = ?", id).First(&notice)
+	if notice.ID > 0 {
+		return true
+	}
+	return  false
+}
+
+func DeleteNotice(id int) bool  {
+	db.Where("id = ?",id).Delete(&Notice{})
+	return true
+}
+
+func EditNotice(id int,data interface{}) bool {
+	db.Model(&Notice{}).Where("id = ?",id).Update(data)
+	return  true
+}
+
+
+
+
