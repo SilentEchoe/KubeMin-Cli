@@ -4,6 +4,8 @@ type Notice struct {
 	Model
 
 	Cntitle    string `gorm:"type:text;column:cnTitle"`
+	Entitle    string `gorm:"type:text;column:enTitle"`
+
 	PublishState int `gorm:"column:publishState"`
 }
 
@@ -19,10 +21,11 @@ func GetNoticeTotal(maps interface {}) (count int){
 	return
 }
 
-func AddNotices(cntitle string,publishState int) bool  {
+func AddNotices(cntitle string,entitle string ) bool  {
 	db.Create(&Notice{
 		Cntitle:      cntitle,
-		PublishState: publishState,
+		Entitle:	  entitle,
+		PublishState: 0,
 	})
 	return  true
 }

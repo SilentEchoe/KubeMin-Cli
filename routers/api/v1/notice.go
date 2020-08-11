@@ -1,6 +1,7 @@
 package v1
 
 import (
+	"github.com/astaxie/beego/validation"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -48,16 +49,24 @@ func GetNotices(c *gin.Context) {
 // 新增通知
 func AddNotices(c *gin.Context)  {
 
-	data := make(map[string]interface{})
-	name := c.PostForm("name")
+	cnTitle := c.PostForm("cnTitle")
+	enTitle := c.PostForm("enTitle")
+	//state := com.StrTo(c.DefaultPostForm("state", "0")).MustInt()
+	valid := validation.Validation{}
+	valid.Required(cnTitle, "cnTitle").Message("公告标题不能为空")
+	code := e.INVALID_PARAMS
 
-	data["lists"] =name
 
-	code := e.SUCCESS
+
+	if ! valid.HasErrors() {
+		code = e.SUCCESS
+		models.AddNotices(cnTitle,enTitle)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"code" : code,
 		"msg" : e.GetMsg(code),
-		"data" : data,
+		"data" : make(map[string]string),
 	})
 
 
