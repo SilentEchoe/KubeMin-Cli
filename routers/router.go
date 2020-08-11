@@ -19,9 +19,10 @@ func InitRouter() *gin.Engine {
 	//jwt.JWT()
 	apiv1.Use()
 	{
-		//获取标签列表
+		//获取通知列表
 		apiv1.GET("/notices", v1.GetNotices)
-
+		// 新增通知
+		apiv1.POST("/notices", v1.AddNotices)
 	}
 
 	return r

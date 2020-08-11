@@ -18,3 +18,11 @@ func GetNoticeTotal(maps interface {}) (count int){
 
 	return
 }
+
+func AddNotices(cntitle string,publishState int) bool  {
+	db.Create(&Notice{
+		Cntitle:      cntitle,
+		PublishState: publishState,
+	})
+	return  true
+}

@@ -45,3 +45,21 @@ func GetNotices(c *gin.Context) {
 	})
 }
 
+// 新增通知
+func AddNotices(c *gin.Context)  {
+
+	data := make(map[string]interface{})
+	name := c.PostForm("name")
+
+	data["lists"] =name
+
+	code := e.SUCCESS
+	c.JSON(http.StatusOK, gin.H{
+		"code" : code,
+		"msg" : e.GetMsg(code),
+		"data" : data,
+	})
+
+
+
+}
