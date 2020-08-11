@@ -17,7 +17,14 @@ import (
 	"LearningNotes-GoMicro/pkg/setting"
 )
 
-//获取全部通知
+
+// @Summary 获取全部通知
+// @Produce  json
+// @Param name query string true "Name"
+// @Param state query int false "State"
+// @Param created_by query int false "CreatedBy"
+// @Success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
+// @Router /api/v1/tags [post]
 func GetNotices(c *gin.Context) {
 	name := c.Query("name")
 

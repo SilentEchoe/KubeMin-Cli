@@ -1,7 +1,7 @@
 package api
 
 import (
-	"log"
+
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -11,6 +11,8 @@ import (
 	"LearningNotes-GoMicro/pkg/e"
 
 	"LearningNotes-GoMicro/pkg/util"
+
+	"LearningNotes-GoMicro/pkg/logging"
 
 	"LearningNotes-GoMicro/models"
 )
@@ -47,7 +49,7 @@ func GetAuth(c *gin.Context) {
 		}
 	} else {
 		for _, err := range valid.Errors {
-			log.Println(err.Key, err.Message)
+			logging.Info(err.Key, err.Message)
 		}
 	}
 
