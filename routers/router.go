@@ -1,6 +1,7 @@
 package routers
 
 import (
+	jwt "LearningNotes-GoMicro/middleware"
 	"LearningNotes-GoMicro/routers/api"
 	"github.com/gin-gonic/gin"
 
@@ -17,8 +18,7 @@ func InitRouter() *gin.Engine {
 	r.GET("/auth", api.GetAuth)
 	//r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	apiv1 := r.Group("/api/v1")
-	//jwt.JWT()
-	apiv1.Use()
+	apiv1.Use(jwt.JWT())
 	{
 		//获取通知列表
 		apiv1.GET("/notices", v1.GetNotices)
