@@ -4,9 +4,11 @@ import (
 
 	_ "LearningNotes-GoMicro/docs"
 	jwt "LearningNotes-GoMicro/middleware"
+	"LearningNotes-GoMicro/pkg/upload"
 	"LearningNotes-GoMicro/routers/api"
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -22,6 +24,7 @@ func InitRouter() *gin.Engine {
 
 	r.GET("/auth", api.GetAuth)
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.StaticFS("/upload/images", http.Dir(upload.GetImageFullPath()))
 	r.POST("/upload", api.UploadImage)
 	apiv1 := r.Group("/api/v1")
 	apiv1.Use(jwt.JWT())
