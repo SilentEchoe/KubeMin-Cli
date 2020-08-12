@@ -10,6 +10,7 @@ import (
 	"github.com/micro/go-plugins/registry/consul"
 
 	_ "github.com/go-sql-driver/mysql"
+
 	"fmt"
 )
 
