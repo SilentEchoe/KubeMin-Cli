@@ -22,7 +22,7 @@ func main() {
 		//web.Handler()返回一个Option，我们直接把ginRouter穿进去，就可以和gin完美的结合
 		web.Handler(ginRouter),
 		//注册进consul服务中的端口,也是这里我们gin的server地址
-		web.Address(":8001"),
+		web.Address(":8000"),
 		web.Registry(consulReg),
 	)
 

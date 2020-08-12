@@ -46,6 +46,7 @@ require (
 	github.com/nats-io/nats.go v1.10.0 // indirect
 	github.com/nats-io/nkeys v0.2.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/robfig/cron v1.2.0 // indirect
 	github.com/swaggo/gin-swagger v1.2.0
 	github.com/swaggo/swag v1.6.7
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
