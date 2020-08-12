@@ -1,18 +1,27 @@
 package main
 
 import (
+	"LearningNotes-GoMicro/models"
+	"LearningNotes-GoMicro/pkg/logging"
+	"LearningNotes-GoMicro/pkg/setting"
 	"LearningNotes-GoMicro/routers"
 	"github.com/micro/go-micro/registry"
 	"github.com/micro/go-micro/web"
 	"github.com/micro/go-plugins/registry/consul"
+
+	_ "github.com/go-sql-driver/mysql"
+	"fmt"
 )
-
-
 
 func main() {
 	consulReg := consul.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
 		registry.Addrs("127.0.0.1:8500"),
 	)
+	setting.Setup()
+	fmt.Println("a")
+
+	models.Setup()
+	logging.Setup()
 
 	ginRouter := routers.InitRouter()
 
@@ -28,4 +37,9 @@ func main() {
 
 	httpServer.Init() //加了这句就可以使用命令行的形式去设置我们一些启动的配置
 	httpServer.Run()
+
+
+
+
+
 }

@@ -14,12 +14,14 @@ require (
 	github.com/erikstmartin/go-testdb v0.0.0-20160219214506-8d10e4a1bae5 // indirect
 	github.com/favadi/protoc-go-inject-tag v1.1.0 // indirect
 	github.com/fsnotify/fsnotify v1.4.9 // indirect
+	github.com/fvbock/endless v0.0.0-20170109170031-447134032cb6 // indirect
 	github.com/gin-gonic/gin v1.6.3
 	github.com/go-ini/ini v1.57.0
 	github.com/go-log/log v0.2.0 // indirect
 	github.com/go-openapi/spec v0.19.9 // indirect
 	github.com/go-openapi/swag v0.19.9 // indirect
 	github.com/go-playground/validator/v10 v10.3.0 // indirect
+	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.1 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.4.2
