@@ -16,11 +16,11 @@ type Notice struct {
 	PageSize int
 }
 
-func (a *Notice) GetArticleKey() string {
+func (a *Notice) GetNoticeKey() string {
 	return e.CACHE_ARTICLE + "_" + strconv.Itoa(a.ID)
 }
 
-func (a *Notice) GetArticlesKey() string {
+func (a *Notice) GetNoticesKey() string {
 	keys := []string{
 		e.CACHE_ARTICLE,
 		"LIST",

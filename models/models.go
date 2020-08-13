@@ -23,7 +23,7 @@ type Model struct {
 	DeletedOn  int `json:"deleted_on"`
 }
 
-// Setup initializes the database instance
+// Setup initializes the database instanceGetNotice
 func Setup() {
 
 	fmt.Println("参数为："+setting.DatabaseSetting.Type)

@@ -30,7 +30,7 @@ func (a *Notice) GetAll() ([]*models.Notice, error) {
 		PageNum:  a.PageNum,
 		PageSize: a.PageSize,
 	}
-	key := cache.GetArticlesKey()
+	key := cache.GetNoticeKey()
 	if gredis.Exists(key) {
 		data, err := gredis.Get(key)
 		if err != nil {
@@ -41,7 +41,7 @@ func (a *Notice) GetAll() ([]*models.Notice, error) {
 		}
 	}
 
-	notices, err := models.GetNotice(a.PageNum, a.PageSize, a.getMaps())
+	notices, err := models.GetNotice(1, 10, a.getMaps())
 	if err != nil {
 		return nil, err
 	}

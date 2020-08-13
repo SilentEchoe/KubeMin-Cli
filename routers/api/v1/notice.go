@@ -85,7 +85,7 @@ func GetNoticesByRedis(c *gin.Context)  {
 	appG := app.Gin{c}
 
 
-	noticeService := notice_service.Notice{}
+	noticeService := notice_service.Notice{ID:1}
 
 	article, err := noticeService.GetAll()
 	if err != nil {
