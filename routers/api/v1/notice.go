@@ -2,21 +2,17 @@ package v1
 
 import (
 	"LearningNotes-GoMicro/pkg/app"
+	"LearningNotes-GoMicro/pkg/setting"
+	"LearningNotes-GoMicro/pkg/util"
 	"LearningNotes-GoMicro/service/notice_service"
 	"github.com/astaxie/beego/validation"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	//"github.com/astaxie/beego/validation"
-	"github.com/unknwon/com"
 
 	"LearningNotes-GoMicro/pkg/e"
 
 	"LearningNotes-GoMicro/models"
-
-	"LearningNotes-GoMicro/pkg/util"
-
-	"LearningNotes-GoMicro/pkg/setting"
 )
 
 
@@ -27,7 +23,7 @@ import (
 // @Param created_by query int false "CreatedBy"
 // @Success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
 // @Router /api/v1/tags [post]
-func GetNotices(c *gin.Context) {
+/*func GetNotices(c *gin.Context) {
 	name := c.Query("name")
 
 	maps := make(map[string]interface{})
@@ -53,7 +49,7 @@ func GetNotices(c *gin.Context) {
 		"msg" : e.GetMsg(code),
 		"data" : data,
 	})
-}
+}*/
 
 // 新增通知
 func AddNotices(c *gin.Context)  {
@@ -81,26 +77,24 @@ func AddNotices(c *gin.Context)  {
 }
 
 func GetNoticesByRedis(c *gin.Context)  {
-
 	appG := app.Gin{c}
+	noticeService := notice_service.Notice{
+		PageNum:  util.GetPage(c),
+		PageSize: setting.AppSetting.PageSize,
+	}
 
-
-	noticeService := notice_service.Notice{ID:1}
-
-	article, err := noticeService.GetAll()
+	tags, err := noticeService.GetNoticeAll()
 	if err != nil {
-		appG.Response(http.StatusOK, e.ERROR_GET_ARTICLE_FAIL, nil)
+		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
 		return
 	}
 
-	appG.Response(http.StatusOK, e.SUCCESS, article)
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]interface{}{
+		"lists": tags,
+
+	})
+
+
 }
 
 
-func EditNotice(c *gin.Context)  {
-	
-}
-
-func DeleteNoticeByID(c *gin.Context)  {
-	
-}
