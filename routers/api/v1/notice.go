@@ -2,6 +2,7 @@ package v1
 
 import (
 	"LearningNotes-GoMicro/pkg/app"
+	"LearningNotes-GoMicro/service/notice_service"
 	"github.com/astaxie/beego/validation"
 	"net/http"
 
@@ -80,29 +81,13 @@ func AddNotices(c *gin.Context)  {
 }
 
 func GetNoticesByRedis(c *gin.Context)  {
+
 	appG := app.Gin{c}
-	id := com.StrTo(c.Param("id")).MustInt()
-	valid := validation.Validation{}
-	valid.Min(id, 1, "id").Message("ID必须大于0")
 
-	if valid.HasErrors() {
-		app.MarkErrors(valid.Errors)
-		appG.Response(http.StatusOK, e.INVALID_PARAMS, nil)
-		return
-	}
 
-	articleService := notice_service.Notice{ID: id}
-	exists, err := articleService.ExistByID()
-	if err != nil {
-		appG.Response(http.StatusOK, e.ERROR_CHECK_EXIST_ARTICLE_FAIL, nil)
-		return
-	}
-	if !exists {
-		appG.Response(http.StatusOK, e.ERROR_NOT_EXIST_ARTICLE, nil)
-		return
-	}
+	noticeService := notice_service.Notice{}
 
-	article, err := articleService.Get()
+	article, err := noticeService.GetAll()
 	if err != nil {
 		appG.Response(http.StatusOK, e.ERROR_GET_ARTICLE_FAIL, nil)
 		return

@@ -29,6 +29,8 @@ func InitRouter() *gin.Engine {
 	apiv1 := r.Group("/api/v1")
 	apiv1.Use(jwt.JWT())
 	{
+		// 从redis 获取通知列表
+		apiv1.GET("/notice",v1.GetNoticesByRedis)
 		//获取通知列表
 		apiv1.GET("/notices", v1.GetNotices)
 		// 新增通知

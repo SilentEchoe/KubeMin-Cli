@@ -6,21 +6,20 @@ import (
 	"LearningNotes-GoMicro/pkg/setting"
 	"LearningNotes-GoMicro/routers"
 	"github.com/micro/go-micro/registry"
+	"LearningNotes-GoMicro/pkg/gredis"
 	"github.com/micro/go-micro/web"
 	"github.com/micro/go-plugins/registry/consul"
 
 	_ "github.com/go-sql-driver/mysql"
-
-	"fmt"
 )
 
 func main() {
 	consulReg := consul.NewRegistry( //新建一个consul注册的地址，也就是我们consul服务启动的机器ip+端口
 		registry.Addrs("127.0.0.1:8500"),
 	)
-	setting.Setup()
-	fmt.Println("a")
 
+	setting.Setup()
+	gredis.Setup()
 	models.Setup()
 	logging.Setup()
 

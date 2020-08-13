@@ -1,5 +1,7 @@
 package models
 
+import "github.com/jinzhu/gorm"
+
 type Notice struct {
 	Model
 
@@ -29,6 +31,17 @@ func AddNotices(cntitle string,entitle string ) bool  {
 	})
 	return  true
 }
+
+func GetNotice(pageNum int, pageSize int, maps interface{}) ([]*Notice, error) {
+	var notice []*Notice
+	err := db.Where(maps).Offset(pageNum).Limit(pageSize).Find(&notice).Error
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	return notice, nil
+}
+
 
 func ExistNoticeByID(id int) bool  {
 	var notice Notice
