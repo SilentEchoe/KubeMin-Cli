@@ -19,37 +19,6 @@ type Notice struct {
 	PageSize int
 }
 
-func (n *Notice) GetAll() ([]*models.Notice, error) {
-	var (
-		notices, cacheNotices []*models.Notice
-	)
-	cache := cache_service.Notice{
-		Cntitle : n.Cntitle,
-		Entitle : n.Entitle,
-
-		PageNum:  n.PageNum,
-		PageSize: n.PageSize,
-	}
-	key := cache.GetNoticeKey()
-	if gredis.Exists(key) {
-		data, err := gredis.Get(key)
-		if err != nil {
-			logging.Info(err)
-		} else {
-			json.Unmarshal(data, &cacheNotices)
-			return cacheNotices, nil
-		}
-	}
-
-	notices, err := models.GetNotice(2, 10, n.getMaps())
-	if err != nil {
-		return nil, err
-	}
-
-	gredis.Set(key, notices, 3600)
-	return notices, nil
-}
-
 
 func (n *Notice) GetNoticeAll() ([]models.Notice, error) {
 	var (
@@ -70,10 +39,7 @@ func (n *Notice) GetNoticeAll() ([]models.Notice, error) {
 			return cacheTags, nil
 		}
 	}
-
 	notices, err := models.GetAll()
-
-	//notices, err := models.GetNotices(n.PageNum, n.PageSize, n.getMaps())
 	if err != nil {
 		return nil, err
 	}

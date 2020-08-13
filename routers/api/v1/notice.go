@@ -16,40 +16,46 @@ import (
 )
 
 
-// @Summary 获取全部通知
-// @Produce  json
-// @Param name query string true "Name"
-// @Param state query int false "State"
-// @Param created_by query int false "CreatedBy"
-// @Success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
-// @Router /api/v1/tags [post]
-/*func GetNotices(c *gin.Context) {
-	name := c.Query("name")
-
+// @summary 获取全部通知
+// @produce  json
+// @param name query string true "name"
+// @param state query int false "state"
+// @param created_by query int false "createdby"
+// @success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
+// @router /api/v1/tags [post]
+func GetNoticesPage(c *gin.Context) {
+	appG := app.Gin{c}
 	maps := make(map[string]interface{})
-	data := make(map[string]interface{})
-
-	if name != "" {
-		maps["name"] = name
+	tags, err := models.GetNoticePage(util.GetPage(c),setting.AppSetting.PageSize,maps)
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
+		return
 	}
-
-	var state int = -1
-	if arg := c.Query("state"); arg != "" {
-		state = com.StrTo(arg).MustInt()
-		maps["state"] = state
-	}
-
-	code := e.SUCCESS
-
-	data["lists"] = models.GetNotices(util.GetPage(c), setting.AppSetting.PageSize, maps)
-	data["total"] = models.GetNoticeTotal(maps)
-
-	c.JSON(http.StatusOK, gin.H{
-		"code" : code,
-		"msg" : e.GetMsg(code),
-		"data" : data,
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]interface{}{
+		"lists": tags,
 	})
-}*/
+}
+
+// @summary 获取全部通知
+// @produce  json
+// @param name query string true "name"
+// @param state query int false "state"
+// @param created_by query int false "createdby"
+// @success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
+// @router /api/v1/tags [post]
+func GetNoticesPageTest(c *gin.Context) {
+	appG := app.Gin{c}
+	maps := make(map[string]interface{})
+	tags, err := models.GetNoticePageTest(util.GetPage(c),setting.AppSetting.PageSize,maps)
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]interface{}{
+		"lists": tags,
+	})
+}
+
 
 // 新增通知
 func AddNotices(c *gin.Context)  {

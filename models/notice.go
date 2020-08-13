@@ -11,13 +11,23 @@ type Notice struct {
 	PublishState int `gorm:"column:publishState"`
 }
 
-/*func GetNotices(pageNum int, pageSize int, maps interface {}) (notices []Notice) {
-	db.Where(maps).Offset(pageNum).Limit(pageSize).Find(&notices)
+// 获取全部的通告信息
+func GetAll() ([]Notice,error) {
+	var (
+		notice []Notice
+		err  error
+	)
+	err = db.Find(&notice).Error
 
-	return
-}*/
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
 
-func GetNotices(pageNum int, pageSize int, maps interface {}) ([]Notice,error) {
+	return notice, nil
+}
+
+
+func GetNoticePage(pageNum int, pageSize int, maps interface{}) ([]Notice, error) {
 	var (
 		tags []Notice
 		err  error
@@ -35,8 +45,27 @@ func GetNotices(pageNum int, pageSize int, maps interface {}) ([]Notice,error) {
 
 	return tags, nil
 
+
 }
 
+func GetNoticePageTest(pageNum int, pageSize int, maps interface{}) ([]Notice, error)  {
+	var (
+		tags []Notice
+		err  error
+	)
+
+	/*if pageSize > 0 && pageNum > 0 {
+		 db.Where(maps).Find(&tags).Offset(pageNum).Limit(pageSize)
+	} else {
+		err = db.Where(maps).Find(&tags).Offset(0).Limit(10).Error
+	}*/
+	db.Where(maps).Find(&tags).Offset(pageNum).Limit(pageSize)
+	if err != nil && err != gorm.ErrRecordNotFound {
+		return nil, err
+	}
+
+	return tags, nil
+}
 
 func GetNoticeTotal(maps interface {}) (count int){
 	db.Model(&Notice{}).Where(maps).Count(&count)
@@ -51,16 +80,6 @@ func AddNotices(cntitle string,entitle string ) bool  {
 		PublishState: 0,
 	})
 	return  true
-}
-
-func GetNotice(pageNum int, pageSize int, maps interface{}) ([]*Notice, error) {
-	var notice []*Notice
-	err := db.Where(maps).Offset(pageSize).Limit(pageNum).Find(&notice).Error
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	return notice, nil
 }
 
 
@@ -83,19 +102,7 @@ func EditNotice(id int,data interface{}) bool {
 	return  true
 }
 
-func GetAll() ([]Notice,error) {
-	var (
-		notice []Notice
-		err  error
-	)
-	err = db.Find(&notice).Error
 
-	if err != nil && err != gorm.ErrRecordNotFound {
-		return nil, err
-	}
-
-	return notice, nil
-}
 
 
 

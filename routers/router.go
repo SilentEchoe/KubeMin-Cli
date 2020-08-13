@@ -35,6 +35,11 @@ func InitRouter() *gin.Engine {
 		//apiv1.GET("/notices", v1.GetNotices)
 		// 新增通知
 		apiv1.POST("/notices", v1.AddNotices)
+
+		// 测试通告分页
+		apiv1.GET("/test",v1.GetNoticesPage)
+
+		apiv1.GET("/tests",v1.GetNoticesPageTest)
 	}
 
 	return r
