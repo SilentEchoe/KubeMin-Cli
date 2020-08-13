@@ -24,7 +24,6 @@ func main() {
 	logging.Setup()
 
 	ginRouter := routers.InitRouter()
-
 	httpServer := web.NewService(
 		//注册进consul服务中的service名字
 		web.Name("httpprodservice"),
@@ -37,9 +36,5 @@ func main() {
 
 	httpServer.Init() //加了这句就可以使用命令行的形式去设置我们一些启动的配置
 	httpServer.Run()
-
-
-
-
 
 }
