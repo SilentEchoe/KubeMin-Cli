@@ -47,6 +47,7 @@ func GetNoticesPageTest(c *gin.Context) {
 	appG := app.Gin{c}
 	maps := make(map[string]interface{})
 	tags, err := models.GetNoticePageTest(util.GetPage(c),setting.AppSetting.PageSize,maps)
+	println(tags)
 	if err != nil {
 		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
 		return

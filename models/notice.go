@@ -50,21 +50,18 @@ func GetNoticePage(pageNum int, pageSize int, maps interface{}) ([]Notice, error
 
 func GetNoticePageTest(pageNum int, pageSize int, maps interface{}) ([]Notice, error)  {
 	var (
-		tags []Notice
+		notice []Notice
 		err  error
 	)
 
-	/*if pageSize > 0 && pageNum > 0 {
-		 db.Where(maps).Find(&tags).Offset(pageNum).Limit(pageSize)
-	} else {
-		err = db.Where(maps).Find(&tags).Offset(0).Limit(10).Error
-	}*/
-	db.Where(maps).Find(&tags).Offset(pageNum).Limit(pageSize)
+	// 查询前十条
+	err = db.Where(maps).Find(&notice).Limit(10).Error
+
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, err
 	}
 
-	return tags, nil
+	return notice, nil
 }
 
 func GetNoticeTotal(maps interface {}) (count int){

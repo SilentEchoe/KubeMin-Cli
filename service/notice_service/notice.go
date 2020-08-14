@@ -44,7 +44,7 @@ func (n *Notice) GetNoticeAll() ([]models.Notice, error) {
 		return nil, err
 	}
 
-	gredis.Set(key, notices, 13600)
+	gredis.Set(key, notices, 3000)
 	return notices, nil
 }
 
