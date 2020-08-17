@@ -57,7 +57,6 @@ func GetNoticesPageTest(c *gin.Context) {
 	})
 }
 
-
 // 新增通知
 func AddNotices(c *gin.Context)  {
 
@@ -104,4 +103,23 @@ func GetNoticesByRedis(c *gin.Context)  {
 
 }
 
+// @summary 根据ID 查询某条通知
+// @produce  json
+// @param name query string true "name"
+// @param state query int false "state"
+// @success 200 {string} string "{"code":200,"data":{},"msg":"ok"}"
+// @router /api/v1/tags [post]
+func GetNoticesByID(c *gin.Context){
+	appG := app.Gin{c}
+	maps := make(map[string]interface{})
+	tags, err := models.GetNoticePageTest(util.GetPage(c),setting.AppSetting.PageSize,maps)
+	println(tags)
+	if err != nil {
+		appG.Response(http.StatusInternalServerError, e.ERROR_GET_TAGS_FAIL, nil)
+		return
+	}
+	appG.Response(http.StatusOK, e.SUCCESS, map[string]interface{}{
+		"lists": tags,
+	})
+}
 

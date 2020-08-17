@@ -3,9 +3,10 @@ package routers
 import (
 
 	_ "LearningNotes-GoMicro/docs"
-	jwt "LearningNotes-GoMicro/middleware"
+	middleware "LearningNotes-GoMicro/middleware"
 	"LearningNotes-GoMicro/pkg/upload"
 	"LearningNotes-GoMicro/routers/api"
+
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"github.com/swaggo/gin-swagger/swaggerFiles"
 	"net/http"
@@ -27,7 +28,7 @@ func InitRouter() *gin.Engine {
 	r.StaticFS("/upload/images", http.Dir(upload.GetImageFullPath()))
 	r.POST("/upload", api.UploadImage)
 	apiv1 := r.Group("/api/v1")
-	apiv1.Use(jwt.JWT())
+	apiv1.Use(middleware.JWT())
 	{
 		// 从redis 获取通知列表
 		apiv1.GET("/notice",v1.GetNoticesByRedis)
@@ -44,3 +45,14 @@ func InitRouter() *gin.Engine {
 
 	return r
 }
+
+/*func Routers() *gin.Engine {
+	var Router = gin.Default()
+	//Router.Use(middleware.Cors())
+	Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	// 方便统一添加路由组前缀 多服务器上线使用
+	ApiGroup := Router.Group("")
+	routers.InitAutoCodeRouter(ApiGroup)                  // 注册用户路由
+	return Router
+
+}*/
