@@ -54,6 +54,7 @@ require (
 	github.com/swaggo/swag v1.6.7
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20200122045848-3419fae592fc // indirect
 	github.com/unknwon/com v1.0.1
+	github.com/unrolled/secure v1.0.8 // indirect
 	github.com/urfave/cli/v2 v2.2.0 // indirect
 
 	go.etcd.io/bbolt v1.3.4 // indirect

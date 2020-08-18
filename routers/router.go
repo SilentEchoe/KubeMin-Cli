@@ -46,13 +46,15 @@ func InitRouter() *gin.Engine {
 	return r
 }
 
+// 多路由注册
 func Routers() *gin.Engine {
 	var Router = gin.Default()
 	//Router.Use(middleware.Cors())
 	Router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 	// 方便统一添加路由组前缀 多服务器上线使用
-	ApiGroup := Router.Group("")
-	InitAutoCodeRouter(ApiGroup)                  // 注册用户路由
+	ApiGroup := Router.Group("/api/v1")
+	// 注册用户路由
+	InitAutoCodeRouter(ApiGroup)
 	return Router
 
 }
