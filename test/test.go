@@ -1,36 +1,45 @@
 package main
 
 import (
-	"os"
-	"os/signal"
-	"sync"
-	"time"
-
 	"fmt"
+	"runtime"
+	"sync"
 )
 
 func main() {
-	c := sync.NewCond(&sync.Mutex{})
-	for i := 0; i < 10; i++ {
-		go listen(c)
-	}
-	time.Sleep(1*time.Second)
-	go broadcast(c)
 
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
+	runtime.GOMAXPROCS(1)
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	fmt.Println("Start Goroutines")
+
+	go func() {
+		defer wg.Done()
+
+		for count := 0 ; count < 3; count ++ {
+			for char := 'a';char < 'a'+26; char ++ {
+				fmt.Printf("%c ", char)
+			}
+		}
+
+	}()
+
+	go func() {
+		defer wg.Done()
+
+		for count := 0 ; count < 3; count ++ {
+			for char := 'A';char < 'A'+26; char ++ {
+				fmt.Printf("%c ", char)
+			}
+		}
+
+	}()
+
+	fmt.Println("wating to Finish")
+	wg.Wait()
+
+	fmt.Println("\n Terminating Program")
 }
 
-func broadcast(c *sync.Cond) {
-	c.L.Lock()
-	c.Broadcast()
-	c.L.Unlock()
-}
-
-func listen(c *sync.Cond) {
-	c.L.Lock()
-	c.Wait()
-	fmt.Println("listen")
-	c.L.Unlock()
-}
