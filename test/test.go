@@ -1,45 +1,47 @@
-package main
+package  main
 
 import (
 	"fmt"
-	"runtime"
 	"sync"
 )
 
-func main() {
+var (
+	counter int
+	wg sync.WaitGroup
 
-	runtime.GOMAXPROCS(1)
+	mutex sync.Mutex
+)
 
-	var wg sync.WaitGroup
+func main()  {
 	wg.Add(2)
 
-	fmt.Println("Start Goroutines")
+	go incCounter(1)
+	go incCounter(2)
 
-	go func() {
-		defer wg.Done()
-
-		for count := 0 ; count < 3; count ++ {
-			for char := 'a';char < 'a'+26; char ++ {
-				fmt.Printf("%c ", char)
-			}
-		}
-
-	}()
-
-	go func() {
-		defer wg.Done()
-
-		for count := 0 ; count < 3; count ++ {
-			for char := 'A';char < 'A'+26; char ++ {
-				fmt.Printf("%c ", char)
-			}
-		}
-
-	}()
-
-	fmt.Println("wating to Finish")
+	// 等待goroutine 结束
 	wg.Wait()
 
-	fmt.Println("\n Terminating Program")
+	fmt.Println("Final counter : %d\\n", counter)
+}
+
+func  incCounter(id int)  {
+	defer wg.Done()
+
+	for count := 0;count < 2 ; count++ {
+		// 和C#的Lock 锁一样 锁住共享资源 只允许一个访问
+		mutex.Lock()
+		{
+			value := counter
+
+			//runtime.Gosched()
+
+			value ++
+
+			counter = value
+		}
+		// 释放锁
+		mutex.Unlock()
+	}
+
 }
 
