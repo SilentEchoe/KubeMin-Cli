@@ -1,4 +1,4 @@
-package  main
+/*package  main
 
 import (
 	"fmt"
@@ -44,4 +44,66 @@ func  incCounter(id int)  {
 	}
 
 }
+
+*/
+
+
+package  main
+
+import (
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+)
+
+var wg sync.WaitGroup
+
+func init()  {
+	rand.Seed(time.Now().UnixNano())
+}
+
+func main()  {
+	baton := make(chan int)
+
+	wg.Add(1)
+
+	go Runner(baton)
+
+	baton <- 1
+
+	wg.Wait()
+}
+
+func Runner(baton chan int){
+	var newRunner int
+
+	// 将通道的值传入
+	runner := <- baton
+
+	fmt.Println("Runner %d Running With Baton\n", runner)
+
+	if runner  != 4 {
+		newRunner = runner + 1
+		fmt.Printf("Runner %d To The Line\n", newRunner)
+		// 递归
+		go Runner(baton)
+	}
+	time.Sleep(100 * time.Millisecond)
+
+	// 判断是否跑了一圈（默认一圈是四百米）
+	if runner == 4 {
+		fmt.Printf("Runner %d Finished, Race Over\n", runner)
+		wg.Done()
+		return
+	}
+
+	fmt.Printf("Runner %d Exchange With Runner %d\n",
+		 runner,
+		newRunner)
+	// 讲新的值传给通道
+	baton <- newRunner
+
+}
+
 
