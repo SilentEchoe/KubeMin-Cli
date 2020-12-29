@@ -1,7 +1,7 @@
 package svc
 
 import (
-	"LearningNotes-GoZero/greet/internal/config"
+	"LearningNotes-GoZero/internal/config"
 )
 
 type ServiceContext struct {

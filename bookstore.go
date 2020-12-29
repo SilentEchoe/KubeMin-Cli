@@ -4,15 +4,15 @@ import (
 	"flag"
 	"fmt"
 
-	"LearningNotes-GoZero/greet/internal/config"
-	"LearningNotes-GoZero/greet/internal/handler"
-	"LearningNotes-GoZero/greet/internal/svc"
+	"LearningNotes-GoZero/internal/config"
+	"LearningNotes-GoZero/internal/handler"
+	"LearningNotes-GoZero/internal/svc"
 
 	"github.com/tal-tech/go-zero/core/conf"
 	"github.com/tal-tech/go-zero/rest"
 )
 
-var configFile = flag.String("f", "etc/greet-api.yaml", "the config file")
+var configFile = flag.String("f", "etc/bookstore-api.yaml", "the config file")
 
 func main() {
 	flag.Parse()

@@ -3,23 +3,23 @@ package handler
 import (
 	"net/http"
 
-	"LearningNotes-GoZero/greet/internal/logic"
-	"LearningNotes-GoZero/greet/internal/svc"
-	"LearningNotes-GoZero/greet/internal/types"
+	"LearningNotes-GoZero/internal/logic"
+	"LearningNotes-GoZero/internal/svc"
+	"LearningNotes-GoZero/internal/types"
 
 	"github.com/tal-tech/go-zero/rest/httpx"
 )
 
-func GreetHandler(ctx *svc.ServiceContext) http.HandlerFunc {
+func AddHandler(ctx *svc.ServiceContext) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		var req types.Request
+		var req types.AddReq
 		if err := httpx.Parse(r, &req); err != nil {
 			httpx.Error(w, err)
 			return
 		}
 
-		l := logic.NewGreetLogic(r.Context(), ctx)
-		resp, err := l.Greet(req)
+		l := logic.NewAddLogic(r.Context(), ctx)
+		resp, err := l.Add(req)
 		if err != nil {
 			httpx.Error(w, err)
 		} else {
