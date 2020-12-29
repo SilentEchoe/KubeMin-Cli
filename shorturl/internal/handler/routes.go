@@ -4,7 +4,7 @@ package handler
 import (
 	"net/http"
 
-	"LearningNotes-GoZero/internal/svc"
+	"shorturl/internal/svc"
 
 	"github.com/tal-tech/go-zero/rest"
 )
@@ -14,13 +14,13 @@ func RegisterHandlers(engine *rest.Server, serverCtx *svc.ServiceContext) {
 		[]rest.Route{
 			{
 				Method:  http.MethodGet,
-				Path:    "/add",
-				Handler: AddHandler(serverCtx),
+				Path:    "/shorten",
+				Handler: ShortenHandler(serverCtx),
 			},
 			{
 				Method:  http.MethodGet,
-				Path:    "/check",
-				Handler: CheckHandler(serverCtx),
+				Path:    "/expand",
+				Handler: ExpandHandler(serverCtx),
 			},
 		},
 	)
