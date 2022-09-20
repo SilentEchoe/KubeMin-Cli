@@ -1,0 +1,6 @@
+apiVersion: nodes.demo.kubebuilder.io/v1
+kind: NodePool
+metadata:
+  name: nodepool-sample
+spec:
+  # TODO(user): Add fields here
