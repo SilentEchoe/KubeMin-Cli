@@ -19,6 +19,8 @@ package controllers
 import (
 	nodesv1 "KubeMin-Cli/api/v1"
 	"context"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/api/node/v1beta1"
 
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -49,17 +51,41 @@ func (r *NodePoolReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	log := log.FromContext(ctx)
 	log.WithValues("nodepool", req.NamespacedName)
 	//// 获取对象
-	//pool := &nodesv1.NodePool{}
-	//if err := r.Get(ctx, req.NamespacedName, pool); err != nil {
-	//	return ctrl.Result{}, err
-	//}
-	//
-	//var nodes corev1.NodeList
-	//err := r.List(ctx, &nodes, &client.ListOptions{LabelSelector: pool.node})
-	//
-	//if len(nodes.Items) > 0 {
-	//
-	//}
+	pool := &nodesv1.NodePool{}
+	if err := r.Get(ctx, req.NamespacedName, pool); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	var nodes corev1.NodeList
+	err := r.List(ctx, &nodes, &client.ListOptions{LabelSelector: pool.NodeLabelSelector()})
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+
+	if len(nodes.Items) > 0 {
+		log.Info("find nodes, will merge data", "nodes", len(nodes.Items))
+		for _, n := range nodes.Items {
+			n := n
+			err := r.Patch(ctx, pool.Spec.ApplyNode(n), client.Merge)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	var runtimeClass v1beta1.RuntimeClass
+	err = r.Get(ctx, client.ObjectKeyFromObject(pool.RuntimeClass()), &runtimeClass)
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+
+	// 如果不存在，创建一个新的
+	if runtimeClass.Name == "" {
+		err = r.Create(ctx, pool.RuntimeClass())
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+	}
 
 	return ctrl.Result{}, nil
 }
