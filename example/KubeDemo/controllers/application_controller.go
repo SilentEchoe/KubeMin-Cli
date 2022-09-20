@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/go-logr/logr"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	appsv1 "KubeDemo/api/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -49,10 +50,13 @@ type ApplicationReconciler struct {
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 
-	fmt.Println("application", req.NamespacedName)
+	log := logf.FromContext(ctx)
+	r.Log = log
 
+	fmt.Println("application", req.NamespacedName)
+	fmt.Println(r.Log)
 	if r == nil {
-		logr.Logger{}.Info("空指针")
+		logr.Logger{}.Info("ApplicationReconciler is nil")
 		return ctrl.Result{}, nil
 	}
 
