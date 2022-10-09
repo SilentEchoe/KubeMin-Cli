@@ -1,7 +1,0 @@
-apiVersion: apps.demo.kubebuilder.io/v1
-kind: Application
-metadata:
-  name: application-sample
-spec:
-  # Add fields heres
-  product: test
