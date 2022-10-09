@@ -1,0 +1,13 @@
+apiVersion: nodes.node.kubebuilder.io/v1
+kind: NodePool
+metadata:
+  name: master
+spec:
+  taints:
+    - key: node-pool.lailin.xyz
+      value: master
+      effect: NoSchedule
+  labels:
+    "node-pool.lailin.xyz/master": "8"
+    "node-pool.lailin.xyz/test": "2"
+  handler: runc
