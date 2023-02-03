@@ -1,0 +1,6 @@
+domain: tutorial.kubebuilder.io
+layout:
+- go.kubebuilder.io/v3
+projectName: example
+repo: KubeMin-Cli/example
+version: "3"
