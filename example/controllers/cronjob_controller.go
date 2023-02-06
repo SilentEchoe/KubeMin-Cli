@@ -20,7 +20,6 @@ import (
 	batchv1 "KubeMin-Cli/example/api/v1"
 	"context"
 	"fmt"
-	kbatch "k8s.io/api/batch/v1"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"time"
 
@@ -73,22 +72,22 @@ func (r *CronJobReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	fmt.Println("test")
 
-	//1.根据名称加载定时任务
-	var cronJob batchv1.CronJob
-	if err := r.Get(ctx, req.NamespacedName, &cronJob); err != nil {
-		fmt.Println(err, "unable to fetch CronJob")
-		//忽略掉 not-found 错误，它们不能通过重新排队修复（要等待新的通知）
-		//在删除一个不存在的对象时，可能会报这个错误。
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
-	//2.列出所有有效Job,更新它们的状态
-	var childJobs kbatch.JobList
-	if err := r.List(ctx, &childJobs, client.InNamespace(req.Namespace), client.MatchingFields{jobOwnerKey: req.Name}); err != nil {
-		fmt.Println(err, "unable to list child Jobs")
-
-		return ctrl.Result{}, err
-	}
+	////1.根据名称加载定时任务
+	//var cronJob batchv1.CronJob
+	//if err := r.Get(ctx, req.NamespacedName, &cronJob); err != nil {
+	//	fmt.Println(err, "unable to fetch CronJob")
+	//	//忽略掉 not-found 错误，它们不能通过重新排队修复（要等待新的通知）
+	//	//在删除一个不存在的对象时，可能会报这个错误。
+	//	return ctrl.Result{}, client.IgnoreNotFound(err)
+	//}
+	//
+	////2.列出所有有效Job,更新它们的状态
+	//var childJobs kbatch.JobList
+	//if err := r.List(ctx, &childJobs, client.InNamespace(req.Namespace), client.MatchingFields{}); err != nil {
+	//	fmt.Println(err, "unable to list child Jobs")
+	//
+	//	return ctrl.Result{}, err
+	//}
 
 	return ctrl.Result{}, nil
 }
