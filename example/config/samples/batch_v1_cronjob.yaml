@@ -1,6 +1,0 @@
-apiVersion: batch.tutorial.kubebuilder.io/v1
-kind: CronJob
-metadata:
-  name: cronjob-sample
-spec:
-  # TODO(user): Add fields here

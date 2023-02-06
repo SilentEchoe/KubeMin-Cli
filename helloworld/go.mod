@@ -1,4 +1,4 @@
-module KubeMin-Cli/example
+module KubeMin-Cli/helloworld
 
 go 1.18
 

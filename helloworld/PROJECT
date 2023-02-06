@@ -1,0 +1,16 @@
+domain: com.bolingcavalry
+layout:
+- go.kubebuilder.io/v3
+projectName: helloworld
+repo: KubeMin-Cli/helloworld
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: com.bolingcavalry
+  group: webapp
+  kind: Guestbook
+  path: KubeMin-Cli/helloworld/api/v1
+  version: v1
+version: "3"
