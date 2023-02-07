@@ -1,13 +1,13 @@
-# permissions for end users to edit guestbooks.
+# permissions for end users to edit elasticwebs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: guestbook-editor-role
+  name: elasticweb-editor-role
 rules:
 - apiGroups:
-  - webapp.com.bolingcavalry
+  - elasticweb.com.bolingcavalry
   resources:
-  - guestbooks
+  - elasticwebs
   verbs:
   - create
   - delete
@@ -17,8 +17,8 @@ rules:
   - update
   - watch
 - apiGroups:
-  - webapp.com.bolingcavalry
+  - elasticweb.com.bolingcavalry
   resources:
-  - guestbooks/status
+  - elasticwebs/status
   verbs:
   - get

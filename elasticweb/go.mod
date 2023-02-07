@@ -1,4 +1,4 @@
-module KubeMin-Cli/helloworld
+module KubeMin-Cli/elasticweb
 
 go 1.18
 
