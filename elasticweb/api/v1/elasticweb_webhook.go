@@ -17,7 +17,10 @@ limitations under the License.
 package v1
 
 import (
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -63,16 +66,14 @@ var _ webhook.Validator = &ElasticWeb{}
 func (r *ElasticWeb) ValidateCreate() error {
 	elasticweblog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
-	return nil
+	return r.validateElasticWeb()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *ElasticWeb) ValidateUpdate(old runtime.Object) error {
 	elasticweblog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	return r.validateElasticWeb()
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
@@ -81,4 +82,26 @@ func (r *ElasticWeb) ValidateDelete() error {
 
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil
+}
+
+func (r *ElasticWeb) validateElasticWeb() error {
+	var allErrs field.ErrorList
+
+	if *r.Spec.SinglePodQPS > 1000 {
+		elasticweblog.Info("c. Invalid SinglePodQPS")
+
+		err := field.Invalid(field.NewPath("spec").Child("singlePodQPS"),
+			*r.Spec.SinglePodQPS,
+			"d. must be less than 1000")
+
+		allErrs = append(allErrs, err)
+
+		return apierrors.NewInvalid(
+			schema.GroupKind{Group: "elasticweb.com.bolingcavalry", Kind: "ElasticWeb"},
+			r.Name,
+			allErrs)
+	} else {
+		elasticweblog.Info("e. SinglePodQPS is valid")
+		return nil
+	}
 }
