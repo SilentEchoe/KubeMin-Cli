@@ -97,10 +97,11 @@ func main() {
 		os.Exit(1)
 	}
 	// webhook 自动新增代码
-	if err = (&elasticwebv1.ElasticWeb{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "ElasticWeb")
-		os.Exit(1)
-	}
+	//if err = (&elasticwebv1.ElasticWeb{}).SetupWebhookWithManager(mgr); err != nil {
+	//	setupLog.Error(err, "unable to create webhook", "webhook", "ElasticWeb")
+	//	os.Exit(1)
+	//}
+
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

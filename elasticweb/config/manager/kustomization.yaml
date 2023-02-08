@@ -13,4 +13,4 @@ kind: Kustomization
 images:
 - name: controller
   newName: 871779972/elasticweb
-  newTag: "002"
+  newTag: "003"
