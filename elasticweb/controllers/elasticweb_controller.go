@@ -21,6 +21,8 @@ import (
 	"fmt"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -373,5 +375,6 @@ func updateStatus(ctx context.Context, r *ElasticWebReconciler, elasticWeb *elas
 func (r *ElasticWebReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&elasticwebv1.ElasticWeb{}).
+		Owns(&corev1.Pod{}, builder.OnlyMetadata).
 		Complete(r)
 }
