@@ -30,7 +30,7 @@ func init() {
 	// 加载运行初始化配置
 	cobra.OnInitialize(initConfig)
 	// rootCmd，命令行下读取配置文件，持久化的 flag，全局的配置文件
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.firstappname.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kubeMin-cli.yaml)")
 	// local flag，本地化的配置
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
@@ -46,7 +46,7 @@ func initConfig() {
 
 		viper.AddConfigPath(home)
 		viper.SetConfigType("yaml")
-		viper.SetConfigName(".firstappname")
+		viper.SetConfigName(".kubeMin-cli")
 	}
 
 	viper.AutomaticEnv()
