@@ -1,0 +1,6 @@
+domain: app.kubebuilder.io
+layout:
+- go.kubebuilder.io/v3
+projectName: examples
+repo: github.com/AnAnonymousFriend/KubeMin-Cli
+version: "3"
