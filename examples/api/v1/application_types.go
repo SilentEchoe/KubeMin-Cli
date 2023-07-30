@@ -41,8 +41,8 @@ type ServiceTemplate struct {
 
 // ApplicationStatus defines the observed state of Application
 type ApplicationStatus struct {
-	Workflow appsv1.DeploymentSpec `json:"workflow,omitempty"`
-	Network  corev1.ServiceSpec    `json:"network,omitempty"`
+	Workflow appsv1.DeploymentStatus `json:"workflow,omitempty"`
+	Network  corev1.ServiceSpec      `json:"network,omitempty"`
 }
 
 //+kubebuilder:object:root=true

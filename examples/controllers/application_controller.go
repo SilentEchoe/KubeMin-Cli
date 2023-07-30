@@ -18,13 +18,14 @@ package controllers
 
 import (
 	"context"
-
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"time"
 
-	appkubebuilderiov1 "github.com/AnAnonymousFriend/KubeMin-Cli/api/v1"
+	appv1 "github.com/AnAnonymousFriend/KubeMin-Cli/api/v1"
 )
 
 // ApplicationReconciler reconciles a Application object
@@ -37,19 +38,33 @@ type ApplicationReconciler struct {
 //+kubebuilder:rbac:groups=app.kubebuilder.io,resources=applications/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=app.kubebuilder.io,resources=applications/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the Application object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
-func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+var CounterReconcileApplication = 0
 
-	// TODO(user): your logic here
+func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	<-time.NewTicker(100 * time.Millisecond).C
+	logs := log.FromContext(ctx)
+
+	CounterReconcileApplication += 1
+	logs.Info("Starting a reconcile", "number", CounterReconcileApplication)
+	app := &appv1.Application{}
+	if err := r.Get(ctx, req.NamespacedName, app); err != nil {
+		if errors.IsNotFound(err) {
+			logs.Info("Application not found.")
+			return ctrl.Result{}, nil
+		}
+		logs.Error(err, "Failed to get the Application, will requeue after a short time.")
+		return ctrl.Result{Requeue: false}, err
+	}
+
+	// reconcile sub-resources
+	var result ctrl.Result
+	var err error
+
+	result, err = r.reconcileDeployment(ctx, app)
+	if err != nil {
+		logs.Error(err, "Failed to reconcile Deployment.")
+		return result, err
+	}
 
 	return ctrl.Result{}, nil
 }
@@ -57,6 +72,6 @@ func (r *ApplicationReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 // SetupWithManager sets up the controller with the Manager.
 func (r *ApplicationReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&appkubebuilderiov1.Application{}).
+		For(&appv1.Application{}).
 		Complete(r)
 }
