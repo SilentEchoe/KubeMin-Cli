@@ -11,7 +11,7 @@ var cfgFile string
 
 // 构建根 command 命令。前面我们介绍它还可以有子命令，这个command里没有构建子命令
 var rootCmd = &cobra.Command{
-	Use:   "KubeMin-CLI",
+	Use:   "kubectl",
 	Short: "A brief description of your application",
 	Long: `A longer description that spans multiple lines and likely contains
 examples and usage of using your application. For example:
@@ -21,7 +21,7 @@ This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 }
 
-// 执行 rootCmd 命令并检测错误
+// Execute 执行 kubectl 命令并检测错误
 func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
