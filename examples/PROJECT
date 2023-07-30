@@ -3,4 +3,13 @@ layout:
 - go.kubebuilder.io/v3
 projectName: examples
 repo: github.com/AnAnonymousFriend/KubeMin-Cli
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: app.kubebuilder.io
+  kind: Application
+  path: github.com/AnAnonymousFriend/KubeMin-Cli/api/v1
+  version: v1
 version: "3"
