@@ -8,6 +8,8 @@ domain 领域层，定义Repository接口
 
 infrastructure 提供domain层的Repository接口实现
 
+Event 异步任务模块，通过工作池的方式实现
+
 
 
 

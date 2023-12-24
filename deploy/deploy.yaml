@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubemin-cli
+  labels:
+    app: kubemin-cli
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubemin-cli
+  template:
+    metadata:
+      name: kubemin-cli
+      labels:
+        app: kubemin-cli
+    spec:
+      containers:
+        - name: kubemin-cli
+          image: anonymitycat/kubemin-cli:latest
+          imagePullPolicy: IfNotPresent
+      restartPolicy: Always
