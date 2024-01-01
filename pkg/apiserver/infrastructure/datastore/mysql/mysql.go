@@ -43,7 +43,7 @@ func New(ctx context.Context, cfg datastore.Config) (datastore.DataStore, error)
 	return m, nil
 }
 
-// Add data model
+// Add a data model
 func (m *mysql) Add(ctx context.Context, entity datastore.Entity) error {
 	if entity.PrimaryKey() == "" {
 		return datastore.ErrPrimaryEmpty
@@ -86,7 +86,7 @@ func (m *mysql) BatchAdd(ctx context.Context, entities []datastore.Entity) error
 	return nil
 }
 
-// Get get a data model
+// Get a data model
 func (m *mysql) Get(ctx context.Context, entity datastore.Entity) error {
 	if entity.PrimaryKey() == "" {
 		return datastore.ErrPrimaryEmpty
