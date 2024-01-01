@@ -12,7 +12,6 @@ import (
 // APIServer interface for call api server
 type APIServer interface {
 	Run(context.Context, chan error) error
-	BuildRestfulConfig() (*restfulSpec.Config, error)
 }
 
 // restServer rest server
@@ -22,11 +21,8 @@ type restServer struct {
 }
 
 // New create api server with config data
-func New(cfg config.Config) (a APIServer) {
-	s := &restServer{
-		cfg: cfg,
-	}
-	return s
+func New(cfg config.Config) APIServer {
+	return nil
 }
 
 func (s *restServer) buildIoCContainer() error {

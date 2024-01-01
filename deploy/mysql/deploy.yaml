@@ -5,7 +5,7 @@ metadata:
   name: mysql-secret
 type: Opaque
 data:
-  MYSQL_ROOT_PASSWORD: <base64 encoded password>
+  MYSQL_ROOT_PASSWORD: MTIzNDU2 #<base64 encoded password>
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -15,6 +15,17 @@ data:
   my.cnf: |
     [mysqld]
     lower_case_table_names=1
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -31,7 +42,7 @@ spec:
     spec:
       containers:
         - name: mysql
-          image: mysql:5.7
+          image: mysql:latest
           env:
             - name: MYSQL_ROOT_PASSWORD
               valueFrom:
