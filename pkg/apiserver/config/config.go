@@ -14,7 +14,7 @@ func NewConfig() *Config {
 		Datastore: datastore.Config{
 			Type:     "kubeapi",
 			Database: "kubemincli",
-			URL:      "",
+			URL:      "Data Source=127.0.0.1;Database=kubemin;User Id=root;Password=123456;",
 		},
 	}
 }

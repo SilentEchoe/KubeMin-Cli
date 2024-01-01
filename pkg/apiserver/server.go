@@ -1,12 +1,12 @@
 package apiserver
 
 import (
+	"context"
+	"fmt"
+
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
-	"context"
-	"fmt"
-	"kubevela/pkg/apiserver/infrastructure/clients"
 )
 
 // APIServer interface for call api server
@@ -26,11 +26,6 @@ func New(cfg config.Config) APIServer {
 }
 
 func (s *restServer) buildIoCContainer() error {
-	err := clients.SetKubeConfig(s.cfg)
-	if err != nil {
-		return err
-	}
-
 	ds, err := mysql.New(context.Background(), s.cfg.Datastore)
 	if err != nil {
 		return fmt.Errorf("create mysql datastore instance failure %w", err)
