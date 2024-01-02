@@ -1,7 +1,5 @@
 package mysql
 
-import "testing"
-
-func TestMysqlTest(t *testing.T) {
-
-}
+import (
+	_ "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+)
