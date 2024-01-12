@@ -26,6 +26,7 @@ func KubeConfigLocal() {
 	} else {
 		kubeConfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
+	NewKubeClient()
 }
 
 func GetKubeClient() *kubernetes.Clientset {

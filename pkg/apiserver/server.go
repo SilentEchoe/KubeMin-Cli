@@ -1,52 +1,63 @@
 package apiserver
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"context"
 	"fmt"
-	"k8s.io/klog"
+
+	"k8s.io/client-go/kubernetes"
+
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 )
 
 // APIServer interface for call api server
 type APIServer interface {
 	Run(context.Context, chan error) error
+	BuildRestfulConfig() error //加载配置
 }
 
-// server rest server
-type server struct {
-	cfg       config.Config
-	dataStore datastore.DataStore
+type Server struct {
+	cfg        config.Config
+	dataStore  datastore.DataStore
+	KubeClient *kubernetes.Clientset
 }
 
-// New create api server with config data
-func New(cfg config.Config) APIServer {
-	return nil
-}
-
-func (s *server) buildIoCContainer() error {
-	ds, err := mysql.New(context.Background(), s.cfg.Datastore)
-	if err != nil {
-		return fmt.Errorf("create mysql datastore instance failure %w", err)
+func New(cfg config.Config) (a APIServer) {
+	return &Server{
+		cfg: cfg,
 	}
-	s.dataStore = ds
+}
+
+func (s *Server) Run(context.Context, chan error) error {
+	// 1. build the Ioc Container
+	// 2. init database
+	// 3. 注册服务路由
+
 	return nil
 }
 
-func (s *server) Run(ctx context.Context, err chan error) error {
+func (s *Server) BuildRestfulConfig() error {
+	// 加载配置,有两种加载配置的方式，一种是读静态文件，一种是读ConfigMap
 
-	// build the Ioc Container
-	if err := s.buildIoCContainer(); err != nil {
-		return err
+	return nil
+}
+
+func (s *Server) buildIocContainer() error {
+	if s.cfg.LocalCluster {
+		clients.KubeConfigLocal()
+		s.KubeClient = clients.GetKubeClient()
 	}
 
-	return nil
-}
-
-func (s *server) startHTTP(ctx context.Context) error {
-	// Start HTTP apiserver
-	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BinAddr, ctx)
+	var err error
+	switch s.cfg.DatastoreType {
+	case config.Mysql:
+		s.dataStore, err = mysql.New(context.Background(), s.cfg.Datastore)
+		if err != nil {
+			return fmt.Errorf("create mysql datastore instance failure %w", err)
+		}
+	}
 
 	return nil
 }
