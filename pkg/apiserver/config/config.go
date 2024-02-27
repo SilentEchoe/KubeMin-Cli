@@ -7,11 +7,11 @@ const (
 )
 
 type Config struct {
-	BinAddr string
-	// Datastore config
+	BinAddr       string
 	Datastore     datastore.Config
 	DatastoreType string
 	LocalCluster  bool
+	IstioEnable   bool
 }
 
 func NewConfig() *Config {
@@ -22,7 +22,8 @@ func NewConfig() *Config {
 			Database: "kubemincli",
 			URL:      "Data Source=127.0.0.1;Database=kubemin;User Id=root;Password=123456;",
 		},
-		LocalCluster:  true,  //默认本地集群,
-		DatastoreType: Mysql, //默认为Mysql
+		LocalCluster:  true,
+		DatastoreType: Mysql,
+		IstioEnable:   false,
 	}
 }
