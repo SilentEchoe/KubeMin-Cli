@@ -1,0 +1,5 @@
+package datastore
+
+func Write() {
+
+}

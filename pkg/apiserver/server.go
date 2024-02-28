@@ -1,7 +1,6 @@
 package apiserver
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"context"
 	"fmt"
 
@@ -20,27 +19,15 @@ type APIServer interface {
 }
 
 type Server struct {
-	Container  *container.Container
-	cfg        config.Config
+	cfg        *config.Config
 	dataStore  datastore.DataStore
 	KubeClient *kubernetes.Clientset
 }
 
-func New(cfg config.Config) (a APIServer) {
+func New(cfg *config.Config) (a APIServer) {
 	return &Server{
 		cfg: cfg,
 	}
-}
-
-func (s *Server) Run(context.Context, chan error) error {
-	// 1. build the Ioc Container
-	if err := s.buildIocContainer(); err != nil {
-		return fmt.Errorf("build ioc container failure %w", err)
-	}
-	// 2. init database
-	// 3. 注册服务路由
-
-	return nil
 }
 
 func (s *Server) BuildRestfulConfig() error {
@@ -64,11 +51,24 @@ func (s *Server) buildIocContainer() error {
 			return fmt.Errorf("create mysql datastore instance failure %w", err)
 		}
 	}
+	// 注册datastore 至Ioc
 
 	// init domain
 
 	// interfaces
 	// event
+
+	return nil
+}
+
+func (s *Server) Run(context.Context, chan error) error {
+
+	// 1. build the Ioc Container
+	if err := s.buildIocContainer(); err != nil {
+		return fmt.Errorf("build ioc container failure %w", err)
+	}
+	// 2. init database
+	// 3. 注册服务路由
 
 	return nil
 }
