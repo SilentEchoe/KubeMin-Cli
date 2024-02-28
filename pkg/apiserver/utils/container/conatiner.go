@@ -6,12 +6,14 @@ import (
 )
 
 type Container struct {
+	graph interface{}
 }
 
 func NewContainer() *Container {
 	return &Container{}
 }
 
+// 提供提供一些具有默认名称的bean
 func (c *Container) Provides(beans ...interface{}) error {
 
 	return nil

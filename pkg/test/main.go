@@ -1,68 +1,40 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"os"
-	"time"
+	"github.com/google/wire"
 )
 
-// Message is what greeters will use to greet guests.
-type Message string
-
-// NewMessage creates a default Message.
-func NewMessage(phrase string) Message {
-	return Message(phrase)
+type Service interface {
+	Run()
 }
 
-// NewGreeter initializes a Greeter. If the current epoch time is an even
-// number, NewGreeter will create a grumpy Greeter.
-func NewGreeter(m Message) Greeter {
-	var grumpy bool
-	if time.Now().Unix()%2 == 0 {
-		grumpy = true
+// Auth 创建Auth 模块
+type Auth struct {
+	UserName string
+}
+
+func (a *Auth) Run() {
+	fmt.Println("Service User:", a.UserName)
+}
+
+func provideAuth() *Auth {
+	return &Auth{UserName: "kai"}
+}
+
+// Role
+type Role struct {
+	Domain []string
+}
+
+func (r *Role) Run() {
+	for _, v := range r.Domain {
+		fmt.Println("domain:", v)
 	}
-	return Greeter{Message: m, Grumpy: grumpy}
 }
 
-// Greeter is the type charged with greeting guests.
-type Greeter struct {
-	Grumpy  bool
-	Message Message
+func provideRole() *Role {
+	return &Role{Domain: []string{"test"}}
 }
 
-// Greet produces a greeting for guests.
-func (g Greeter) Greet() Message {
-	if g.Grumpy {
-		return Message("Go away!")
-	}
-	return g.Message
-}
-
-// NewEvent creates an event with the specified greeter.
-func NewEvent(g Greeter) (Event, error) {
-	if g.Grumpy {
-		return Event{}, errors.New("could not create event: event greeter is grumpy")
-	}
-	return Event{Greeter: g}, nil
-}
-
-// Event is a gathering with greeters.
-type Event struct {
-	Greeter Greeter
-}
-
-// Start ensures the event starts with greeting all guests.
-func (e Event) Start() {
-	msg := e.Greeter.Greet()
-	fmt.Println(msg)
-}
-
-func main() {
-	e, err := InitializeEvent("hi there!")
-	if err != nil {
-		fmt.Printf("failed to create event: %s\n", err)
-		os.Exit(2)
-	}
-	e.Start()
-}
+var Set = wire.NewSet(provideAuth, provideRole, wire.Bind(new(Auth), new(Role)))
