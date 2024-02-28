@@ -1,40 +1,39 @@
 package main
 
-import (
-	"fmt"
-	"github.com/google/wire"
-)
+import "fmt"
 
-type Service interface {
-	Run()
+type AuthService struct {
+	Name string
 }
 
-// Auth 创建Auth 模块
-type Auth struct {
-	UserName string
+func NewAuthService(name string) AuthService {
+	return AuthService{Name: name}
 }
 
-func (a *Auth) Run() {
-	fmt.Println("Service User:", a.UserName)
+type RoleService struct {
+	doamin string
 }
 
-func provideAuth() *Auth {
-	return &Auth{UserName: "kai"}
+func NewRoleService() RoleService {
+	return RoleService{doamin: "拥有访问角色模块权限"}
 }
 
-// Role
-type Role struct {
-	Domain []string
+type UserService struct {
+	RoleService RoleService
+	AuthService AuthService
 }
 
-func (r *Role) Run() {
-	for _, v := range r.Domain {
-		fmt.Println("domain:", v)
-	}
+func NewUserService(r RoleService, a AuthService) UserService {
+	return UserService{RoleService: r, AuthService: a}
 }
 
-func provideRole() *Role {
-	return &Role{Domain: []string{"test"}}
+func (u UserService) Start() {
+	fmt.Printf("用户:%s,拥有权限域:%s", u.AuthService.Name, u.RoleService.doamin)
 }
 
-var Set = wire.NewSet(provideAuth, provideRole, wire.Bind(new(Auth), new(Role)))
+func main() {
+	auth := NewAuthService("kai")
+	role := NewRoleService()
+	user := NewUserService(role, auth)
+	user.Start()
+}
