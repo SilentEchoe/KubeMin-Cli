@@ -3,6 +3,8 @@ package apiserver
 import (
 	"context"
 	"fmt"
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
 
 	"k8s.io/client-go/kubernetes"
 
@@ -15,7 +17,7 @@ import (
 // APIServer interface for call api server
 type APIServer interface {
 	Run(context.Context, chan error) error
-	BuildRestfulConfig() error //加载配置
+	buildRestfulConfig() error //加载配置
 }
 
 type Server struct {
@@ -30,7 +32,7 @@ func New(cfg *config.Config) (a APIServer) {
 	}
 }
 
-func (s *Server) BuildRestfulConfig() error {
+func (s *Server) buildRestfulConfig() error {
 	// 加载配置,有两种加载配置的方式，一种是读静态文件，一种是读ConfigMap
 
 	return nil
@@ -63,12 +65,25 @@ func (s *Server) buildIocContainer() error {
 
 func (s *Server) Run(context.Context, chan error) error {
 
-	// 1. build the Ioc Container
-	if err := s.buildIocContainer(); err != nil {
-		return fmt.Errorf("build ioc container failure %w", err)
+	// 1. load configs
+	if err := s.buildRestfulConfig(); err != nil {
+		return fmt.Errorf("load config err %w", err)
 	}
-	// 2. init database
-	// 3. 注册服务路由
+	// 3. registry gin router
+	g := newKubeMinCliServer()
+	g.router.Run()
 
 	return nil
+}
+
+type KubeMinCliServer struct {
+	router *gin.Engine //路由
+}
+
+func newKubeMinCliServer() *KubeMinCliServer {
+	g := gin.Default()
+	g.Use(cors.Default())
+	return &KubeMinCliServer{
+		router: g,
+	}
 }
