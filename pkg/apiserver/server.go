@@ -12,6 +12,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // APIServer interface for call api server
@@ -33,22 +34,35 @@ func New(cfg *config.Config) (a APIServer) {
 }
 
 func (s *Server) buildRestfulConfig() error {
-	// 加载配置,有两种加载配置的方式，一种是读静态文件，一种是读ConfigMap
+	// 1. 加载Config配置
+	if s.cfg.ConfigMapName != "" {
+		clients.KubeConfigLocal()
+		s.KubeClient = clients.GetKubeClient()
+		configMaps, err := s.KubeClient.CoreV1().ConfigMaps("").Get(context.Background(), s.cfg.ConfigMapName, metav1.GetOptions{})
+		if err != nil {
+			return fmt.Errorf("get configmap error %w", err)
+		}
+		// 2. 解析Config配置
+		if err := s.cfg.ParseConfigMap(configMaps); err != nil {
+			return fmt.Errorf("parse configmap error %w", err)
+		}
+
+	}
 
 	return nil
 }
 
 // 构建Ioc
 func (s *Server) buildIocContainer() error {
-	if s.cfg.LocalCluster {
+	if s.cfg.ConfigInfo.LocalCluster {
 		clients.KubeConfigLocal()
 		s.KubeClient = clients.GetKubeClient()
 	}
 
 	var err error
-	switch s.cfg.DatastoreType {
+	switch s.cfg.ConfigInfo.DatastoreType {
 	case config.Mysql:
-		s.dataStore, err = mysql.New(context.Background(), s.cfg.Datastore)
+		s.dataStore, err = mysql.New(context.Background(), s.cfg.ConfigInfo.Datastore)
 		if err != nil {
 			return fmt.Errorf("create mysql datastore instance failure %w", err)
 		}
