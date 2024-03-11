@@ -34,7 +34,7 @@ func New(cfg *config.Config) (a APIServer) {
 }
 
 func (s *Server) buildRestfulConfig() error {
-	// 1. 加载Config配置
+	// 1. 加载ConfigMap配置
 	if s.cfg.ConfigMapName != "" {
 		clients.KubeConfigLocal()
 		s.KubeClient = clients.GetKubeClient()
@@ -46,8 +46,10 @@ func (s *Server) buildRestfulConfig() error {
 		if err := s.cfg.ParseConfigMap(configMaps); err != nil {
 			return fmt.Errorf("parse configmap error %w", err)
 		}
-
+		return nil
 	}
+	//3. 如果没有configmap则加载默认配置
+	s.cfg = config.NewConfig()
 
 	return nil
 }
@@ -83,6 +85,12 @@ func (s *Server) Run(context.Context, chan error) error {
 	if err := s.buildRestfulConfig(); err != nil {
 		return fmt.Errorf("load config err %w", err)
 	}
+
+	// 2. load all components
+	if err := s.buildIocContainer(); err != nil {
+		return fmt.Errorf("build ioc container err %w", err)
+	}
+
 	// 3. registry gin router
 	g := newKubeMinCliServer()
 	g.router.Run()

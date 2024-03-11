@@ -1,5 +1,0 @@
-package datastore
-
-func Write() {
-
-}

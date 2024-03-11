@@ -2,6 +2,7 @@ package config
 
 import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"encoding/json"
 	v1 "k8s.io/api/core/v1"
 )
 
@@ -39,7 +40,19 @@ func NewConfig() *Config {
 	}
 }
 
-func (c Config) ParseConfigMap(maps *v1.ConfigMap) interface{} {
+func (c *Config) ParseConfigMap(maps *v1.ConfigMap) error {
 
-	return nil
+	if maps != nil {
+		data, err := json.Marshal(maps.Data)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(data, &c.ConfigInfo)
+		if err != nil {
+			return err
+		}
+	}
+
+	return error(nil)
 }

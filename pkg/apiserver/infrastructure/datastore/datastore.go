@@ -17,7 +17,7 @@ var (
 	// ErrNilEntity Error that entity is nil
 	ErrNilEntity = NewDBError(fmt.Errorf("entity is nil"))
 
-	// ErrRecordExist Error that entity primary key is exist
+	// ErrRecordExist Error that entity primary key exists
 	ErrRecordExist = NewDBError(fmt.Errorf("data record is exist"))
 
 	// ErrRecordNotExist Error that entity primary key is not exist
@@ -127,7 +127,7 @@ type DataStore interface {
 	// Add adds entity to database, Name() and TableName() can't return zero value.
 	Add(ctx context.Context, entity Entity) error
 
-	// BatchAdd will adds batched entities to database, Name() and TableName() can't return zero value.
+	// BatchAdd will add batched entities to database, Name() and TableName() can't return zero value.
 	BatchAdd(ctx context.Context, entities []Entity) error
 
 	// Put will update entity to database, Name() and TableName() can't return zero value.
