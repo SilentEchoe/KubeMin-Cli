@@ -1,11 +1,11 @@
 package main
 
 import (
-	"KubeMin-Cli/pkg/apiserver"
-	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/cmd/server/app"
 	"context"
 	"fmt"
 	"k8s.io/klog/v2"
+	"log"
 	"os"
 	"os/signal"
 	"syscall"
@@ -40,10 +40,9 @@ func Run() error {
 func run(ctx context.Context, errChan chan error) error {
 	klog.Infof("KubeMin-CLI Start ……")
 
-	// init 默认的config
-	config := config.NewConfig()
-	// init server
-	server := apiserver.New(config)
-
-	return server.Run(ctx, errChan)
+	cmd := app.NewAPIServerCommand()
+	if err := cmd.Execute(); err != nil {
+		log.Fatalln(err)
+	}
+	return nil
 }

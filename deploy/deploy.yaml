@@ -20,3 +20,14 @@ spec:
           image: anonymitycat/kubemin-cli:latest
           imagePullPolicy: IfNotPresent
       restartPolicy: Always
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kube-cli-configmap
+data:
+  BINADDR: "0.0.0.0:8000"
+  LOG_LEVEL: "DEBUG"
+  DATABASE_HOST: "db.example.com"
+  DATABASE_PORT: "5432"

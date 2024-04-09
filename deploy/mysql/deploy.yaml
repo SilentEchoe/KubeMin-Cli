@@ -5,7 +5,7 @@ metadata:
   name: mysql-secret
 type: Opaque
 data:
-  MYSQL_ROOT_PASSWORD: MTIzNDU2 #<base64 encoded password>
+  MYSQL_ROOT_PASSWORD: d2VueHVlMTIzNDU2 #<base64 encoded password>
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -77,6 +77,6 @@ spec:
   ports:
     - port: 3306
       targetPort: 3306
-      nodePort: 30036
+      nodePort: 30037
   selector:
     app: mysql

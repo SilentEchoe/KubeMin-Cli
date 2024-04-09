@@ -2,7 +2,7 @@ package utils
 
 import "math/rand"
 
-// RandomString 创建一个随机数
+// RandomString 创建一个随机数(包含大小写)
 func RandomString(n int) string {
 	var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	result := make([]byte, n)
@@ -12,7 +12,7 @@ func RandomString(n int) string {
 	return string(result)
 }
 
-// RandomStringWithNumber 创建一个带数字的随机数
+// RandomStringWithNumber 创建一个包含大小写并带数字的随机数
 func RandomStringWithNumber(n int) string {
 	var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789")
 	result := make([]byte, n)
