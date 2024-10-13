@@ -1,16 +1,1 @@
-本项目使用DDD的项目结构
-
-Application 应用层，负责业务编排，对象转换
-
-interfaces 输入层
-
-domain 领域层，定义Repository接口
-
-infrastructure 提供domain层的Repository接口实现
-
-Event 异步任务模块，通过工作池的方式实现
-
-
-
-
-
+KubeMin-Cli 是一个云原生命令工具，它以云原生服务应用为中心，基于Kubernetes，帮助开发人员在公有云/私有云集群中，部署中间件服务。
