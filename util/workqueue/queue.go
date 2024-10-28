@@ -1,4 +1,4 @@
-package workqueue
+package main
 
 import (
 	"k8s.io/utils/clock"
