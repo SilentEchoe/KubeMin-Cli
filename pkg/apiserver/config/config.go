@@ -1,7 +1,6 @@
 package config
 
 import (
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"fmt"
 	"github.com/spf13/pflag"
 )
@@ -11,23 +10,19 @@ type Config struct {
 	BindAddr string
 	//DTM Distributed transaction management
 	DTMAddr string
-	// Datastore config
-	Datastore datastore.Config
 	// LocalCluster
 	LocalCluster bool
+	// KubeConfig
+	KubeConfig string
 	// Istio Enable
 	IstioEnable bool
 }
 
 func NewConfig() *Config {
 	return &Config{
-		BindAddr: "0.0.0.0:8000",
-		Datastore: datastore.Config{
-			Type:     "kubeapi",
-			Database: "kubemincli",
-			URL:      "Data Source=127.0.0.1;Database=kubemin;User Id=root;Password=123456;",
-		},
+		BindAddr:     "0.0.0.0:8000",
 		LocalCluster: true,
+		KubeConfig:   "",
 		IstioEnable:  false,
 		DTMAddr:      "",
 	}
@@ -35,9 +30,8 @@ func NewConfig() *Config {
 
 func (c *Config) Validate() []error {
 	var errs []error
-	//Currently, only redis is supported
-	if c.Datastore.Type != REDIS {
-		errs = append(errs, fmt.Errorf("not support datastore type %s", c.Datastore.Type))
+	if c.LocalCluster && c.KubeConfig == "" {
+		errs = append(errs, fmt.Errorf("when localCluster is set to false, KubeConfig must be set"))
 	}
 	return errs
 }
@@ -45,9 +39,6 @@ func (c *Config) Validate() []error {
 // AddFlags adds flags to the specified FlagSet
 func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.StringVar(&c.BindAddr, "bind-addr", configParameter.BindAddr, "The bind address used to serve the http APIs.")
-	fs.StringVar(&c.Datastore.Type, "datastore-type", configParameter.Datastore.Type, "Metadata storage driver type, support mysql")
-	fs.StringVar(&c.Datastore.Database, "datastore-database", configParameter.Datastore.Database, "Metadata storage database name, takes effect when the storage driver is mysql.")
-	fs.StringVar(&c.Datastore.URL, "datastore-url", configParameter.Datastore.URL, "Metadata storage database url,takes effect when the storage driver is mysql.")
 	AddFlags(fs)
 }
 
