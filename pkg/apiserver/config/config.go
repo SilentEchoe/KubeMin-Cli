@@ -35,8 +35,8 @@ func NewConfig() *Config {
 
 func (c *Config) Validate() []error {
 	var errs []error
-	//Currently, only mysql is supported
-	if c.Datastore.Type != MYSQL {
+	//Currently, only redis is supported
+	if c.Datastore.Type != REDIS {
 		errs = append(errs, fmt.Errorf("not support datastore type %s", c.Datastore.Type))
 	}
 	return errs

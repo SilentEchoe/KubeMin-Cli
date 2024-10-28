@@ -2,5 +2,5 @@ package config
 
 const (
 	REDIS = "redis"
-	TIDB  = "Tidb"
+	TIDB  = "tidb"
 )
