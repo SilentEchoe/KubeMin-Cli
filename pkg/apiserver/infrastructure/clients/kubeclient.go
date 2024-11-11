@@ -40,3 +40,8 @@ func NewClient(config config.Config) error {
 	kubeClient = clientset
 	return nil
 }
+
+// SetKubeConfig generate the kube config from the config of apiserver
+func SetKubeConfig() error {
+	return nil
+}
