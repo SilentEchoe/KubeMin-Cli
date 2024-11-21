@@ -6,6 +6,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
+	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
@@ -15,11 +16,13 @@ import (
 	"k8s.io/klog/v2"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 	"time"
 )
 
 const (
 	SwaggerConfigRoutePath = "/debug/apidocs.json"
+	BuildPublicPath        = "public/build"
 )
 
 type APIServer interface {
@@ -35,10 +38,29 @@ type restServer struct {
 	KubeConfig    *rest.Config  `inject:"kubeConfig"`
 }
 
-func (s *restServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
+func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	var staticFilters []utils.FilterFunction
 	// API 服务特性注册
 	staticFilters = append(staticFilters, filters.Gzip)
+
+	switch {
+	case strings.HasPrefix(req.URL.Path, SwaggerConfigRoutePath):
+		s.webContainer.ServeHTTP(res, req)
+		return
+	default:
+		for _, pre := range api.GetAPIPrefix() {
+			if strings.HasPrefix(req.URL.Path, pre) {
+				s.webContainer.ServeHTTP(res, req)
+				return
+			}
+		}
+		// Rewrite to index.html, which means this route is handled by frontend.
+		req.URL.Path = "/"
+		utils.NewFilterChain(func(req *http.Request, res http.ResponseWriter) {
+			s.staticFiles(res, req, BuildPublicPath)
+		}, staticFilters...).ProcessFilter(req, res)
+	}
+
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
@@ -176,4 +198,8 @@ func (s *restServer) startHTTP(ctx context.Context) error {
 	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
 	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
 	return server.ListenAndServe()
+}
+
+func (s *restServer) staticFiles(res http.ResponseWriter, req *http.Request, root string) {
+	http.FileServer(http.Dir(root)).ServeHTTP(res, req)
 }
