@@ -1,7 +1,7 @@
 package main
 
 import (
-	"KubeMin-Cli/pkg/cmd/server/app"
+	"KubeMin-Cli/cmd/server/app"
 	"context"
 	"fmt"
 	"k8s.io/klog/v2"

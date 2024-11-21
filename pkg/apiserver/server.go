@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"context"
 	"fmt"
@@ -35,8 +36,9 @@ type restServer struct {
 }
 
 func (s *restServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	//TODO implement me
-	panic("implement me")
+	var staticFilters []utils.FilterFunction
+	// API 服务特性注册
+	staticFilters = append(staticFilters, filters.Gzip)
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
