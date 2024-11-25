@@ -30,7 +30,7 @@ func NewConfig() *Config {
 
 func (c *Config) Validate() []error {
 	var errs []error
-	if c.LocalCluster && c.KubeConfig == "" {
+	if !c.LocalCluster && c.KubeConfig == "" {
 		errs = append(errs, fmt.Errorf("when localCluster is set to false, KubeConfig must be set"))
 	}
 	return errs

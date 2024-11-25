@@ -3,10 +3,10 @@ package apiserver
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/event"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
-	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
@@ -41,7 +41,7 @@ type restServer struct {
 func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	var staticFilters []utils.FilterFunction
 	// API 服务特性注册
-	staticFilters = append(staticFilters, filters.Gzip)
+	//staticFilters = append(staticFilters, filters.Gzip)
 
 	switch {
 	case strings.HasPrefix(req.URL.Path, SwaggerConfigRoutePath):
@@ -64,8 +64,11 @@ func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
-	//TODO implement me
-	panic("implement me")
+	if err := s.buildIoCContainer(); err != nil {
+		return nil, err
+	}
+	config := s.RegisterAPIRoute()
+	return &config, nil
 }
 
 // New create api server with config data
@@ -82,6 +85,18 @@ func (s *restServer) buildIoCContainer() error {
 	// infrastructure
 	if err := s.beanContainer.ProvideWithName("RestServer", s); err != nil {
 		return fmt.Errorf("fail to provides the RestServer bean to the container: %w", err)
+	}
+
+	// 获取k8sClients,先用本地Client
+	kubeClient, err := clients.NewLoadClient()
+	if err != nil {
+		return err
+	}
+
+	authClient := utils.NewAuthClient(kubeClient)
+
+	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
+		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
 	}
 
 	// domain

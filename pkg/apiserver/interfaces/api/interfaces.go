@@ -27,5 +27,16 @@ func GetRegisteredAPI() []Interface {
 }
 
 func InitAPIBean() []interface{} {
-	return []interface{}{}
+	RegisterAPI(NewApplication())
+	var beans []interface{}
+	for i := range registeredAPI {
+		beans = append(beans, registeredAPI[i])
+	}
+	//beans = append(beans, NewWorkflow())
+	return beans
+}
+
+// RegisterAPI register API handler
+func RegisterAPI(ws Interface) {
+	registeredAPI = append(registeredAPI, ws)
 }
