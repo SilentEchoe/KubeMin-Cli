@@ -1,6 +1,7 @@
 package config
 
 import (
+	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 	"time"
@@ -61,12 +62,13 @@ func (c *Config) Validate() []error {
 }
 
 // AddFlags adds flags to the specified FlagSet
-func (s *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
-	fs.StringVar(&s.BindAddr, "bind-addr", configParameter.BindAddr, "The bind address used to serve the http APIs.")
-	fs.StringVar(&s.LeaderConfig.ID, "id", configParameter.LeaderConfig.ID, "the holder identity name")
-	fs.StringVar(&s.LeaderConfig.LockName, "lock-name", configParameter.LeaderConfig.LockName, "the lease lock resource name")
-	fs.DurationVar(&s.LeaderConfig.Duration, "duration", configParameter.LeaderConfig.Duration, "the lease lock resource name")
-	fs.Float64Var(&s.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
-	fs.IntVar(&s.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
-	fs.BoolVar(&s.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
+func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
+	fs.StringVar(&c.BindAddr, "bind-addr", configParameter.BindAddr, "The bind address used to serve the http APIs.")
+	fs.StringVar(&c.LeaderConfig.ID, "id", configParameter.LeaderConfig.ID, "the holder identity name")
+	fs.StringVar(&c.LeaderConfig.LockName, "lock-name", configParameter.LeaderConfig.LockName, "the lease lock resource name")
+	fs.DurationVar(&c.LeaderConfig.Duration, "duration", configParameter.LeaderConfig.Duration, "the lease lock resource name")
+	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
+	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
+	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
+	profiling.AddFlags(fs)
 }
