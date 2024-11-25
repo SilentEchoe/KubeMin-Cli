@@ -3,7 +3,6 @@ package apiserver
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/event"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
@@ -83,20 +82,9 @@ func New(cfg config.Config) (a APIServer) {
 
 func (s *restServer) buildIoCContainer() error {
 	// infrastructure
+	// 注入Rest服务
 	if err := s.beanContainer.ProvideWithName("RestServer", s); err != nil {
 		return fmt.Errorf("fail to provides the RestServer bean to the container: %w", err)
-	}
-
-	// 获取k8sClients,先用本地Client
-	kubeClient, err := clients.NewLoadClient()
-	if err != nil {
-		return err
-	}
-
-	authClient := utils.NewAuthClient(kubeClient)
-
-	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
-		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
 	}
 
 	// domain

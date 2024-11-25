@@ -1,76 +1,124 @@
+/*
+Copyright 2021 The KubeVela Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+	http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package clients
 
 import (
-	"flag"
-	"path/filepath"
+	"fmt"
 
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/util/homedir"
+	cloudshellv1alpha1 "github.com/cloudtty/cloudtty/pkg/apis/cloudshell/v1alpha1"
+	pkgmulticluster "github.com/kubevela/pkg/multicluster"
+	"github.com/kubevela/workflow/api/v1alpha1"
+	"github.com/kubevela/workflow/pkg/cue/packages"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"github.com/oam-dev/kubevela/pkg/auth"
+	"github.com/oam-dev/kubevela/pkg/utils/common"
+
+	apiConfig "github.com/kubevela/velaux/pkg/server/config"
 )
 
-var kubeClient *kubernetes.Clientset
-
-func NewClient(config config.Config) (*kubernetes.Clientset, error) {
-	var localKubeConfig *string
-	var kubeConfig *restclient.Config
-	if config.KubeConfig != "" && !config.LocalCluster {
-		localKubeConfig = &config.KubeConfig
-	}
-	//TODO config.LocalCluster = true
-	config.LocalCluster = true
-
-	if config.LocalCluster {
-		if home := homedir.HomeDir(); home != "" {
-			localKubeConfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-		} else {
-			localKubeConfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-		}
-		_, err := clientcmd.BuildConfigFromFlags("", *localKubeConfig)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	clients, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient = clients
-	return kubeClient, nil
-}
-
-func NewLoadClient() (*kubernetes.Clientset, error) {
-	var localKubeConfig *string
-	if home := homedir.HomeDir(); home != "" {
-		localKubeConfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	} else {
-		localKubeConfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	}
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", *localKubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	clients, err := kubernetes.NewForConfig(kubeConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient = clients
-	return kubeClient, nil
-}
+var kubeClient client.Client
+var kubeConfig *rest.Config
 
 // SetKubeClient for test
-func SetKubeClient(c *kubernetes.Clientset) {
+func SetKubeClient(c client.Client) {
 	kubeClient = c
 }
 
-// SetKubeConfig generate the kube config from the config of apiserver
-func SetKubeConfig() error {
+func setKubeConfig(conf *rest.Config) (err error) {
+	if conf == nil {
+		conf, err = config.GetConfig()
+		if err != nil {
+			return err
+		}
+	}
+	kubeConfig = conf
+	kubeConfig.Wrap(auth.NewImpersonatingRoundTripper)
 	return nil
+}
+
+// SetKubeConfig generate the kube config from the config of apiserver
+func SetKubeConfig(c apiConfig.Config) error {
+	conf, err := config.GetConfig()
+	if err != nil {
+		return err
+	}
+	kubeConfig = conf
+	kubeConfig.Burst = c.KubeBurst
+	kubeConfig.QPS = float32(c.KubeQPS)
+	return setKubeConfig(kubeConfig)
+}
+
+// GetKubeClient create and return kube runtime client
+func GetKubeClient() (client.Client, error) {
+	if kubeClient != nil {
+		return kubeClient, nil
+	}
+	if kubeConfig == nil {
+		return nil, fmt.Errorf("please call SetKubeConfig first")
+	}
+	err := v1alpha1.AddToScheme(common.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	err = cloudshellv1alpha1.AddToScheme(common.Scheme)
+	if err != nil {
+		return nil, err
+	}
+	return pkgmulticluster.NewClient(kubeConfig, pkgmulticluster.ClientOptions{
+		Options: client.Options{Scheme: common.Scheme},
+	})
+}
+
+// GetKubeConfig create/get kube runtime config
+func GetKubeConfig() (*rest.Config, error) {
+	if kubeConfig == nil {
+		return nil, fmt.Errorf("please call SetKubeConfig first")
+	}
+	return kubeConfig, nil
+}
+
+// GetPackageDiscover get package discover
+func GetPackageDiscover() (*packages.PackageDiscover, error) {
+	conf, err := GetKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	pd, err := packages.NewPackageDiscover(conf)
+	if err != nil {
+		if !packages.IsCUEParseErr(err) {
+			return nil, err
+		}
+	}
+	return pd, nil
+}
+
+// GetDiscoveryClient return a discovery client
+func GetDiscoveryClient() (*discovery.DiscoveryClient, error) {
+	conf, err := GetKubeConfig()
+	if err != nil {
+		return nil, err
+	}
+	dc, err := discovery.NewDiscoveryClientForConfig(conf)
+	if err != nil {
+		return nil, err
+	}
+	return dc, nil
 }
