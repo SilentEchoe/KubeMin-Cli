@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fatih/color"
+	"github.com/kubevela/pkg/util/profiling"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
 	"os"
@@ -48,7 +49,7 @@ func Run(s *options.ServerRunOptions) error {
 	defer cancel()
 
 	// 用来通知
-	//go profiling.StartProfilingServer(errChan)
+	go profiling.StartProfilingServer(errChan)
 
 	go func() {
 		if err := run(ctx, s, errChan); err != nil {
