@@ -1,10 +1,14 @@
 package config
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 	"time"
+)
+
+var (
+	// Addr the address for starting profiling server
+	Addr = ""
 )
 
 type leaderConfig struct {
@@ -70,5 +74,9 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
 	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
-	profiling.AddFlags(fs)
+	addFlags(fs)
+}
+
+func addFlags(fs *pflag.FlagSet) {
+	fs.StringVarP(&Addr, "profiling-addr", "", Addr, "if not empty, start the profiling server at the given address")
 }

@@ -2,7 +2,6 @@ package options
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/utils/features"
 	"flag"
 	cliflag "k8s.io/component-base/cli/flag"
 
@@ -26,7 +25,6 @@ func NewServerRunOptions() *ServerRunOptions {
 func (s *ServerRunOptions) Flags() (fss cliflag.NamedFlagSets) {
 	fs := fss.FlagSet("generic")
 	s.GenericServerRunOptions.AddFlags(fs, s.GenericServerRunOptions)
-	features.APIServerMutableFeatureGate.AddFlag(fss.FlagSet("featuregate"))
 	local := flag.NewFlagSet("klog", flag.ExitOnError)
 	klog.InitFlags(local)
 	fs.AddGoFlagSet(local)

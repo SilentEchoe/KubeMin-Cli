@@ -3,7 +3,6 @@ package app
 import (
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
-	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 	"context"
 	"fmt"
 	"github.com/fatih/color"
@@ -48,7 +47,8 @@ func Run(s *options.ServerRunOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	go profiling.StartProfilingServer(errChan)
+	// 用来通知
+	//go profiling.StartProfilingServer(errChan)
 
 	go func() {
 		if err := run(ctx, s, errChan); err != nil {
