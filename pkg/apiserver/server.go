@@ -2,7 +2,6 @@ package apiserver
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
@@ -98,9 +97,9 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// event
-	if err := s.beanContainer.Provides(event.InitEvent()...); err != nil {
-		return fmt.Errorf("fail to provides the event bean to the container: %w", err)
-	}
+	//if err := s.beanContainer.Provides(event.InitEvent()...); err != nil {
+	//	return fmt.Errorf("fail to provides the event bean to the container: %w", err)
+	//}
 
 	if err := s.beanContainer.Populate(); err != nil {
 		return fmt.Errorf("fail to populate the bean container: %w", err)

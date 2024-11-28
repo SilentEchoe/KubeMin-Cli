@@ -6,16 +6,23 @@ toolchain go1.22.5
 
 require (
 	github.com/barnettZQG/inject v0.0.1
+	github.com/cloudtty/cloudtty v0.5.0
 	github.com/emicklei/go-restful-openapi/v2 v2.11.0
 	github.com/emicklei/go-restful/v3 v3.11.0
+	github.com/fatih/color v1.15.0
 	github.com/go-openapi/spec v0.20.9
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
+	github.com/google/uuid v1.6.0
+	github.com/kubevela/pkg v1.8.1-0.20230613075152-2cef0c31b14e
 	github.com/kubevela/velaux v1.9.4
+	github.com/kubevela/workflow v0.6.0
+	github.com/oam-dev/kubevela v1.9.4
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	helm.sh/helm/v3 v3.16.2
 	k8s.io/apimachinery v0.31.2
+	k8s.io/apiserver v0.31.1
 	k8s.io/client-go v0.31.2
 	k8s.io/component-base v0.31.1
 	k8s.io/klog/v2 v2.130.1
@@ -49,7 +56,6 @@ require (
 	github.com/evanphx/json-patch v5.9.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/facebookgo/structtag v0.0.0-20150214074306-217e25fb9691 // indirect
-	github.com/fatih/color v1.15.0 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/form3tech-oss/jwt-go v3.2.5+incompatible // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
@@ -69,7 +75,6 @@ require (
 	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/gosuri/uitable v0.0.4 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.1-0.20191002090509-6af20e3a5340 // indirect
@@ -85,8 +90,6 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	github.com/klauspost/compress v1.16.5 // indirect
-	github.com/kubevela/pkg v1.8.1-0.20230613075152-2cef0c31b14e // indirect
-	github.com/kubevela/workflow v0.6.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -105,7 +108,6 @@ require (
 	github.com/mxk/go-flowrate v0.0.0-20140419014527-cca7078d478f // indirect
 	github.com/oam-dev/cluster-gateway v1.9.0-alpha.2 // indirect
 	github.com/oam-dev/cluster-register v1.0.4-0.20230424040021-147f7c1fefe5 // indirect
-	github.com/oam-dev/kubevela v1.9.4 // indirect
 	github.com/oam-dev/terraform-config-inspect v0.0.0-20210418082552-fc72d929aa28 // indirect
 	github.com/oam-dev/terraform-controller v0.7.11 // indirect
 	github.com/onsi/gomega v1.33.1 // indirect
@@ -164,7 +166,6 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/api v0.31.2 // indirect
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
-	k8s.io/apiserver v0.31.1 // indirect
 	k8s.io/cli-runtime v0.31.1 // indirect
 	k8s.io/klog v1.0.0 // indirect
 	k8s.io/kms v0.31.1 // indirect
