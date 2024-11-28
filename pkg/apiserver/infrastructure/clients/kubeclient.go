@@ -85,3 +85,11 @@ func GetKubeClient() (*kubernetes.Clientset, error) {
 	SetKubeClient(loadClient)
 	return loadClient, nil
 }
+
+// GetKubeConfig create/get kube runtime config
+func GetKubeConfig() (*rest.Config, error) {
+	if kubeConfig == nil {
+		return nil, fmt.Errorf("please call SetKubeConfig first")
+	}
+	return kubeConfig, nil
+}

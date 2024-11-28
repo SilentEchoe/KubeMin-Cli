@@ -1,10 +1,11 @@
 package config
 
 import (
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"github.com/oam-dev/kubevela/pkg/utils/apply"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 )
 
 // Factory handle the config
@@ -15,23 +16,15 @@ type Factory interface {
 type Dispatcher func(context.Context, []*unstructured.Unstructured, []apply.ApplyOption) error
 
 type kubeConfigFactory struct {
-	cli      client.Client
+	cli      *kubernetes.Clientset
 	apiApply Dispatcher
 }
 
 // NewConfigFactory create a config factory instance
-func NewConfigFactory(cli client.Client) Factory {
-	return &kubeConfigFactory{cli: cli, apiApply: defaultDispatcher(cli)}
+func NewConfigFactory(cli *utils.AuthClient) Factory {
+	return &kubeConfigFactory{cli: cli.Clientset, apiApply: defaultDispatcher(cli)}
 }
 
-func defaultDispatcher(cli client.Client) Dispatcher {
-	api := apply.NewAPIApplicator(cli)
-	return func(ctx context.Context, manifests []*unstructured.Unstructured, ao []apply.ApplyOption) error {
-		for _, m := range manifests {
-			if err := api.Apply(ctx, m, ao...); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
+func defaultDispatcher(cli *utils.AuthClient) Dispatcher {
+	return nil
 }

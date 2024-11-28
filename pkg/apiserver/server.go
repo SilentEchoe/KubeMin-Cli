@@ -3,17 +3,14 @@ package apiserver
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	pkgconfig "KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
+	"KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/apply"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/kubevela/velaux/pkg/server/domain/service"
-	"github.com/kubevela/velaux/pkg/server/infrastructure/clients"
-	"github.com/kubevela/velaux/pkg/server/interfaces/api"
-	"github.com/kubevela/velaux/pkg/server/utils"
-	"github.com/oam-dev/kubevela/pkg/utils/apply"
-
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -89,21 +86,6 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the config factory bean to the container: %w", err)
 	}
 
-	// domain
-	if err := s.beanContainer.Provides(service.InitServiceBean(s.cfg)...); err != nil {
-		return fmt.Errorf("fail to provides the service bean to the container: %w", err)
-	}
-
-	// interfaces
-	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
-		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
-	}
-
-	// event
-	if err := s.beanContainer.Provides(event.InitEvent()...); err != nil {
-		return fmt.Errorf("fail to provides the event bean to the container: %w", err)
-	}
-
 	if err := s.beanContainer.Populate(); err != nil {
 		return fmt.Errorf("fail to populate the bean container: %w", err)
 	}
@@ -116,7 +98,7 @@ func (s *restServer) Run(ctx context.Context, errors chan error) error {
 	if err := s.buildIoCContainer(); err != nil {
 		return err
 	}
-
+	return nil
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
