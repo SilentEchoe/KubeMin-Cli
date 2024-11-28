@@ -2,19 +2,20 @@ package apiserver
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
+	pkgconfig "KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"context"
 	"fmt"
+	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
+	"github.com/emicklei/go-restful/v3"
 	"github.com/kubevela/velaux/pkg/server/domain/service"
 	"github.com/kubevela/velaux/pkg/server/infrastructure/clients"
 	"github.com/kubevela/velaux/pkg/server/interfaces/api"
 	"github.com/kubevela/velaux/pkg/server/utils"
 	"github.com/oam-dev/kubevela/pkg/utils/apply"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
-	"github.com/emicklei/go-restful/v3"
 	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 /*
@@ -87,11 +88,7 @@ func (s *restServer) buildIoCContainer() error {
 	if err := s.beanContainer.ProvideWithName("configFactory", factory); err != nil {
 		return fmt.Errorf("fail to provides the config factory bean to the container: %w", err)
 	}
-	// 注册
-	addonStore := pkgaddon.NewRegistryDataStore(authClient)
-	if err := s.beanContainer.ProvideWithName("registryDatastore", addonStore); err != nil {
-		return fmt.Errorf("fail to provides the registry datastore bean to the container: %w", err)
-	}
+
 	// domain
 	if err := s.beanContainer.Provides(service.InitServiceBean(s.cfg)...); err != nil {
 		return fmt.Errorf("fail to provides the service bean to the container: %w", err)
