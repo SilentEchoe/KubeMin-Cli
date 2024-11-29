@@ -3,10 +3,10 @@ package app
 import (
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
+	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 	"context"
 	"fmt"
 	"github.com/fatih/color"
-	"github.com/kubevela/pkg/util/profiling"
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
 	"os"

@@ -4,15 +4,19 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	pkgconfig "KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/apply"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
+	"github.com/kubevela/velaux/pkg/server/interfaces/api"
+	"github.com/kubevela/velaux/pkg/server/utils"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 )
 
 /*
@@ -68,7 +72,7 @@ func (s *restServer) buildIoCContainer() error {
 		return err
 	}
 	// 将这个k8s的连接与用户信息绑定在一起
-	authClient := utils.NewAuthClient(kubeClient)
+	authClient := pkgUtils.NewAuthClient(kubeClient)
 
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
@@ -98,7 +102,72 @@ func (s *restServer) Run(ctx context.Context, errors chan error) error {
 	if err := s.buildIoCContainer(); err != nil {
 		return err
 	}
+
+	s.RegisterAPIRoute()
+
 	return nil
+}
+
+// RegisterAPIRoute register the API route
+func (s *restServer) RegisterAPIRoute() restfulSpec.Config {
+	/* **************************************************************  */
+	/* *************       Open API Route Group     *****************  */
+	/* **************************************************************  */
+	// Add container filter to enable CORS
+	cors := restful.CrossOriginResourceSharing{
+		ExposeHeaders:  []string{},
+		AllowedHeaders: []string{"Content-Type", "Accept", "Authorization", "RefreshToken"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		CookiesAllowed: true,
+		Container:      s.webContainer}
+	// 配置跨域
+	s.webContainer.Filter(cors.Filter)
+
+	// Add container filter to respond to OPTIONS
+	s.webContainer.Filter(s.webContainer.OPTIONSFilter)
+	s.webContainer.Filter(s.OPTIONSFilter)
+
+	// Add request log
+	s.webContainer.Filter(s.requestLog)
+
+	// Register all custom api
+	for _, handler := range api.GetRegisteredAPI() {
+		s.webContainer.Add(handler.GetWebServiceRoute())
+	}
+
+	config := restfulSpec.Config{
+		WebServices: s.webContainer.RegisteredWebServices(), // you control what services are visible
+	}
+	s.webContainer.Add(restfulSpec.NewOpenAPIService(config))
+	return config
+}
+
+func (s *restServer) requestLog(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	if req.HeaderParameter("Upgrade") == "websocket" && req.HeaderParameter("Connection") == "Upgrade" {
+		chain.ProcessFilter(req, resp)
+		return
+	}
+	start := time.Now()
+	c := utils.NewResponseCapture(resp.ResponseWriter)
+	resp.ResponseWriter = c
+	chain.ProcessFilter(req, resp)
+	takeTime := time.Since(start)
+	klog.InfoS("request log",
+		"clientIP", pkgUtils.Sanitize(utils.ClientIP(req.Request)),
+		"path", pkgUtils.Sanitize(req.Request.URL.Path),
+		"method", req.Request.Method,
+		"status", c.StatusCode(),
+		"time", takeTime.String(),
+		"responseSize", len(c.Bytes()),
+	)
+}
+
+func (s *restServer) OPTIONSFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+	if req.Request.Method != "OPTIONS" {
+		chain.ProcessFilter(req, resp)
+		return
+	}
+	resp.AddHeader(restful.HEADER_AccessControlAllowCredentials, "true")
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
