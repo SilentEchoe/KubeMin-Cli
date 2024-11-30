@@ -5,14 +5,12 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/apply"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,7 +36,7 @@ type restServer struct {
 	cfg           config.Config
 	//dataStore     datastore.DataStore 第一版暂时使用缓存
 	KubeClient client.Client `inject:"kubeClient"`
-	KubeConfig *rest.Config  `inject:"kubeConfig"`
+	//KubeConfig *rest.Config  `inject:"kubeConfig"`
 }
 
 func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -78,10 +76,10 @@ func (s *restServer) buildIoCContainer() error {
 		return err
 	}
 	// 获取k8s的配置文件
-	kubeConfig, err := clients.GetKubeConfig()
-	if err != nil {
-		return err
-	}
+	//kubeConfig, err := clients.GetKubeConfig()
+	//if err != nil {
+	//	return err
+	//}
 	// 获取k8s的连接
 	kubeClient, err := clients.GetKubeClient()
 	if err != nil {
@@ -94,12 +92,12 @@ func (s *restServer) buildIoCContainer() error {
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
 		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
 	}
-	if err := s.beanContainer.ProvideWithName("kubeConfig", kubeConfig); err != nil {
-		return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
-	}
-	if err := s.beanContainer.ProvideWithName("apply", apply.NewAPIApplicator(authClient)); err != nil {
-		return fmt.Errorf("fail to provides the apply bean to the container: %w", err)
-	}
+	//if err := s.beanContainer.ProvideWithName("kubeConfig", kubeConfig); err != nil {
+	//	return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
+	//}
+	//if err := s.beanContainer.ProvideWithName("apply", apply.NewAPIApplicator(authClient)); err != nil {
+	//	return fmt.Errorf("fail to provides the apply bean to the container: %w", err)
+	//}
 	// 这里原本是解析config的工厂类，kubevela 用来解析cue结构的config信息
 	//factory := pkgconfig.NewConfigFactory(authClient)
 	//if err := s.beanContainer.ProvideWithName("configFactory", factory); err != nil {
