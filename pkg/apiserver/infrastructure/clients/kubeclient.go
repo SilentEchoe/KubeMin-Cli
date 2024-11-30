@@ -4,7 +4,6 @@ import (
 	apiConfig "KubeMin-Cli/pkg/apiserver/config"
 	"flag"
 	"fmt"
-	"github.com/oam-dev/kubevela/pkg/auth"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -34,7 +33,7 @@ func setKubeConfig(conf *rest.Config) (err error) {
 		}
 	}
 	kubeConfig = conf
-	kubeConfig.Wrap(auth.NewImpersonatingRoundTripper)
+	//kubeConfig.Wrap(auth.NewImpersonatingRoundTripper)
 	return nil
 }
 

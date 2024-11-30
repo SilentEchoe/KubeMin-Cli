@@ -37,3 +37,8 @@ type NameAlias struct {
 type ListApplicationResponse struct {
 	Applications []*ApplicationBase `json:"applications"`
 }
+
+// SimpleResponse simple response model for temporary
+type SimpleResponse struct {
+	Status string `json:"status"`
+}

@@ -2,20 +2,21 @@ package apiserver
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	pkgconfig "KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
+	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/apply"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
+	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
-	"github.com/kubevela/velaux/pkg/server/interfaces/api"
-	"github.com/kubevela/velaux/pkg/server/utils"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
+	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"strings"
 	"time"
 )
 
@@ -38,6 +39,21 @@ type restServer struct {
 	//dataStore     datastore.DataStore 第一版暂时使用缓存
 	KubeClient client.Client `inject:"kubeClient"`
 	KubeConfig *rest.Config  `inject:"kubeConfig"`
+}
+
+func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	var staticFilters []pkgUtils.FilterFunction
+	// 开启 GZIP
+	staticFilters = append(staticFilters, filters.Gzip)
+
+	for _, pre := range api.GetAPIPrefix() {
+		if strings.HasPrefix(req.URL.Path, pre) {
+			s.webContainer.ServeHTTP(res, req)
+			return
+		}
+	}
+
+	req.URL.Path = "/"
 }
 
 // New create api server with config data
@@ -84,11 +100,11 @@ func (s *restServer) buildIoCContainer() error {
 	if err := s.beanContainer.ProvideWithName("apply", apply.NewAPIApplicator(authClient)); err != nil {
 		return fmt.Errorf("fail to provides the apply bean to the container: %w", err)
 	}
-	// 这里应该是启动一个list-watch 的even
-	factory := pkgconfig.NewConfigFactory(authClient)
-	if err := s.beanContainer.ProvideWithName("configFactory", factory); err != nil {
-		return fmt.Errorf("fail to provides the config factory bean to the container: %w", err)
-	}
+	// 这里原本是解析config的工厂类，kubevela 用来解析cue结构的config信息
+	//factory := pkgconfig.NewConfigFactory(authClient)
+	//if err := s.beanContainer.ProvideWithName("configFactory", factory); err != nil {
+	//	return fmt.Errorf("fail to provides the config factory bean to the container: %w", err)
+	//}
 
 	if err := s.beanContainer.Populate(); err != nil {
 		return fmt.Errorf("fail to populate the bean container: %w", err)
@@ -105,7 +121,7 @@ func (s *restServer) Run(ctx context.Context, errors chan error) error {
 
 	s.RegisterAPIRoute()
 
-	return nil
+	return s.startHTTP(ctx)
 }
 
 // RegisterAPIRoute register the API route
@@ -148,12 +164,12 @@ func (s *restServer) requestLog(req *restful.Request, resp *restful.Response, ch
 		return
 	}
 	start := time.Now()
-	c := utils.NewResponseCapture(resp.ResponseWriter)
+	c := pkgUtils.NewResponseCapture(resp.ResponseWriter)
 	resp.ResponseWriter = c
 	chain.ProcessFilter(req, resp)
 	takeTime := time.Since(start)
 	klog.InfoS("request log",
-		"clientIP", pkgUtils.Sanitize(utils.ClientIP(req.Request)),
+		"clientIP", pkgUtils.Sanitize(pkgUtils.ClientIP(req.Request)),
 		"path", pkgUtils.Sanitize(req.Request.URL.Path),
 		"method", req.Request.Method,
 		"status", c.StatusCode(),
@@ -171,6 +187,17 @@ func (s *restServer) OPTIONSFilter(req *restful.Request, resp *restful.Response,
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
-	//TODO implement me
-	panic("implement me")
+	if err := s.buildIoCContainer(); err != nil {
+		return nil, err
+	}
+
+	config := s.RegisterAPIRoute()
+	return &config, nil
+}
+
+func (s *restServer) startHTTP(ctx context.Context) error {
+	// Start HTTP apiserver
+	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
+	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
+	return server.ListenAndServe()
 }

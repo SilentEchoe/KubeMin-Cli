@@ -10,9 +10,6 @@ require (
 	github.com/emicklei/go-restful/v3 v3.11.0
 	github.com/fatih/color v1.15.0
 	github.com/google/uuid v1.6.0
-	github.com/kubevela/pkg v1.8.1-0.20230613075152-2cef0c31b14e
-	github.com/kubevela/velaux v1.9.4
-	github.com/oam-dev/kubevela v1.9.4
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
