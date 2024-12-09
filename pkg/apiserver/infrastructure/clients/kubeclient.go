@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"path/filepath"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 )
 
@@ -91,4 +93,16 @@ func GetKubeConfig() (*rest.Config, error) {
 		return nil, fmt.Errorf("please call SetKubeConfig first")
 	}
 	return kubeConfig, nil
+}
+
+func NewRemoteClusterClient(cfg *rest.Config, options client.Options) (client.Client, error) {
+	defaultClient, err := client.New(cfg, options)
+	if err != nil {
+		return nil, err
+	}
+	if options.Scheme == nil {
+		options.Scheme = scheme.Scheme
+	}
+
+	return defaultClient, nil
 }

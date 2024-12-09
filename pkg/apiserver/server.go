@@ -2,6 +2,8 @@ package apiserver
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/service"
+	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
@@ -35,8 +37,7 @@ type restServer struct {
 	beanContainer *container.Container
 	cfg           config.Config
 	//dataStore     datastore.DataStore 第一版暂时使用缓存
-	KubeClient client.Client `inject:"kubeClient"`
-	//KubeConfig *rest.Config  `inject:"kubeConfig"`
+	KubeClient client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务
 }
 
 func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -75,11 +76,6 @@ func (s *restServer) buildIoCContainer() error {
 	if err != nil {
 		return err
 	}
-	// 获取k8s的配置文件
-	//kubeConfig, err := clients.GetKubeConfig()
-	//if err != nil {
-	//	return err
-	//}
 	// 获取k8s的连接
 	kubeClient, err := clients.GetKubeClient()
 	if err != nil {
@@ -92,17 +88,21 @@ func (s *restServer) buildIoCContainer() error {
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
 		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
 	}
-	//if err := s.beanContainer.ProvideWithName("kubeConfig", kubeConfig); err != nil {
-	//	return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
-	//}
-	//if err := s.beanContainer.ProvideWithName("apply", apply.NewAPIApplicator(authClient)); err != nil {
-	//	return fmt.Errorf("fail to provides the apply bean to the container: %w", err)
-	//}
-	// 这里原本是解析config的工厂类，kubevela 用来解析cue结构的config信息
-	//factory := pkgconfig.NewConfigFactory(authClient)
-	//if err := s.beanContainer.ProvideWithName("configFactory", factory); err != nil {
-	//	return fmt.Errorf("fail to provides the config factory bean to the container: %w", err)
-	//}
+
+	// domain
+	if err := s.beanContainer.Provides(service.InitServiceBean(s.cfg)...); err != nil {
+		return fmt.Errorf("fail to provides the service bean to the container: %w", err)
+	}
+
+	// interfaces
+	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
+		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
+	}
+
+	// event
+	if err := s.beanContainer.Provides(event.InitEvent()...); err != nil {
+		return fmt.Errorf("fail to provides the event bean to the container: %w", err)
+	}
 
 	if err := s.beanContainer.Populate(); err != nil {
 		return fmt.Errorf("fail to populate the bean container: %w", err)

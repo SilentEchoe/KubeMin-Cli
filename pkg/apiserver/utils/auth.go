@@ -48,9 +48,12 @@ func (c *AuthClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ..
 	panic("implement me")
 }
 
+type authAppStatusClient struct {
+	client.StatusWriter
+}
+
 func (c *AuthClient) Status() client.SubResourceWriter {
-	//TODO implement me
-	panic("implement me")
+	return &authAppStatusClient{StatusWriter: c.Client.Status()}
 }
 
 func (c *AuthClient) SubResource(subResource string) client.SubResourceClient {
