@@ -48,7 +48,6 @@ func Run(s *options.ServerRunOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	// 用来通知
 	go profiling.StartProfilingServer(errChan)
 
 	go func() {
@@ -72,7 +71,6 @@ func Run(s *options.ServerRunOptions) error {
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
 	//klog.Infof("KubeMin-Cli information: version: %v, gitRevision: %v", version.VelaVersion, version.GitRevision)
-
 	server := server.New(*s.GenericServerRunOptions)
 
 	return server.Run(ctx, errChan)

@@ -10,7 +10,7 @@ import (
 )
 
 type AuthClient struct {
-	*kubernetes.Clientset
+	kubeClient client.Client
 }
 
 func (c *AuthClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
@@ -53,7 +53,7 @@ type authAppStatusClient struct {
 }
 
 func (c *AuthClient) Status() client.SubResourceWriter {
-	return &authAppStatusClient{StatusWriter: c.Client.Status()}
+	return &authAppStatusClient{StatusWriter: c.kubeClient.Status()}
 }
 
 func (c *AuthClient) SubResource(subResource string) client.SubResourceClient {
