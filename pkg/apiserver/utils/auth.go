@@ -3,10 +3,6 @@ package utils
 import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
-	"github.com/oam-dev/kubevela/pkg/features"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/endpoints/request"
 	"k8s.io/client-go/kubernetes"
@@ -25,9 +21,6 @@ type AuthClient struct {
 }
 
 func ContextWithUserInfo(ctx context.Context) context.Context {
-	if !features.APIServerFeatureGate.Enabled(features.APIServerEnableImpersonation) {
-		return ctx
-	}
 	userInfo := &user.DefaultInfo{Name: user.Anonymous}
 	if username, ok := UsernameFrom(ctx); ok {
 		userInfo.Name = username
@@ -38,7 +31,9 @@ func ContextWithUserInfo(ctx context.Context) context.Context {
 		userInfo.Groups = []string{UXDefaultGroup}
 	}
 	userRole, ok := UserRoleFrom(ctx)
-	if ok && features.APIServerFeatureGate.Enabled(features.APIServerEnableAdminImpersonation) {
+
+	//You can add an environment variable to determine whether dev mode is enabled
+	if ok {
 		for _, role := range userRole {
 			if role == model.RoleAdmin {
 				userInfo.Groups = []string{UXDefaultGroup}
@@ -48,40 +43,44 @@ func ContextWithUserInfo(ctx context.Context) context.Context {
 	return request.WithUser(ctx, userInfo)
 }
 
+// NewAuthClient will carry UserInfo for mutating requests automatically
+func NewAuthClient(c *kubernetes.Clientset) client.Client {
+	return &AuthClient{}
+}
+
 func (c *AuthClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	// 根据上下文获取当前用户的信息
 	ctx = ContextWithUserInfo(ctx)
 	return c.Client.Get(ctx, key, obj)
 }
 
-func (c *AuthClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	//TODO implement me
-	panic("implement me")
+func (c *AuthClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.List(ctx, obj, opts...)
 }
 
 func (c *AuthClient) Create(ctx context.Context, obj client.Object, opts ...client.CreateOption) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.Create(ctx, obj, opts...)
 }
 
 func (c *AuthClient) Delete(ctx context.Context, obj client.Object, opts ...client.DeleteOption) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.Delete(ctx, obj, opts...)
 }
 
 func (c *AuthClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.Update(ctx, obj, opts...)
 }
 
 func (c *AuthClient) Patch(ctx context.Context, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.Patch(ctx, obj, patch, opts...)
 }
 
 func (c *AuthClient) DeleteAllOf(ctx context.Context, obj client.Object, opts ...client.DeleteAllOfOption) error {
-	//TODO implement me
-	panic("implement me")
+	ctx = ContextWithUserInfo(ctx)
+	return c.Client.DeleteAllOf(ctx, obj, opts...)
 }
 
 type authAppStatusClient struct {
@@ -89,35 +88,5 @@ type authAppStatusClient struct {
 }
 
 func (c *AuthClient) Status() client.SubResourceWriter {
-	return &authAppStatusClient{StatusWriter: c.kubeClient.Status()}
-}
-
-func (c *AuthClient) SubResource(subResource string) client.SubResourceClient {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *AuthClient) Scheme() *runtime.Scheme {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *AuthClient) RESTMapper() meta.RESTMapper {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *AuthClient) GroupVersionKindFor(obj runtime.Object) (schema.GroupVersionKind, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *AuthClient) IsObjectNamespaced(obj runtime.Object) (bool, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-// NewAuthClient will carry UserInfo for mutating requests automatically
-func NewAuthClient(c *kubernetes.Clientset) client.Client {
-	return &AuthClient{}
+	return &authAppStatusClient{StatusWriter: c.Client.Status()}
 }

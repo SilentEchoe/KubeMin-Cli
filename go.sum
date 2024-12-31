@@ -804,6 +804,8 @@ github.com/oam-dev/cluster-gateway v1.9.0-alpha.2 h1:412Yhe6BoNVgeomv0tvJaOeKl6v
 github.com/oam-dev/cluster-gateway v1.9.0-alpha.2/go.mod h1:MbBn0E1eGWXqSsnrOb2aKLnGcyvg34Lz9/Q+B1uGEpE=
 github.com/oam-dev/cluster-register v1.0.4-0.20230424040021-147f7c1fefe5 h1:LJbb+5T9SyykRbni1jwcj9DvqhP60m5OexrF0vzzRcg=
 github.com/oam-dev/cluster-register v1.0.4-0.20230424040021-147f7c1fefe5/go.mod h1:Xc5oAAnLOjH7xYSQL0AGHPobFiShL7EYhV/4j9rrwXg=
+github.com/oam-dev/kubevela v1.8.0-beta.1.0.20230410031905-d8af20224298 h1:qROU6CUoe3RdsVNNTZwD1iDEBvRSMq5sqNk4bdz8e58=
+github.com/oam-dev/kubevela v1.8.0-beta.1.0.20230410031905-d8af20224298/go.mod h1:yK22fw0YwPBYvXFiChZVDNMXdvUGViG2JpIvdNbVLEM=
 github.com/oam-dev/kubevela v1.9.4 h1:ZZmmkvi7mdShfbdnrf3kSQGuFI/hdEmktE7olHNCA0o=
 github.com/oam-dev/kubevela v1.9.4/go.mod h1:6zWuQRLNatpVKVSkpqlMOiy7tRKt1QjG4enciusYhHg=
 github.com/oam-dev/terraform-config-inspect v0.0.0-20210418082552-fc72d929aa28 h1:tD8HiFKnt0jnwdTWjeqUnfnUYLD/+Nsmj8ZGIxqDWiU=
