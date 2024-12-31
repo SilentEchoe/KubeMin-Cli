@@ -2,6 +2,7 @@ package event
 
 import (
 	"context"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/workqueue"
 )
 
@@ -13,10 +14,16 @@ type Task struct {
 // ApplicationSync sync application from cluster to database
 // TODO RateLimitingInterface Replace TypedRateLimitingInterface
 type ApplicationSync struct {
-	Queue workqueue.TypedRateLimitingInterface[Task]
+	KubeConfig *rest.Config `inject:"kubeConfig"`
+	Queue      workqueue.TypedRateLimitingInterface[Task]
 }
 
-func (a ApplicationSync) Start(ctx context.Context, errChan chan error) {
-	//TODO implement me
-	panic("implement me")
+// Start prepares watchers and run their controllers, then waits for process termination signals
+func (a *ApplicationSync) Start(ctx context.Context, errChan chan error) {
+	//dynamicClient, err := dynamic.NewForConfig(a.KubeConfig)
+	//if err != nil {
+	//	errChan <- err
+	//}
+	// TODO 这里创建一个informerFactory的实例，然后监听Pod的变化
+
 }
