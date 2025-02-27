@@ -12,7 +12,6 @@ type Task struct {
 }
 
 // ApplicationSync sync application from cluster to database
-// TODO RateLimitingInterface Replace TypedRateLimitingInterface
 type ApplicationSync struct {
 	KubeConfig *rest.Config `inject:"kubeConfig"`
 	Queue      workqueue.TypedRateLimitingInterface[Task]

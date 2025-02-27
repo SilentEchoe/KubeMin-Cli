@@ -23,6 +23,7 @@ var waitBackOff = wait.Backoff{
 }
 
 // InfoCalculateCronJob is the cronJob to calculate the system info store in db
+// 用于定时任务
 type InfoCalculateCronJob struct {
 	KubeClient client.Client       `inject:"kubeClient"`
 	Store      datastore.DataStore `inject:"datastore"`
@@ -42,10 +43,9 @@ func (i *InfoCalculateCronJob) start(cronSpec string) {
 		cron.Recover(cron.DefaultLogger),
 	))
 	//  ignore the entityId and error, the cron spec is defined by hard code, mustn't generate error
-	// ignore the entityId and error, the cron spec is defined by hard code, mustn't generate error
+	// 忽略entityId和error， cron规范是由硬代码定义的，一定不会产生错误
 	_, _ = c.AddFunc(cronSpec, func() {
-
-		// ExponentialBackoff retry this job
+		// 重试这个任务
 		err := retry.OnError(waitBackOff, func(err error) bool { //nolint:revive,unused
 			// always retry
 			return true
