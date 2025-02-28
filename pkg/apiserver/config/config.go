@@ -1,6 +1,7 @@
 package config
 
 import (
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 	"time"
@@ -23,6 +24,8 @@ type Config struct {
 
 	//DTM Distributed transaction management
 	DTMAddr string
+
+	Datastore datastore.Config
 
 	// Istio Enable
 	IstioEnable bool

@@ -5,6 +5,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
@@ -21,9 +23,8 @@ import (
 )
 
 /*
-1.
 
-*/
+ */
 
 // APIServer interface for call api server
 type APIServer interface {
@@ -36,8 +37,8 @@ type restServer struct {
 	webContainer  *restful.Container
 	beanContainer *container.Container
 	cfg           config.Config
-	//dataStore     datastore.DataStore 第一版暂时使用缓存
-	KubeClient client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务
+	dataStore     datastore.DataStore
+	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务
 }
 
 func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
@@ -83,6 +84,18 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	// 将这个k8s的连接与用户信息绑定在一起
 	authClient := pkgUtils.NewAuthClient(kubeClient)
+
+	var ds datastore.DataStore
+	switch s.cfg.Datastore.Type {
+	case "mysql":
+		ds, err = mysql.New(context.Background(), s.cfg.Datastore)
+		if err != nil {
+			return fmt.Errorf("create mysql datastore instance failure %w", err)
+		}
+	default:
+		return fmt.Errorf("not support datastore type %s", s.cfg.Datastore.Type)
+	}
+	s.dataStore = ds
 
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
