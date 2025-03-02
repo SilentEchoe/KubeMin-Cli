@@ -1,14 +1,16 @@
 package sync
 
 import (
+	v1alpha1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/dynamic"
+	dynamicInformer "k8s.io/client-go/dynamic/dynamicinformer"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
@@ -29,23 +31,13 @@ type ApplicationSync struct {
 
 func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 	// 因为需要监听CRD资源，所以才需要
-	//dynamicClient, err := dynamic.NewForConfig(a.KubeConfig)
-	//if err != nil {
-	//	errorChan <- err
-	//}
-	//// 创建client-go inform
-	//factory := dynamicInformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 0, v1.NamespaceAll, nil)
-	////informer := factory.ForResource(wf.SchemeGroupVersion.WithResource(v1.Pod{})).Informer()
-	//informer := factory.ForResource(wf.SchemeGroupVersion.WithResource(v1.Pod{}))
-
-	// 创建 client
-	clientSet, err := kubernetes.NewForConfig(a.KubeConfig)
+	dynamicClient, err := dynamic.NewForConfig(a.KubeConfig)
 	if err != nil {
 		errorChan <- err
 	}
-
-	factory := informers.NewSharedInformerFactoryWithOptions(clientSet, 0, informers.WithNamespace(v1.NamespaceAll))
-	informer := factory.Core().V1().Pods().Informer()
+	// 创建client-go inform
+	factory := dynamicInformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 0, v1.NamespaceAll, nil)
+	informer := factory.ForResource(wf.SchemeGroupVersion.WithResource("applications")).Informer()
 
 	addOrUpdateHandler := func(obj interface{}) {
 		app := getApp(obj)
@@ -55,7 +47,7 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 		}
 	}
 
-	// Infrom
+	// Inform
 
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
@@ -88,17 +80,16 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 }
 
 // 获取Pod的元数据
-func getApp(obj interface{}) *v1.Pod {
-	if app, ok := obj.(*v1.Pod); ok {
+func getApp(obj interface{}) *v1alpha1.Applications {
+	if app, ok := obj.(*v1alpha1.Applications); ok {
 		return app
 	}
-	var app v1.Pod
+	var app v1alpha1.Applications
 	if object, ok := obj.(*unstructured.Unstructured); ok {
 		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(object.Object, &app); err != nil {
 			klog.Errorf("decode the Pod failure %s", err.Error())
 			return &app
 		}
 	}
-
 	return &app
 }

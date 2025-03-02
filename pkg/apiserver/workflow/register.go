@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	Group   = "core.kubeMinCli.dev"
+	Group   = "core.kubemincli.dev"
 	Version = "v1alpha1"
 )
 
