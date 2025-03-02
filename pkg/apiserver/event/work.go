@@ -14,7 +14,7 @@ type Task struct {
 // ApplicationSync sync application from cluster to database
 type ApplicationSync struct {
 	KubeConfig *rest.Config `inject:"kubeConfig"`
-	Queue      workqueue.TypedRateLimitingInterface[Task]
+	Queue      workqueue.TypedRateLimitingInterface[any]
 }
 
 // Start prepares watchers and run their controllers, then waits for process termination signals

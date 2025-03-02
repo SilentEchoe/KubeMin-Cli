@@ -2,7 +2,6 @@ package sync
 
 import (
 	v1alpha1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
-	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
@@ -26,7 +25,7 @@ type ApplicationSync struct {
 	KubeClient client.Client       `inject:"kubeClient"`
 	KubeConfig *rest.Config        `inject:"kubeConfig"`
 	Store      datastore.DataStore `inject:"datastore"`
-	Queue      workqueue.TypedRateLimitingInterface[event.Task]
+	Queue      workqueue.TypedRateLimitingInterface[any]
 }
 
 func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
@@ -39,16 +38,32 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 	factory := dynamicInformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 0, v1.NamespaceAll, nil)
 	informer := factory.ForResource(wf.SchemeGroupVersion.WithResource("applications")).Informer()
 
+	//TODO 初始化缓存
+
+	go func() {
+		for {
+			item, down := a.Queue.Get()
+			if down {
+				break
+			}
+			app := item.(*v1alpha1.Applications)
+			// 添加一条消息，或者修改一条状态
+			// TODO 这里可以判断是否需要加入队列，先默认一直重试
+			a.Queue.AddRateLimited(app)
+			a.Queue.Done(app)
+		}
+
+	}()
+
 	addOrUpdateHandler := func(obj interface{}) {
 		app := getApp(obj)
 		if app.DeletionTimestamp == nil {
-			//a.Queue.Add(app)
+			a.Queue.Add(app)
 			klog.V(4).Infof("watched update/add app event, namespace: %s, name: %s", app.Namespace, app.Name)
 		}
 	}
 
 	// Inform
-
 	handlers := cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
 			addOrUpdateHandler(obj)
@@ -59,8 +74,8 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 		DeleteFunc: func(obj interface{}) {
 			app := getApp(obj)
 			klog.V(4).Infof("watched delete app event, namespace: %s, name: %s", app.Namespace, app.Name)
-			//a.Queue.Forget(app)
-			//a.Queue.Done(app)
+			a.Queue.Forget(app)
+			a.Queue.Done(app)
 			// 从数据库中删除这个APP
 			//err = cu.DeleteApp(ctx, app)
 			//if err != nil {
