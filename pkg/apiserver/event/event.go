@@ -16,7 +16,7 @@ type Worker interface {
 // InitEvent init all event worker
 func InitEvent() []interface{} {
 	application := &ApplicationSync{
-		Queue: workqueue.NewTypedRateLimitingQueue[Task](workqueue.DefaultTypedControllerRateLimiter[Task]()),
+		Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
 	}
 
 	collect := &collect.InfoCalculateCronJob{}
