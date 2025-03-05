@@ -29,7 +29,6 @@ type ApplicationSync struct {
 }
 
 func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
-	// 因为需要监听CRD资源，所以才需要
 	dynamicClient, err := dynamic.NewForConfig(a.KubeConfig)
 	if err != nil {
 		errorChan <- err
