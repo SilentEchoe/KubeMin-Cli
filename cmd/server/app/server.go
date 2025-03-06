@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
 	"KubeMin-Cli/pkg/apiserver/utils/profiling"
+	"KubeMin-Cli/version"
 	"context"
 	"fmt"
 	"github.com/fatih/color"
@@ -20,7 +21,7 @@ func NewAPIServerCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "ApiServer",
 		Long: `The KubeMin-CLI API service, which provides application deployment and Istio operations`,
-		RunE: func(cmd *cobra.Command, args []string) error { //nolint:revive,unused
+		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := s.Validate(); err != nil {
 				return err
 			}
@@ -48,6 +49,7 @@ func Run(s *options.ServerRunOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	//开启分析服务
 	go profiling.StartProfilingServer(errChan)
 
 	go func() {
@@ -70,8 +72,7 @@ func Run(s *options.ServerRunOptions) error {
 }
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
-	//klog.Infof("KubeMin-Cli information: version: %v, gitRevision: %v", version.VelaVersion, version.GitRevision)
+	klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
 	server := server.New(*s.GenericServerRunOptions)
-
 	return server.Run(ctx, errChan)
 }
