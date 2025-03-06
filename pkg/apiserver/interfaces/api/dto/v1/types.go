@@ -42,3 +42,30 @@ type ListApplicationResponse struct {
 type SimpleResponse struct {
 	Status string `json:"status"`
 }
+
+// WorkflowBase workflow base model
+type WorkflowBase struct {
+	Name        string         `json:"name"`
+	Alias       string         `json:"alias"`
+	Description string         `json:"description"`
+	Enable      bool           `json:"enable"`
+	Default     bool           `json:"default"`
+	EnvName     string         `json:"envName"`
+	CreateTime  time.Time      `json:"createTime"`
+	UpdateTime  time.Time      `json:"updateTime"`
+	Mode        string         `json:"mode"`
+	SubMode     string         `json:"subMode"`
+	Steps       []WorkflowStep `json:"steps,omitempty"`
+}
+
+// WorkflowStep workflow step config
+type WorkflowStep struct {
+	WorkflowStepBase `json:",inline"`
+	Mode             string             `json:"mode,omitempty" validate:"checkMode"`
+	SubSteps         []WorkflowStepBase `json:"subSteps,omitempty"`
+}
+
+// WorkflowStepBase is the step base of workflow
+type WorkflowStepBase struct {
+	Name string `json:"name" validate:"checkname"`
+}
