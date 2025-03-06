@@ -15,6 +15,11 @@ type Applications struct {
 	Annotations map[string]string `json:"annotations,omitempty" gorm:"serializer:json"`
 }
 
+func (a Applications) PrimaryKey() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (a Applications) TableName() string {
 	return tableNamePrefix + "applications"
 }

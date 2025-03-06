@@ -2,6 +2,7 @@ package event
 
 import (
 	"KubeMin-Cli/pkg/apiserver/event/collect"
+	"KubeMin-Cli/pkg/apiserver/event/sync"
 	"context"
 	"k8s.io/client-go/util/workqueue"
 )
@@ -15,7 +16,7 @@ type Worker interface {
 
 // InitEvent init all event worker
 func InitEvent() []interface{} {
-	application := &ApplicationSync{
+	application := &sync.ApplicationSync{
 		Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
 	}
 

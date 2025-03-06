@@ -1,6 +1,7 @@
 package service
 
 import (
+	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
@@ -10,6 +11,12 @@ import (
 
 type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
+	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
+}
+
+// NewWorkflowService new workflow service
+func NewWorkflowService() WorkflowService {
+	return &workflowServiceImpl{}
 }
 
 type workflowServiceImpl struct {
@@ -18,6 +25,12 @@ type workflowServiceImpl struct {
 	KubeConfig *rest.Config        `inject:"kubeConfig"`
 }
 
-func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) {
-	//从数据库
+func (w workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (w workflowServiceImpl) SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error {
+	//TODO implement me
+	panic("implement me")
 }

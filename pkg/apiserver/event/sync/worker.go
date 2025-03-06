@@ -2,6 +2,7 @@ package sync
 
 import (
 	v1alpha1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
+	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
@@ -15,17 +16,20 @@ import (
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sync"
 )
 
 const (
 	APPNAME = "applications"
 )
 
+// ApplicationSync 用于从k8s集群中的APP信息同步到数据库中
 type ApplicationSync struct {
-	KubeClient client.Client       `inject:"kubeClient"`
-	KubeConfig *rest.Config        `inject:"kubeConfig"`
-	Store      datastore.DataStore `inject:"datastore"`
-	Queue      workqueue.TypedRateLimitingInterface[any]
+	KubeClient         client.Client       `inject:"kubeClient"`
+	KubeConfig         *rest.Config        `inject:"kubeConfig"`
+	Store              datastore.DataStore `inject:"datastore"`
+	ApplicationService service.ApplicationService
+	Queue              workqueue.TypedRateLimitingInterface[any]
 }
 
 func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
@@ -37,7 +41,16 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 	factory := dynamicInformer.NewFilteredDynamicSharedInformerFactory(dynamicClient, 0, v1.NamespaceAll, nil)
 	informer := factory.ForResource(wf.SchemeGroupVersion.WithResource("applications")).Informer()
 
-	//TODO 初始化缓存
+	cu := &CR2UX{
+		ds:                 a.Store,
+		cli:                a.KubeClient,
+		cache:              sync.Map{},
+		applicationService: a.ApplicationService,
+	}
+
+	if err = cu.initCache(ctx); err != nil {
+		errorChan <- err
+	}
 
 	go func() {
 		for {
@@ -46,12 +59,20 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 				break
 			}
 			app := item.(*v1alpha1.Applications)
-			// 添加一条消息，或者修改一条状态
-			// TODO 这里可以判断是否需要加入队列，先默认一直重试
-			a.Queue.AddRateLimited(app)
+			if err := cu.AddOrUpdate(ctx, app); err != nil {
+				failTimes := a.Queue.NumRequeues(app)
+				klog.Errorf("fail to add or update application %s: %s, requeue times: %d", app.Name, err.Error(), failTimes)
+				// 如果重试小于五次，则重新加入队列
+				if failTimes < 5 {
+					a.Queue.AddRateLimited(app)
+				} else {
+					//如果重试超过五次，则从队列里面移除
+					klog.Errorf("fail to add or update application %s: %s, requeue times reach the limit(%d), give up", app.Name, err.Error(), failTimes)
+					a.Queue.Forget(app)
+				}
+			}
 			a.Queue.Done(app)
 		}
-
 	}()
 
 	addOrUpdateHandler := func(obj interface{}) {

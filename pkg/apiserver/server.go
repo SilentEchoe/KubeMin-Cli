@@ -41,21 +41,6 @@ type restServer struct {
 	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务
 }
 
-func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	var staticFilters []pkgUtils.FilterFunction
-	// 开启 GZIP
-	staticFilters = append(staticFilters, filters.Gzip)
-
-	for _, pre := range api.GetAPIPrefix() {
-		if strings.HasPrefix(req.URL.Path, pre) {
-			s.webContainer.ServeHTTP(res, req)
-			return
-		}
-	}
-
-	req.URL.Path = "/"
-}
-
 // New create api server with config data
 func New(cfg config.Config) (a APIServer) {
 	s := &restServer{
@@ -64,6 +49,19 @@ func New(cfg config.Config) (a APIServer) {
 		cfg:           cfg,
 	}
 	return s
+}
+
+func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
+	var staticFilters []pkgUtils.FilterFunction
+	// 开启 GZIP
+	staticFilters = append(staticFilters, filters.Gzip)
+	for _, pre := range api.GetAPIPrefix() {
+		if strings.HasPrefix(req.URL.Path, pre) {
+			s.webContainer.ServeHTTP(res, req)
+			return
+		}
+	}
+	req.URL.Path = "/"
 }
 
 func (s *restServer) buildIoCContainer() error {
