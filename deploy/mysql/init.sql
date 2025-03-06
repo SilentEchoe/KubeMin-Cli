@@ -1,1 +1,1 @@
-CREATE DATABASE kubemin;
+CREATE DATABASE kubemincli;

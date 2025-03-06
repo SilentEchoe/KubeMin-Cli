@@ -66,7 +66,6 @@ func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 
 func (s *restServer) buildIoCContainer() error {
 	// infrastructure
-	// 注入Rest服务
 	if err := s.beanContainer.ProvideWithName("RestServer", s); err != nil {
 		return fmt.Errorf("fail to provides the RestServer bean to the container: %w", err)
 	}

@@ -54,6 +54,11 @@ func NewConfig() *Config {
 			LockName: "apiserver-lock",
 			Duration: time.Second * 5,
 		},
+		Datastore: datastore.Config{
+			Type:     MYSQL,
+			Database: DBNAME_KUBEMINCLI,
+			URL:      "127.0.0.1:3306",
+		},
 		KubeQPS:          100,
 		KubeBurst:        300,
 		AddonCacheTime:   time.Minute * 10,
