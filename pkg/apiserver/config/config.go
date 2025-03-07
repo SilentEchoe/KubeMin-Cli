@@ -2,6 +2,7 @@ package config
 
 import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 	"time"
@@ -57,7 +58,7 @@ func NewConfig() *Config {
 		Datastore: datastore.Config{
 			Type:     MYSQL,
 			Database: DBNAME_KUBEMINCLI,
-			URL:      "127.0.0.1:3306",
+			URL:      fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
 		},
 		KubeQPS:          100,
 		KubeBurst:        300,
