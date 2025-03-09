@@ -25,8 +25,8 @@ const (
 
 // ApplicationSync 用于从k8s集群中的APP信息同步到数据库中
 type ApplicationSync struct {
-	KubeClient         client.Client       `inject:"kubeClient"`
-	KubeConfig         *rest.Config        `inject:"kubeConfig"`
+	KubeClient         client.Client `inject:"kubeClient"`
+	KubeConfig         *rest.Config
 	Store              datastore.DataStore `inject:"datastore"`
 	ApplicationService service.ApplicationService
 	Queue              workqueue.TypedRateLimitingInterface[any]

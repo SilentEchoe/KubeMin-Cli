@@ -1,6 +1,7 @@
 package sqlnamer
 
 import (
+	"fmt"
 	"strings"
 
 	"gorm.io/gorm/schema"
@@ -13,8 +14,29 @@ type SQLNamer struct {
 }
 
 func (namer SQLNamer) UniqueName(table, column string) string {
-	//TODO implement me
-	panic("implement me")
+	// 生成一个唯一约束名称，格式为：uk_{表名}_{列名}
+	// 由于MySQL中标识符长度限制，需要确保名称不超过64个字符
+	const maxLength = 64
+	const prefix = "uk_"
+
+	// 计算表名和列名可用的最大长度
+	availableLength := maxLength - len(prefix) - 1 // 减1是为了下划线
+
+	// 如果表名和列名的总长度超过可用长度，则需要截断
+	if len(table)+len(column) > availableLength {
+		// 平均分配可用长度给表名和列名
+		tableMaxLen := availableLength / 2
+		columnMaxLen := availableLength - tableMaxLen
+
+		if len(table) > tableMaxLen {
+			table = table[:tableMaxLen]
+		}
+
+		if len(column) > columnMaxLen {
+			column = column[:columnMaxLen]
+		}
+	}
+	return fmt.Sprintf("%s%s_%s", prefix, table, column)
 }
 
 // TableName convert string to table name
