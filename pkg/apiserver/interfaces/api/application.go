@@ -4,13 +4,12 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
-	"fmt"
 	restfulspec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/emicklei/go-restful/v3"
 )
 
 type applications struct {
-	applicationService service.ApplicationsService `inject:""`
+	ApplicationService service.ApplicationsService `inject:""`
 }
 
 // NewApplications new applications manage
@@ -44,14 +43,14 @@ func (a *applications) GetWebServiceRoute() *restful.WebService {
 }
 
 func (a *applications) listApplications(req *restful.Request, res *restful.Response) {
-	fmt.Println("listApplications")
-	res.WriteEntity("listApplications")
-	//apps, err := a.applicationService.ListApplications(req.Request.Context(), apis.ListApplicationOptions{})
-	//if err != nil {
-	//	bcode.ReturnError(req, res, err)
-	//}
-	//if err := res.WriteEntity(apis.ListApplicationResponse{Applications: apps}); err != nil {
-	//	bcode.ReturnError(req, res, err)
-	//	return
-	//}
+	//fmt.Println("listApplications")
+	//res.WriteEntity("listApplications")
+	apps, err := a.ApplicationService.ListApplications(req.Request.Context(), apis.ListApplicationOptions{})
+	if err != nil {
+		bcode.ReturnError(req, res, err)
+	}
+	if err := res.WriteEntity(apis.ListApplicationResponse{Applications: apps}); err != nil {
+		bcode.ReturnError(req, res, err)
+		return
+	}
 }
