@@ -38,7 +38,7 @@ type restServer struct {
 	beanContainer *container.Container
 	cfg           config.Config
 	dataStore     datastore.DataStore
-	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务
+	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
 }
 
 // New create api server with config data

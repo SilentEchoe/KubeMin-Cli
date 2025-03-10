@@ -43,8 +43,6 @@ func (a *applications) GetWebServiceRoute() *restful.WebService {
 }
 
 func (a *applications) listApplications(req *restful.Request, res *restful.Response) {
-	//fmt.Println("listApplications")
-	//res.WriteEntity("listApplications")
 	apps, err := a.ApplicationService.ListApplications(req.Request.Context(), apis.ListApplicationOptions{})
 	if err != nil {
 		bcode.ReturnError(req, res, err)
