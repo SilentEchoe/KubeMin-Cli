@@ -20,22 +20,6 @@ func NewGetRegisteredAPI() []NewInterface {
 	return newRegisteredAPI
 }
 
-func SetupRoutes(router *gin.Engine) {
-	// 创建API路由组
-	apiGroup := router.Group(versionPrefix)
-
-	// 注册所有API
-	for _, api := range newRegisteredAPI {
-		api.RegisterRoutes(apiGroup)
-	}
-
-	v1Group := router.Group("/demo")
-	for _, api := range newRegisteredAPI {
-		api.RegisterRoutes(v1Group)
-	}
-
-}
-
 func NewInitAPIBean() []interface{} {
 	NewRegisterAPI(NewDemo())
 	var beans []interface{}

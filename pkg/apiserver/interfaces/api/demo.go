@@ -24,7 +24,8 @@ func NewDemo() NewInterface {
 }
 
 func (d *Demo) RegisterRoutes(group *gin.RouterGroup) {
-	group.GET("/list", d.ListDemos)
+	group.GET("/demo/list", d.ListDemos)
+	group.POST("/demo/listById", d.ListDemos)
 }
 
 func (d *Demo) ListDemos(c *gin.Context) {

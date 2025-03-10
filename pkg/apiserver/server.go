@@ -14,7 +14,6 @@ import (
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
-	"github.com/emicklei/go-restful/v3"
 	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 	"net/http"
@@ -150,7 +149,6 @@ func (s *restServer) RegisterAPIRoute() {
 	// 为每个API前缀创建路由组
 	for _, prefix := range api.GetAPIPrefix() {
 		group := s.webContainer.Group(prefix)
-
 		// 注册所有API到当前前缀组
 		for _, api := range apis {
 			api.RegisterRoutes(group)
@@ -159,45 +157,16 @@ func (s *restServer) RegisterAPIRoute() {
 
 }
 
-func (s *restServer) requestLog(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	if req.HeaderParameter("Upgrade") == "websocket" && req.HeaderParameter("Connection") == "Upgrade" {
-		chain.ProcessFilter(req, resp)
-		return
-	}
-	start := time.Now()
-	c := pkgUtils.NewResponseCapture(resp.ResponseWriter)
-	resp.ResponseWriter = c
-	chain.ProcessFilter(req, resp)
-	takeTime := time.Since(start)
-	klog.InfoS("request log",
-		"clientIP", pkgUtils.Sanitize(pkgUtils.ClientIP(req.Request)),
-		"path", pkgUtils.Sanitize(req.Request.URL.Path),
-		"method", req.Request.Method,
-		"status", c.StatusCode(),
-		"time", takeTime.String(),
-		"responseSize", len(c.Bytes()),
-	)
-}
-
-func (s *restServer) OPTIONSFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	if req.Request.Method != "OPTIONS" {
-		chain.ProcessFilter(req, resp)
-		return
-	}
-	resp.AddHeader(restful.HEADER_AccessControlAllowCredentials, "true")
-}
-
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
 	if err := s.buildIoCContainer(); err != nil {
 		return nil, err
 	}
-
 	s.RegisterAPIRoute()
 	return nil, nil
 }
 
 func (s *restServer) startHTTP(ctx context.Context) error {
-	// Start HTTP apiserver
+	// Start HTTP appserver
 	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
 	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
 	return server.ListenAndServe()
