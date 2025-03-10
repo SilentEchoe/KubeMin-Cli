@@ -16,7 +16,7 @@ func GetAPIPrefix() []string {
 // viewPrefix the path prefix for view page
 var viewPrefix = "/view"
 
-// Interface the API should define the http route
+// The Interface API should define the http route
 type Interface interface {
 	GetWebServiceRoute() *restful.WebService
 }
