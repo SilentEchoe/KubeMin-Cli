@@ -16,8 +16,7 @@ type Applications struct {
 }
 
 func (a Applications) PrimaryKey() string {
-	//TODO implement me
-	panic("implement me")
+	return a.Name
 }
 
 func (a Applications) TableName() string {

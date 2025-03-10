@@ -94,6 +94,11 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
+	// 将db 注入到IOC中
+	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
+		return fmt.Errorf("fail to provides the datastore bean to the container: %w", err)
+	}
+
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
 		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)

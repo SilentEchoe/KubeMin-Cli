@@ -25,8 +25,8 @@ var waitBackOff = wait.Backoff{
 // InfoCalculateCronJob is the cronJob to calculate the system info store in db
 // 用于定时任务
 type InfoCalculateCronJob struct {
-	KubeClient client.Client       `inject:"kubeClient"`
-	Store      datastore.DataStore `inject:"datastore"`
+	KubeClient client.Client `inject:"kubeClient"`
+	Store      datastore.DataStore
 	cron       *cron.Cron
 }
 
