@@ -16,7 +16,7 @@ type CR2UX struct {
 	ds                 datastore.DataStore
 	cli                client.Client
 	cache              sync.Map
-	applicationService service.ApplicationService
+	applicationService service.ApplicationsService
 	workflowService    service.WorkflowService
 }
 

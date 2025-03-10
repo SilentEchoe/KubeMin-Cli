@@ -38,6 +38,15 @@ type ListApplicationResponse struct {
 	Applications []*ApplicationBase `json:"applications"`
 }
 
+// ListApplicationOptions list application  query options
+type ListApplicationOptions struct {
+	Projects   []string          `json:"projects"`
+	Env        string            `json:"env"`
+	TargetName string            `json:"targetName"`
+	Query      string            `json:"query"`
+	Labels     map[string]string `json:"labels"`
+}
+
 // SimpleResponse simple response model for temporary
 type SimpleResponse struct {
 	Status string `json:"status"`

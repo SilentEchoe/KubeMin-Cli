@@ -28,7 +28,7 @@ type ApplicationSync struct {
 	KubeClient         client.Client `inject:"kubeClient"`
 	KubeConfig         *rest.Config
 	Store              datastore.DataStore `inject:"datastore"`
-	ApplicationService service.ApplicationService
+	ApplicationService service.ApplicationsService
 	Queue              workqueue.TypedRateLimitingInterface[any]
 }
 
