@@ -15,8 +15,11 @@ import (
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/gin-gonic/gin"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
 	"net/http"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
@@ -111,9 +114,6 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// interfaces
-	//if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
-	//	return fmt.Errorf("fail to provides the api bean to the container: %w", err)
-	//}
 	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	}
@@ -127,18 +127,6 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to populate the bean container: %w", err)
 	}
 	return nil
-}
-
-func (s *restServer) Run(ctx context.Context, errors chan error) error {
-
-	// build the Ioc Container
-	if err := s.buildIoCContainer(); err != nil {
-		return err
-	}
-
-	s.RegisterAPIRoute()
-
-	return s.startHTTP(ctx)
 }
 
 func (s *restServer) RegisterAPIRoute() {
@@ -170,4 +158,60 @@ func (s *restServer) startHTTP(ctx context.Context) error {
 	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
 	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
 	return server.ListenAndServe()
+}
+
+func (s *restServer) Run(ctx context.Context, errChan chan error) error {
+	// build the Ioc Container
+	if err := s.buildIoCContainer(); err != nil {
+		return err
+	}
+
+	s.RegisterAPIRoute()
+
+	// 设置领导选举
+	l, err := s.setupLeaderElection(errChan)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		leaderelection.RunOrDie(ctx, *l)
+	}()
+
+	return s.startHTTP(ctx)
+}
+
+func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.LeaderElectionConfig, error) {
+	restCfg := ctrl.GetConfigOrDie()
+	DefaultKubeVelaNS := "min-cli-system"
+	rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, DefaultKubeVelaNS, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
+		Identity: s.cfg.LeaderConfig.ID,
+	}, restCfg, time.Second*10)
+	if err != nil {
+		klog.ErrorS(err, "Unable to setup the resource lock")
+		return nil, err
+	}
+	return &leaderelection.LeaderElectionConfig{
+		Lock:          rl,
+		LeaseDuration: time.Second * 15,
+		RenewDeadline: time.Second * 10,
+		RetryPeriod:   time.Second * 2,
+		Callbacks: leaderelection.LeaderCallbacks{
+			OnStartedLeading: func(ctx context.Context) {
+				go event.StartEventWorker(ctx, errChan)
+			},
+			OnStoppedLeading: func() {
+				if s.cfg.ExitOnLostLeader {
+					errChan <- fmt.Errorf("leader lost %s", s.cfg.LeaderConfig.ID)
+				}
+			},
+			OnNewLeader: func(identity string) {
+				if identity == s.cfg.LeaderConfig.ID {
+					return
+				}
+				klog.Infof("new leader elected: %s", identity)
+			},
+		},
+		ReleaseOnCancel: true,
+	}, nil
 }

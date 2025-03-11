@@ -96,11 +96,7 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 			klog.V(4).Infof("watched delete app event, namespace: %s, name: %s", app.Namespace, app.Name)
 			a.Queue.Forget(app)
 			a.Queue.Done(app)
-			// 从数据库中删除这个APP
-			//err = cu.DeleteApp(ctx, app)
-			//if err != nil {
-			//	klog.Errorf("Application %-30s Deleted Sync to db err %v", color.WhiteString(app.Namespace+"/"+app.Name), err)
-			//}
+			//err = cu.
 			klog.Infof("delete the application (%s/%s) metadata successfully", app.Namespace, app.Name)
 		},
 	}

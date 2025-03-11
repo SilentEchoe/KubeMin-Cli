@@ -11,14 +11,14 @@ type applications struct {
 	ApplicationService service.ApplicationsService `inject:""`
 }
 
-func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
-	// 应用列表
-	group.GET("/applications", a.listApplications)
-}
-
 // NewApplications new applications manage
 func NewApplications() Interface {
 	return &applications{}
+}
+
+func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
+	group.GET("/applications", a.listApplications)
+
 }
 
 func (a *applications) listApplications(c *gin.Context) {
@@ -28,5 +28,4 @@ func (a *applications) listApplications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
-
 }

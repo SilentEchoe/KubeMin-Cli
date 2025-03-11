@@ -10,6 +10,7 @@ require (
 	github.com/emicklei/go-restful-openapi/v2 v2.9.1
 	github.com/emicklei/go-restful/v3 v3.11.0
 	github.com/fatih/color v1.15.0
+	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/cobra v1.8.1
@@ -17,6 +18,7 @@ require (
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
 	helm.sh/helm/v3 v3.11.2
+	k8s.io/api v0.31.2
 	k8s.io/apimachinery v0.31.2
 	k8s.io/apiserver v0.31.1
 	k8s.io/client-go v0.31.2
@@ -34,7 +36,6 @@ require (
 	github.com/bytedance/sonic/loader v0.2.4 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cloudwego/base64x v0.1.5 // indirect
-	github.com/cloudwego/iasm v0.2.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/docker/libkv v0.2.1 // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
@@ -42,7 +43,6 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/gin-contrib/sse v1.0.0 // indirect
-	github.com/gin-gonic/gin v1.10.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	github.com/go-openapi/jsonpointer v0.19.6 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -96,7 +96,6 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	gotest.tools/v3 v3.0.3 // indirect
-	k8s.io/api v0.31.2 // indirect
 	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20240228011516-70dd3763d340 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect

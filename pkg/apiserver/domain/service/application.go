@@ -12,6 +12,7 @@ import (
 
 type ApplicationsService interface {
 	ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
+	DeleteApplication(ctx context.Context, app *model.Applications) error
 }
 
 type applicationsServiceImpl struct {
@@ -61,4 +62,9 @@ func listApp(ctx context.Context, ds datastore.DataStore, listOptions apisv1.Lis
 
 	return list, nil
 
+}
+
+// DeleteApplication delete application
+func (c *applicationsServiceImpl) DeleteApplication(ctx context.Context, app *model.Applications) error {
+	return c.Store.Delete(ctx, app)
 }
