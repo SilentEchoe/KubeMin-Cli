@@ -15,6 +15,7 @@ import (
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
 	"github.com/gin-gonic/gin"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/leaderelection"
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
@@ -25,10 +26,6 @@ import (
 	"time"
 )
 
-/*
-
- */
-
 // APIServer interface for call api server
 type APIServer interface {
 	Run(context.Context, chan error) error
@@ -37,12 +34,12 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-	//webContainer  *restful.Container
 	webContainer  *gin.Engine
 	beanContainer *container.Container
 	cfg           config.Config
 	dataStore     datastore.DataStore
 	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig    *rest.Config  `inject:"kubeConfig"`
 }
 
 // New create api server with config data
@@ -78,6 +75,11 @@ func (s *restServer) buildIoCContainer() error {
 	if err != nil {
 		return err
 	}
+	// 获取k8s的配置文件
+	kubeConfig, err := clients.GetKubeConfig()
+	if err != nil {
+		return err
+	}
 	// 获取k8s的连接
 	kubeClient, err := clients.GetKubeClient()
 	if err != nil {
@@ -106,6 +108,10 @@ func (s *restServer) buildIoCContainer() error {
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
 		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
+	}
+
+	if err := s.beanContainer.ProvideWithName("kubeConfig", kubeConfig); err != nil {
+		return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
 	}
 
 	// domain
@@ -168,7 +174,6 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 
 	s.RegisterAPIRoute()
 
-	// 设置领导选举
 	l, err := s.setupLeaderElection(errChan)
 	if err != nil {
 		return err

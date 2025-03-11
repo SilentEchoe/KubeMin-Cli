@@ -6,6 +6,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
+	"github.com/fatih/color"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -25,8 +26,8 @@ const (
 
 // ApplicationSync 用于从k8s集群中的APP信息同步到数据库中
 type ApplicationSync struct {
-	KubeClient         client.Client `inject:"kubeClient"`
-	KubeConfig         *rest.Config
+	KubeClient         client.Client       `inject:"kubeClient"`
+	KubeConfig         *rest.Config        `inject:"kubeConfig"`
 	Store              datastore.DataStore `inject:"datastore"`
 	ApplicationService service.ApplicationsService
 	Queue              workqueue.TypedRateLimitingInterface[any]
@@ -96,7 +97,10 @@ func (a *ApplicationSync) Start(ctx context.Context, errorChan chan error) {
 			klog.V(4).Infof("watched delete app event, namespace: %s, name: %s", app.Namespace, app.Name)
 			a.Queue.Forget(app)
 			a.Queue.Done(app)
-			//err = cu.
+			err = cu.DeleteApp(ctx, app)
+			if err != nil {
+				klog.Errorf("Application %-30s Deleted Sync to db err %v", color.WhiteString(app.Namespace+"/"+app.Name), err)
+			}
 			klog.Infof("delete the application (%s/%s) metadata successfully", app.Namespace, app.Name)
 		},
 	}
