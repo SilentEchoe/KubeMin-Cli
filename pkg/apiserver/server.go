@@ -14,7 +14,7 @@ import (
 	"context"
 	"fmt"
 	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
-	"github.com/emicklei/go-restful/v3"
+	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 	"net/http"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,7 +34,8 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-	webContainer  *restful.Container
+	//webContainer  *restful.Container
+	webContainer  *gin.Engine
 	beanContainer *container.Container
 	cfg           config.Config
 	dataStore     datastore.DataStore
@@ -44,7 +45,7 @@ type restServer struct {
 // New create api server with config data
 func New(cfg config.Config) (a APIServer) {
 	s := &restServer{
-		webContainer:  restful.NewContainer(),
+		webContainer:  gin.New(),
 		beanContainer: container.NewContainer(),
 		cfg:           cfg,
 	}
@@ -110,6 +111,9 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// interfaces
+	//if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
+	//	return fmt.Errorf("fail to provides the api bean to the container: %w", err)
+	//}
 	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	}
@@ -137,79 +141,32 @@ func (s *restServer) Run(ctx context.Context, errors chan error) error {
 	return s.startHTTP(ctx)
 }
 
-// RegisterAPIRoute register the API route
-func (s *restServer) RegisterAPIRoute() restfulSpec.Config {
-	/* **************************************************************  */
-	/* *************       Open API Route Group     *****************  */
-	/* **************************************************************  */
-	// Add container filter to enable CORS
-	cors := restful.CrossOriginResourceSharing{
-		ExposeHeaders:  []string{},
-		AllowedHeaders: []string{"Content-Type", "Accept", "Authorization", "RefreshToken"},
-		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		CookiesAllowed: true,
-		Container:      s.webContainer}
-	// 配置跨域
-	s.webContainer.Filter(cors.Filter)
-
-	// Add container filter to respond to OPTIONS
-	s.webContainer.Filter(s.webContainer.OPTIONSFilter)
-	s.webContainer.Filter(s.OPTIONSFilter)
-
-	// Add request log
-	s.webContainer.Filter(s.requestLog)
-
-	// Register all custom api
-	for _, handler := range api.GetRegisteredAPI() {
-		s.webContainer.Add(handler.GetWebServiceRoute())
+func (s *restServer) RegisterAPIRoute() {
+	// 初始化中间件
+	s.webContainer.Use(gin.Recovery())
+	// 获取所有注册的API
+	apis := api.GetRegisteredAPI()
+	// 为每个API前缀创建路由组
+	for _, prefix := range api.GetAPIPrefix() {
+		group := s.webContainer.Group(prefix)
+		// 注册所有API到当前前缀组
+		for _, api := range apis {
+			api.RegisterRoutes(group)
+		}
 	}
 
-	config := restfulSpec.Config{
-		WebServices: s.webContainer.RegisteredWebServices(), // you control what services are visible
-	}
-	s.webContainer.Add(restfulSpec.NewOpenAPIService(config))
-	return config
-}
-
-func (s *restServer) requestLog(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	if req.HeaderParameter("Upgrade") == "websocket" && req.HeaderParameter("Connection") == "Upgrade" {
-		chain.ProcessFilter(req, resp)
-		return
-	}
-	start := time.Now()
-	c := pkgUtils.NewResponseCapture(resp.ResponseWriter)
-	resp.ResponseWriter = c
-	chain.ProcessFilter(req, resp)
-	takeTime := time.Since(start)
-	klog.InfoS("request log",
-		"clientIP", pkgUtils.Sanitize(pkgUtils.ClientIP(req.Request)),
-		"path", pkgUtils.Sanitize(req.Request.URL.Path),
-		"method", req.Request.Method,
-		"status", c.StatusCode(),
-		"time", takeTime.String(),
-		"responseSize", len(c.Bytes()),
-	)
-}
-
-func (s *restServer) OPTIONSFilter(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-	if req.Request.Method != "OPTIONS" {
-		chain.ProcessFilter(req, resp)
-		return
-	}
-	resp.AddHeader(restful.HEADER_AccessControlAllowCredentials, "true")
 }
 
 func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
 	if err := s.buildIoCContainer(); err != nil {
 		return nil, err
 	}
-
-	config := s.RegisterAPIRoute()
-	return &config, nil
+	s.RegisterAPIRoute()
+	return nil, nil
 }
 
 func (s *restServer) startHTTP(ctx context.Context) error {
-	// Start HTTP apiserver
+	// Start HTTP appserver
 	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
 	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
 	return server.ListenAndServe()

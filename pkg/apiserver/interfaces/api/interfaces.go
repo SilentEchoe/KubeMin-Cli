@@ -1,24 +1,19 @@
 package api
 
 import (
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"github.com/emicklei/go-restful/v3"
-	"net/http"
+	"github.com/gin-gonic/gin"
 )
 
 var versionPrefix = "/api/v1"
 
 // GetAPIPrefix return the prefix of the api route path
 func GetAPIPrefix() []string {
-	return []string{versionPrefix, viewPrefix, "/v1"}
+	return []string{versionPrefix}
 }
 
-// viewPrefix the path prefix for view page
-var viewPrefix = "/view"
-
-// Interface the API should define the http route
+// The Interface API should define the http route
 type Interface interface {
-	GetWebServiceRoute() *restful.WebService
+	RegisterRoutes(group *gin.RouterGroup)
 }
 
 var registeredAPI []Interface
@@ -31,14 +26,6 @@ func RegisterAPI(ws Interface) {
 // GetRegisteredAPI return all API handlers
 func GetRegisteredAPI() []Interface {
 	return registeredAPI
-}
-
-func returns200(b *restful.RouteBuilder) {
-	b.Returns(http.StatusOK, "OK", apisv1.SimpleResponse{Status: "ok"})
-}
-
-func returns500(b *restful.RouteBuilder) {
-	b.Returns(http.StatusInternalServerError, "Bummer, something went wrong", nil)
 }
 
 // InitAPIBean inits all API handlers, pass in the required parameter object.
