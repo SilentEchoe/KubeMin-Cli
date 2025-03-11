@@ -13,6 +13,7 @@ import (
 type ApplicationsService interface {
 	ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
+	Deploy(ctx context.Context, app *model.Applications, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error)
 }
 
 type applicationsServiceImpl struct {
@@ -67,4 +68,9 @@ func listApp(ctx context.Context, ds datastore.DataStore, listOptions apisv1.Lis
 // DeleteApplication delete application
 func (c *applicationsServiceImpl) DeleteApplication(ctx context.Context, app *model.Applications) error {
 	return c.Store.Delete(ctx, app)
+}
+
+func (c *applicationsServiceImpl) Deploy(ctx context.Context, app *model.Applications, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error) {
+	//TODO implement me
+	panic("implement me")
 }

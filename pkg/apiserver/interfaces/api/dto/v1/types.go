@@ -2,6 +2,10 @@ package v1
 
 import "time"
 
+var (
+	CtxKeyApplication = "applications"
+)
+
 // ApplicationBase application base model
 type ApplicationBase struct {
 	Name        string            `json:"name"`
@@ -45,6 +49,14 @@ type ListApplicationOptions struct {
 	TargetName string            `json:"targetName"`
 	Query      string            `json:"query"`
 	Labels     map[string]string `json:"labels"`
+}
+
+type ApplicationsDeployRequest struct {
+	WorkflowName string `json:"workflowName"`
+	Name         string `json:"appName"`
+}
+
+type ApplicationsDeployResponse struct {
 }
 
 // SimpleResponse simple response model for temporary

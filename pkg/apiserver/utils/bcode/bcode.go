@@ -1,9 +1,11 @@
 package bcode
 
 import (
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"errors"
-	"github.com/emicklei/go-restful/v3"
-	"k8s.io/klog/v2"
+	"fmt"
+	"github.com/gin-gonic/gin"
+	"github.com/go-playground/validator/v10"
 	"net/http"
 )
 
@@ -12,6 +14,10 @@ type Bcode struct {
 	HTTPCode     int32  `json:"-"`
 	BusinessCode int32  `json:"BusinessCode"`
 	Message      string `json:"Message"`
+}
+
+func (b Bcode) Error() string {
+	return fmt.Sprintf("HTTPCode:%d BusinessCode:%d Message:%s", b.HTTPCode, b.BusinessCode, b.Message)
 }
 
 var bcodeMap map[int32]*Bcode
@@ -29,35 +35,35 @@ func NewBcode(httpCode, businessCode int32, message string) *Bcode {
 	return bcode
 }
 
-// ReturnHTTPError Unified handling of all types of errors, generating a standard return structure.
-func ReturnHTTPError(req *http.Request, res http.ResponseWriter, err error) {
-	restRes := restful.NewResponse(res)
-	restRes.SetRequestAccepts(restful.MIME_JSON)
-	ReturnError(restful.NewRequest(req), restRes, err)
-}
-
 // ReturnError Unified handling of all types of errors, generating a standard return structure.
-func ReturnError(req *restful.Request, res *restful.Response, err error) {
+func ReturnError(c *gin.Context, err error) {
 	var bcode *Bcode
 	if errors.As(err, &bcode) {
-		if err := res.WriteHeaderAndEntity(int(bcode.HTTPCode), err); err != nil {
-			klog.Errorf("write entity failure %s", err.Error())
-		}
+		c.JSON(int(bcode.HTTPCode), err)
 		return
 	}
 
-	var restfulerr restful.ServiceError
-	if errors.As(err, &restfulerr) {
-		if err := res.WriteHeaderAndEntity(restfulerr.Code, Bcode{HTTPCode: int32(restfulerr.Code), BusinessCode: int32(restfulerr.Code), Message: restfulerr.Message}); err != nil {
-			klog.Errorf("write entity failure %s", err.Error())
-		}
+	if errors.Is(err, datastore.ErrRecordNotExist) {
+		c.JSON(http.StatusNotFound, err)
 		return
 	}
 
-	//klog.Errorf("Business exceptions, error message: %s, path:%s method:%s", err.Error(), utils.Sanitize(req.Request.URL.String()), req.Request.Method)
-	if err := res.WriteHeaderAndEntity(500, Bcode{HTTPCode: 500, BusinessCode: 500, Message: err.Error()}); err != nil {
-		klog.Errorf("write entity failure %s", err.Error())
+	var validErr validator.ValidationErrors
+	if errors.As(err, &validErr) {
+		c.JSON(http.StatusBadRequest, Bcode{
+			HTTPCode:     http.StatusBadRequest,
+			BusinessCode: 400,
+			Message:      err.Error(),
+		})
+		return
 	}
+
+	c.JSON(http.StatusInternalServerError, Bcode{
+		HTTPCode:     http.StatusInternalServerError,
+		BusinessCode: 500,
+		Message:      err.Error(),
+	})
+	return
 }
 
 // ErrServer an unexpected mistake.

@@ -174,14 +174,14 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 
 	s.RegisterAPIRoute()
 
-	l, err := s.setupLeaderElection(errChan)
-	if err != nil {
-		return err
-	}
-
-	go func() {
-		leaderelection.RunOrDie(ctx, *l)
-	}()
+	//l, err := s.setupLeaderElection(errChan)
+	//if err != nil {
+	//	return err
+	//}
+	//
+	//go func() {
+	//	leaderelection.RunOrDie(ctx, *l)
+	//}()
 
 	return s.startHTTP(ctx)
 }
