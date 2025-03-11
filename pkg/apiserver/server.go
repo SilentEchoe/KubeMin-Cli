@@ -114,7 +114,7 @@ func (s *restServer) buildIoCContainer() error {
 	//if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
 	//	return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	//}
-	if err := s.beanContainer.Provides(api.NewInitAPIBean()...); err != nil {
+	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	}
 
@@ -145,7 +145,7 @@ func (s *restServer) RegisterAPIRoute() {
 	// 初始化中间件
 	s.webContainer.Use(gin.Recovery())
 	// 获取所有注册的API
-	apis := api.NewGetRegisteredAPI()
+	apis := api.GetRegisteredAPI()
 	// 为每个API前缀创建路由组
 	for _, prefix := range api.GetAPIPrefix() {
 		group := s.webContainer.Group(prefix)
