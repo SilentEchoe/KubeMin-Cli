@@ -5,6 +5,7 @@ import (
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"github.com/gin-gonic/gin"
+	"k8s.io/klog/v2"
 	"net/http"
 )
 
@@ -34,10 +35,12 @@ func (a *applications) listApplications(c *gin.Context) {
 
 func (a *applications) deployApplication(c *gin.Context) {
 	var req apis.ApplicationsDeployRequest
-	if err := c.Bind(req); err != nil {
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
 		bcode.ReturnError(c, bcode.ErrApplicationConfig)
+		return
 	}
-	// 验证入参是否正确
+
 	if err := validate.Struct(req); err != nil {
 		bcode.ReturnError(c, err)
 		return
