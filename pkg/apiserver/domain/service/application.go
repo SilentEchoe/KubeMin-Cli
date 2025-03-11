@@ -1,19 +1,22 @@
 package service
 
 import (
+	"context"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sort"
+	"time"
+
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	assembler "KubeMin-Cli/pkg/apiserver/interfaces/api/assembler/v1"
 	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"context"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sort"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 type ApplicationsService interface {
 	ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
-	Deploy(ctx context.Context, app *model.Applications, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error)
+	Deploy(ctx context.Context, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error)
 }
 
 type applicationsServiceImpl struct {
@@ -70,7 +73,8 @@ func (c *applicationsServiceImpl) DeleteApplication(ctx context.Context, app *mo
 	return c.Store.Delete(ctx, app)
 }
 
-func (c *applicationsServiceImpl) Deploy(ctx context.Context, app *model.Applications, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error) {
-	//TODO implement me
-	panic("implement me")
+func (c *applicationsServiceImpl) Deploy(ctx context.Context, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error) {
+	// 根据时间生成一个版本号
+	version := utils.GenerateVersion("")
+	return &apisv1.ApplicationsDeployResponse{Version: version, CreateTime: time.Now()}, nil
 }

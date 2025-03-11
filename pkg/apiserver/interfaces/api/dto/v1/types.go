@@ -57,6 +57,8 @@ type ApplicationsDeployRequest struct {
 }
 
 type ApplicationsDeployResponse struct {
+	CreateTime time.Time `json:"createTime"`
+	Version    string    `json:"version"`
 }
 
 // SimpleResponse simple response model for temporary

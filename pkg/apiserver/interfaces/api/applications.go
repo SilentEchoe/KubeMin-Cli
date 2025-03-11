@@ -1,7 +1,6 @@
 package api
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
@@ -34,7 +33,6 @@ func (a *applications) listApplications(c *gin.Context) {
 }
 
 func (a *applications) deployApplication(c *gin.Context) {
-	app := c.Request.Context().Value(&apis.CtxKeyApplication).(*model.Applications)
 	var req apis.ApplicationsDeployRequest
 	if err := c.Bind(req); err != nil {
 		bcode.ReturnError(c, bcode.ErrApplicationConfig)
@@ -46,7 +44,7 @@ func (a *applications) deployApplication(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	resp, err := a.ApplicationService.Deploy(ctx, app, req)
+	resp, err := a.ApplicationService.Deploy(ctx, req)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return
