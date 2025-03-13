@@ -8,16 +8,12 @@ var (
 
 // ApplicationBase application base model
 type ApplicationBase struct {
-	Name        string            `json:"name"`
-	Alias       string            `json:"alias"`
-	Project     *ProjectBase      `json:"project"`
-	Description string            `json:"description"`
-	CreateTime  time.Time         `json:"createTime"`
-	UpdateTime  time.Time         `json:"updateTime"`
-	Icon        string            `json:"icon"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-	ReadOnly    bool              `json:"readOnly,omitempty"`
+	Name        string    `json:"name"`
+	Alias       string    `json:"alias"`
+	Description string    `json:"description"`
+	CreateTime  time.Time `json:"createTime"`
+	UpdateTime  time.Time `json:"updateTime"`
+	Icon        string    `json:"icon"`
 }
 
 // ProjectBase project base model
@@ -35,6 +31,15 @@ type ProjectBase struct {
 type NameAlias struct {
 	Name  string `json:"name"`
 	Alias string `json:"alias"`
+}
+
+type CreateApplicationsRequest struct {
+	Name        string            `json:"name"`
+	Alias       string            `json:"alias"`
+	Project     string            `json:"project"`
+	Description string            `json:"description"`
+	Icon        string            `json:"icon"`
+	Labels      map[string]string `json:"labels,omitempty"`
 }
 
 // ListApplicationResponse list applications by query params

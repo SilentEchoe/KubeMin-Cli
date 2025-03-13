@@ -21,7 +21,6 @@ func NewApplications() Interface {
 func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/applications", a.listApplications)
 	group.POST("/applications/deploy", a.deployApplication)
-
 }
 
 func (a *applications) listApplications(c *gin.Context) {
@@ -45,7 +44,6 @@ func (a *applications) deployApplication(c *gin.Context) {
 		bcode.ReturnError(c, err)
 		return
 	}
-
 	ctx := c.Request.Context()
 	resp, err := a.ApplicationService.Deploy(ctx, req)
 	if err != nil {

@@ -14,8 +14,6 @@ func ConvertAppModelToBase(app *model.Applications) *apisv1.ApplicationBase {
 		UpdateTime:  app.UpdateTime,
 		Description: app.Description,
 		Icon:        app.Icon,
-		Labels:      app.Labels,
-		Annotations: app.Annotations,
 	}
 	return appBase
 }
