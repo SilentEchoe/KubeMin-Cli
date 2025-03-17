@@ -16,6 +16,10 @@ type Applications struct {
 	Annotations map[string]string `json:"annotations,omitempty" gorm:"serializer:json"`
 }
 
+type ApplicationComponent struct {
+	BaseModel
+}
+
 func (a Applications) PrimaryKey() string {
 	return a.Name
 }
