@@ -1,29 +1,50 @@
 package model
 
+import "KubeMin-Cli/pkg/apiserver/config"
+
 // Workflow application delivery database model
 type Workflow struct {
 	BaseModel
-	Name        string `json:"name" gorm:"primaryKey"`
-	Alias       string `json:"alias"`
-	Description string `json:"description"`
-	// Workflow used by the default
-	Default       *bool          `json:"default"`
-	AppPrimaryKey string         `json:"appPrimaryKey" gorm:"primaryKey"`
-	EnvName       string         `json:"envName"`
-	Steps         []WorkflowStep `json:"steps,omitempty" gorm:"serializer:json"`
+	ID          int              `json:"Id" gorm:"primaryKey"`
+	Name        string           `json:"name"`
+	Alias       string           `json:"alias"`
+	Description string           `json:"description"`
+	Default     *bool            `json:"default"`
+	Stages      []*WorkflowStage `json:"stages"`
 }
 
-// WorkflowStep defines how to execute a workflow step.
-type WorkflowStep struct {
-	WorkflowStepBase `json:",inline" bson:",inline"`
-	SubSteps         []WorkflowStepBase `json:"subSteps,omitempty"`
+type WorkflowStage struct {
+	Name string `json:"name"`
+	Jobs []*Job `json:"jobs"`
 }
 
-// WorkflowStepBase is the step base of workflow
-type WorkflowStepBase struct {
-	// Name是工作流步骤的唯一名称。
-	Name    string `json:"name"`
-	Alias   string `json:"alias"`
-	Type    string `json:"type"`
-	Timeout string `json:"timeout,omitempty"`
+type Job struct {
+	Name      string              `json:"name"`
+	JobType   config.JobType      `json:"type"`
+	Spec      interface{}         `json:"spec"`
+	RunPolicy config.JobRunPolicy `json:"run_policy"`
+}
+
+type DeployJobSpec struct {
+	Env string `json:"env"`
+}
+
+func (w Workflow) PrimaryKey() string {
+	return w.Name
+}
+
+func (w Workflow) TableName() string {
+	return tableNamePrefix + "workflow"
+}
+
+func (w Workflow) ShortTableName() string {
+	return "work"
+}
+
+func (w Workflow) Index() map[string]interface{} {
+	index := make(map[string]interface{})
+	if w.Name != "" {
+		index["name"] = w.Name
+	}
+	return index
 }
