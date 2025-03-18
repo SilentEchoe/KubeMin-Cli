@@ -14,15 +14,15 @@ type WorkflowService interface {
 	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
 }
 
-// NewWorkflowService new workflow service
-func NewWorkflowService() WorkflowService {
-	return &workflowServiceImpl{}
-}
-
 type workflowServiceImpl struct {
 	Store      datastore.DataStore `inject:"datastore"`
 	KubeClient client.Client       `inject:"kubeClient"`
 	KubeConfig *rest.Config        `inject:"kubeConfig"`
+}
+
+// NewWorkflowService new workflow service
+func NewWorkflowService() WorkflowService {
+	return &workflowServiceImpl{}
 }
 
 func (w workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {

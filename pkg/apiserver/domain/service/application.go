@@ -32,6 +32,10 @@ type applicationsServiceImpl struct {
 	KubeClient client.Client       `inject:"kubeClient"`
 }
 
+func NewApplicationService() ApplicationsService {
+	return &applicationsServiceImpl{}
+}
+
 func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error) {
 	application := model.Applications{
 		Name:        req.Name,
@@ -59,10 +63,6 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	// render appUtil base info.
 	base := assembler.ConvertAppModelToBase(&application)
 	return base, nil
-}
-
-func NewApplicationService() ApplicationsService {
-	return &applicationsServiceImpl{}
 }
 
 // ListApplications list applications
