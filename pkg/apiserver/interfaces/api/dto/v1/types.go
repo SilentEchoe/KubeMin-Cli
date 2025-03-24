@@ -66,34 +66,38 @@ type ApplicationsDeployResponse struct {
 	Version    string    `json:"version"`
 }
 
-// SimpleResponse simple response model for temporary
-type SimpleResponse struct {
-	Status string `json:"status"`
+type CreateWorkflowRequest struct {
+	Name        string                       `json:"name" validate:"checkname"`
+	Alias       string                       `json:"alias" validate:"checkalias" optional:"true"`
+	Project     string                       `json:"project" validate:"checkname"`
+	Description string                       `json:"description" optional:"true"`
+	Icon        string                       `json:"icon"`
+	Labels      map[string]string            `json:"labels,omitempty"`
+	Component   []CreateComponentRequest     `json:"component"`
+	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
 }
 
-// WorkflowBase workflow base model
-type WorkflowBase struct {
-	Name        string         `json:"name"`
-	Alias       string         `json:"alias"`
-	Description string         `json:"description"`
-	Enable      bool           `json:"enable"`
-	Default     bool           `json:"default"`
-	EnvName     string         `json:"envName"`
-	CreateTime  time.Time      `json:"createTime"`
-	UpdateTime  time.Time      `json:"updateTime"`
-	Mode        string         `json:"mode"`
-	SubMode     string         `json:"subMode"`
-	Steps       []WorkflowStep `json:"steps,omitempty"`
+type CreateComponentRequest struct {
+	Name          string     `json:"name"`
+	ComponentType string     `json:"componentType"`
+	Properties    Properties `json:"properties"`
 }
 
-// WorkflowStep workflow step config
-type WorkflowStep struct {
-	WorkflowStepBase `json:",inline"`
-	Mode             string             `json:"mode,omitempty" validate:"checkMode"`
-	SubSteps         []WorkflowStepBase `json:"subSteps,omitempty"`
+type Properties struct {
+	Image string  `json:"image"`
+	Ports []Ports `json:"ports"`
 }
 
-// WorkflowStepBase is the step base of workflow
-type WorkflowStepBase struct {
-	Name string `json:"name" validate:"checkname"`
+type Ports struct {
+	Port   int64 `json:"port"`
+	Expose bool  `json:"expose"`
+}
+
+type CreateWorkflowStepsRequest struct {
+	Name          string     `json:"name"`
+	ComponentType string     `json:"componentType"`
+	Properties    Properties `json:"properties"`
+}
+
+type CreateWorkflowResponse struct {
 }

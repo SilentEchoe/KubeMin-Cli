@@ -3,23 +3,17 @@ package service
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	wf "KubeMin-Cli/pkg/apiserver/workflow"
-	job "KubeMin-Cli/pkg/apiserver/workflow/job"
+	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"context"
-	"fmt"
-	"time"
-
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
 	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
-	CreateWorkflowTask(ctx context.Context, workflow *model.Workflow) error
+	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (apis.CreateWorkflowResponse, error)
 }
 
 type workflowServiceImpl struct {
@@ -34,36 +28,25 @@ func NewWorkflowService() WorkflowService {
 }
 
 // CreateWorkflowTask 创建工作流任务(执行)
-func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow *model.Workflow) error {
-	// 校验工作流信息
-	if err := wf.LintWorkflow(workflow); err != nil {
-		return err
-	}
+func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (apis.CreateWorkflowResponse, error) {
 
-	workflowTask := &model.WorkflowTask{}
+	//// 校验工作流信息
+	//if err := wf.LintWorkflow(workflow); err != nil {
+	//	return err
+	//}
+	//
+	////初始化工作流
+	//if err := job.InstantiateWorkflow(workflow); err != nil {
+	//	klog.Error("instantiate workflow error: %s", err)
+	//	return err
+	//}
+	//
+	//return nil
+	panic("implement me")
+}
 
-	// TODO 查询用户信息,与工作流连接在一起
-	originalWorkflow, err := repository.WorkflowByName(ctx, w.Store, workflow.Name)
-	if err != nil {
-		return fmt.Errorf("cannot find workflow %s, error: %v", workflow.Name, err)
-	}
-
-	if workflow.Disabled || originalWorkflow.Disabled {
-		return fmt.Errorf("workflow is disabled ")
-	}
-
-	workflowTask.Hash = originalWorkflow.Hash
-
-	workflow.CreateTime = time.Now()
-	workflow.UpdateTime = time.Now()
-
-	//初始化工作流
-	if err := job.InstantiateWorkflow(workflow); err != nil {
-		klog.Error("instantiate workflow error: %s", err)
-		return err
-	}
-
-	return nil
+func convertWorlflow(req *apis.CreateWorkflowRequest) *model.Workflow {
+	return &model.Workflow{}
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
