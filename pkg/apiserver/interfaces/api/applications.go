@@ -46,7 +46,7 @@ func (a *applications) createApplications(c *gin.Context) {
 }
 
 func (a *applications) listApplications(c *gin.Context) {
-	apps, err := a.ApplicationService.ListApplications(c.Request.Context(), apis.ListApplicationOptions{})
+	apps, err := a.ApplicationService.ListApplications(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apps)
 		return

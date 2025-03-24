@@ -2,12 +2,12 @@ package service
 
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
+	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"context"
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"time"
@@ -22,7 +22,8 @@ import (
 type ApplicationsService interface {
 	CreateApplications(context.Context, apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error)
 	GetApplication(ctx context.Context, appName string) (*model.Applications, error)
-	ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
+	//ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
+	ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
 	Deploy(ctx context.Context, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error)
 }
@@ -44,30 +45,33 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		Icon:        req.Icon,
 		Labels:      req.Labels,
 	}
-	// check appUtil name.
-	exist, err := c.Store.IsExist(ctx, &application)
+	exist, err := repository.IsExist(ctx, c.Store, req.Name)
 	if err != nil {
-		klog.Errorf("check application name is exist failure %s", err.Error())
 		return nil, bcode.ErrApplicationExist
 	}
 	if exist {
 		return nil, bcode.ErrApplicationExist
 	}
-	// add application to db.
-	if err := c.Store.Add(ctx, &application); err != nil {
+	if err := repository.CreateApplications(ctx, c.Store, &application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist
 		}
 		return nil, err
 	}
+
 	// render appUtil base info.
 	base := assembler.ConvertAppModelToBase(&application)
 	return base, nil
 }
 
 // ListApplications list applications
-func (c *applicationsServiceImpl) ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error) {
-	apps, err := listApp(ctx, c.Store, listOptions)
+func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error) {
+	listOptions := datastore.ListOptions{
+		Page:     0,
+		PageSize: 10,
+	}
+
+	apps, err := repository.ListApplications(ctx, c.Store, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -80,29 +84,6 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context, listOpti
 		return list[i].UpdateTime.Unix() > list[j].UpdateTime.Unix()
 	})
 	return list, nil
-
-}
-
-func listApp(ctx context.Context, ds datastore.DataStore, listOptions apisv1.ListApplicationOptions) ([]*model.Applications, error) {
-	// 这里写的简单一点，直接查询所有的应用列表，后续在做身份认证信息
-	var app = model.Applications{}
-	var err error
-	entities, err := ds.List(ctx, &app, &datastore.ListOptions{})
-	if err != nil {
-		return nil, err
-	}
-	var list []*model.Applications
-
-	for _, entity := range entities {
-		appModel, ok := entity.(*model.Applications)
-		if !ok {
-			continue
-		}
-		list = append(list, appModel)
-	}
-
-	return list, nil
-
 }
 
 // GetApplication get application model

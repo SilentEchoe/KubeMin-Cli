@@ -8,6 +8,7 @@ type Workflow struct {
 	ID          int              `json:"Id" gorm:"primaryKey"`
 	Name        string           `json:"name"`
 	Alias       string           `json:"alias"` //别名
+	Project     string           `json:"project"`
 	Description string           `json:"description"`
 	Default     *bool            `json:"default"`
 	Stages      []*WorkflowStage `json:"stages"`
