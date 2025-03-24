@@ -7,22 +7,30 @@ type Workflow struct {
 	BaseModel
 	ID          int              `json:"Id" gorm:"primaryKey"`
 	Name        string           `json:"name"`
-	Alias       string           `json:"alias"`
+	Alias       string           `json:"alias"` //别名
 	Description string           `json:"description"`
 	Default     *bool            `json:"default"`
 	Stages      []*WorkflowStage `json:"stages"`
 }
 
 type WorkflowStage struct {
-	Name string `json:"name"`
-	Jobs []*Job `json:"jobs"`
+	Name     string `json:"name"`
+	Parallel bool   `json:"parallel"` //是否并行
+	Jobs     []*Job `json:"jobs"`
 }
 
 type Job struct {
-	Name      string              `json:"name"`
-	JobType   config.JobType      `json:"type"`
-	Spec      interface{}         `json:"spec"`
-	RunPolicy config.JobRunPolicy `json:"run_policy"`
+	Name        string              `json:"name"`
+	JobType     config.JobType      `json:"type"`
+	Skipped     bool                `json:"skipped"`
+	Spec        interface{}         `json:"spec"`
+	RunPolicy   config.JobRunPolicy `json:"run_policy"`   //运行策略
+	ErrorPolicy *JobErrorPolicy     `json:"error_policy"` //错误策略
+}
+
+type JobErrorPolicy struct {
+	Policy       config.JobErrorPolicy `json:"policy"`        //Job的错误策略
+	MaximumRetry int                   `json:"maximum_retry"` //最大重试次数
 }
 
 type DeployJobSpec struct {
