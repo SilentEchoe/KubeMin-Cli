@@ -3,9 +3,12 @@ package service
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	job "KubeMin-Cli/pkg/apiserver/workflow/job"
 	"context"
+	"fmt"
 	"time"
 
 	"k8s.io/client-go/rest"
@@ -30,16 +33,26 @@ func NewWorkflowService() WorkflowService {
 	return &workflowServiceImpl{}
 }
 
-// CreateWorkflowTask 创建工作流
+// CreateWorkflowTask 创建工作流任务(执行)
 func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow *model.Workflow) error {
-	// 判断工作流是否存在
-	_, err := w.Store.IsExist(ctx, workflow)
-	if err != nil {
+	// 校验工作流信息
+	if err := wf.LintWorkflow(workflow); err != nil {
 		return err
 	}
-	//TODO 校验工作流
 
-	//TODO 查询用户信息，如果用户信息存在，将用户信息与该工作流绑定
+	workflowTask := &model.WorkflowTask{}
+
+	// TODO 查询用户信息,与工作流连接在一起
+	originalWorkflow, err := repository.WorkflowByName(ctx, w.Store, workflow.Name)
+	if err != nil {
+		return fmt.Errorf("cannot find workflow %s, error: %v", workflow.Name, err)
+	}
+
+	if workflow.Disabled || originalWorkflow.Disabled {
+		return fmt.Errorf("workflow is disabled ")
+	}
+
+	workflowTask.Hash = originalWorkflow.Hash
 
 	workflow.CreateTime = time.Now()
 	workflow.UpdateTime = time.Now()
