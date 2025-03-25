@@ -32,6 +32,7 @@ func GetRegisteredAPI() []Interface {
 // It can be implemented using the idea of dependency injection.
 func InitAPIBean() []interface{} {
 	RegisterAPI(NewApplications())
+	RegisterAPI(NewWorkflow())
 	var beans []interface{}
 	for i := range registeredAPI {
 		beans = append(beans, registeredAPI[i])

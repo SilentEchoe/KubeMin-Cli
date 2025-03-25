@@ -1,6 +1,9 @@
 package v1
 
-import "time"
+import (
+	"KubeMin-Cli/pkg/apiserver/config"
+	"time"
+)
 
 var (
 	CtxKeyApplication = "applications"
@@ -68,10 +71,9 @@ type ApplicationsDeployResponse struct {
 
 type CreateWorkflowRequest struct {
 	Name        string                       `json:"name" validate:"checkname"`
-	Alias       string                       `json:"alias" validate:"checkalias" optional:"true"`
+	Alias       string                       `json:"alias"`
 	Project     string                       `json:"project" validate:"checkname"`
 	Description string                       `json:"description" optional:"true"`
-	Icon        string                       `json:"icon"`
 	Labels      map[string]string            `json:"labels,omitempty"`
 	Component   []CreateComponentRequest     `json:"component"`
 	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
@@ -79,7 +81,7 @@ type CreateWorkflowRequest struct {
 
 type CreateComponentRequest struct {
 	Name          string     `json:"name"`
-	ComponentType string     `json:"componentType"`
+	ComponentType string     `json:"type"`
 	Properties    Properties `json:"properties"`
 }
 
@@ -94,9 +96,13 @@ type Ports struct {
 }
 
 type CreateWorkflowStepsRequest struct {
-	Name          string     `json:"name"`
-	ComponentType string     `json:"componentType"`
-	Properties    Properties `json:"properties"`
+	Name               string           `json:"name"`
+	ComponentType      config.JobType   `json:"jobType"`
+	WorkflowProperties WorkflowPolicies `json:"properties"`
+}
+
+type WorkflowPolicies struct {
+	Policies []string `json:"policies"`
 }
 
 type CreateWorkflowResponse struct {

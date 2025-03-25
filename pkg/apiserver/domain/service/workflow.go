@@ -5,15 +5,17 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"context"
 	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
 	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
-	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (apis.CreateWorkflowResponse, error)
+	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 }
 
 type workflowServiceImpl struct {
@@ -28,7 +30,18 @@ func NewWorkflowService() WorkflowService {
 }
 
 // CreateWorkflowTask 创建工作流任务(执行)
-func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (apis.CreateWorkflowResponse, error) {
+func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error) {
+	nworkflow := model.Workflow{
+		Name: workflow.Name,
+	}
+	exist, err := w.Store.IsExist(ctx, &nworkflow)
+	if err != nil {
+		klog.Errorf("check workflow name is exist failure %s", err.Error())
+		return nil, bcode.ErrWorkflowExist
+	}
+	if exist {
+		return nil, bcode.ErrWorkflowExist
+	}
 
 	//// 校验工作流信息
 	//if err := wf.LintWorkflow(workflow); err != nil {
@@ -41,7 +54,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow a
 	//	return err
 	//}
 	//
-	//return nil
+	//return nil-
 	panic("implement me")
 }
 

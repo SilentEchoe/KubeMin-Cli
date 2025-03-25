@@ -2,24 +2,27 @@ package model
 
 import "KubeMin-Cli/pkg/apiserver/config"
 
+func init() {
+	RegisterModel(&Workflow{})
+}
+
 // Workflow application delivery database model
 type Workflow struct {
 	BaseModel
-	ID          int              `json:"Id" gorm:"primaryKey"`
-	Name        string           `json:"name"`
-	Alias       string           `json:"alias"` //别名
-	Disabled    bool             `json:"disabled"`
-	Project     string           `json:"project"`
-	Description string           `json:"description"`
-	Default     *bool            `json:"default"`
-	Stages      []*WorkflowStage `json:"stages"`
-	Hash        string           `json:"hash"`
+	ID            int            `json:"Id" gorm:"primaryKey"`
+	Name          string         `json:"name" `
+	Alias         string         `json:"alias"` //别名
+	Disabled      bool           `json:"disabled"`
+	Project       string         `json:"project"`
+	Description   string         `json:"description"`
+	AppPrimaryKey string         `json:"appPrimaryKey"`
+	Steps         []WorkflowStep `json:"steps,omitempty" gorm:"serializer:json"`
 }
 
-type WorkflowStage struct {
+type WorkflowStep struct {
 	Name     string `json:"name"`
 	Parallel bool   `json:"parallel"` //是否并行
-	Jobs     []*Job `json:"jobs"`
+	Jobs     []Job  `json:"jobs"`
 }
 
 type Job struct {
@@ -40,19 +43,19 @@ type DeployJobSpec struct {
 	Env string `json:"env"`
 }
 
-func (w Workflow) PrimaryKey() string {
+func (w *Workflow) PrimaryKey() string {
 	return w.Name
 }
 
-func (w Workflow) TableName() string {
+func (w *Workflow) TableName() string {
 	return tableNamePrefix + "workflow"
 }
 
-func (w Workflow) ShortTableName() string {
+func (w *Workflow) ShortTableName() string {
 	return "work"
 }
 
-func (w Workflow) Index() map[string]interface{} {
+func (w *Workflow) Index() map[string]interface{} {
 	index := make(map[string]interface{})
 	if w.Name != "" {
 		index["name"] = w.Name
