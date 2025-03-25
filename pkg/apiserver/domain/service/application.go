@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"time"
@@ -22,7 +23,6 @@ import (
 type ApplicationsService interface {
 	CreateApplications(context.Context, apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error)
 	GetApplication(ctx context.Context, appName string) (*model.Applications, error)
-	//ListApplications(ctx context.Context, listOptions apisv1.ListApplicationOptions) ([]*apisv1.ApplicationBase, error)
 	ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
 	Deploy(ctx context.Context, req apisv1.ApplicationsDeployRequest) (*apisv1.ApplicationsDeployResponse, error)
@@ -39,11 +39,12 @@ func NewApplicationService() ApplicationsService {
 
 func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error) {
 	application := model.Applications{
+		ID:          utils.RandStringByNumLowercase(24),
 		Name:        req.Name,
 		Alias:       req.Alias,
+		Project:     req.Project,
 		Description: req.Description,
 		Icon:        req.Icon,
-		Labels:      req.Labels,
 	}
 	exist, err := repository.IsExist(ctx, c.Store, req.Name)
 	if err != nil {
@@ -57,6 +58,22 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 			return nil, bcode.ErrApplicationExist
 		}
 		return nil, err
+	}
+
+	for _, component := range req.Component {
+		nComponent := ConvertComponent(&component, application.ID)
+		properties, err := model.NewJSONStructByStruct(component.Properties)
+		if err != nil {
+			klog.Errorf("new trait failure,%s", err.Error())
+			return nil, bcode.ErrInvalidProperties
+		}
+		nComponent.Properties = properties
+
+		err = repository.CreateComponents(ctx, c.Store, nComponent)
+		if err != nil {
+			klog.Errorf("Create Components err:", err)
+			return nil, bcode.ErrCreateComponents
+		}
 	}
 
 	// render appUtil base info.

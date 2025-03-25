@@ -8,6 +8,7 @@ import (
 // ConvertAppModelToBase assemble the Application model to DTO
 func ConvertAppModelToBase(app *model.Applications) *apisv1.ApplicationBase {
 	appBase := &apisv1.ApplicationBase{
+		ID:          app.ID,
 		Name:        app.Name,
 		Alias:       app.Alias,
 		CreateTime:  app.CreateTime,

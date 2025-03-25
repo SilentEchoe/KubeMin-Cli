@@ -11,6 +11,7 @@ var (
 
 // ApplicationBase application base model
 type ApplicationBase struct {
+	ID          string    `json:"ID"`
 	Name        string    `json:"name"`
 	Alias       string    `json:"alias"`
 	Project     string    `json:"project"`
@@ -38,10 +39,10 @@ type NameAlias struct {
 }
 
 type CreateApplicationsRequest struct {
-	Name        string                   `json:"name"`
+	Name        string                   `json:"name" validate:"checkname"`
 	Alias       string                   `json:"alias"`
-	Project     string                   `json:"project"`
-	Description string                   `json:"description"`
+	Project     string                   `json:"project" validate:"checkname"`
+	Description string                   `json:"description" optional:"true"`
 	Icon        string                   `json:"icon"`
 	Component   []CreateComponentRequest `json:"component"`
 }
