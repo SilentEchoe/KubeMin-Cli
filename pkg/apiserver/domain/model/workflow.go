@@ -9,14 +9,13 @@ func init() {
 // Workflow application delivery database model
 type Workflow struct {
 	BaseModel
-	ID            int            `json:"Id" gorm:"primaryKey"`
-	Name          string         `json:"name" `
-	Alias         string         `json:"alias"` //别名
-	Disabled      bool           `json:"disabled"`
-	Project       string         `json:"project"`
-	Description   string         `json:"description"`
-	AppPrimaryKey string         `json:"appPrimaryKey"`
-	Steps         []WorkflowStep `json:"steps,omitempty" gorm:"serializer:json"`
+	ID          string         `json:"Id" gorm:"primaryKey"`
+	Name        string         `json:"name" `
+	Alias       string         `json:"alias"`    //别名
+	Disabled    bool           `json:"disabled"` //是否关闭，创建时默认为true
+	Project     string         `json:"project"`
+	Description string         `json:"description"`
+	Steps       []WorkflowStep `json:"steps,omitempty" gorm:"serializer:json"`
 }
 
 type WorkflowStep struct {

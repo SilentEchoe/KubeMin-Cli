@@ -45,6 +45,8 @@ type Config struct {
 
 	//ExitOnLostLeader will exit the process if this server lost the leader election, set this to true for debugging
 	ExitOnLostLeader bool
+
+	CacheDB string
 }
 
 func NewConfig() *Config {

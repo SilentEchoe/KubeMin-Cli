@@ -5,7 +5,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
+	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -30,11 +32,11 @@ func NewWorkflowService() WorkflowService {
 }
 
 // CreateWorkflowTask 创建工作流任务(执行)
-func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error) {
-	nworkflow := model.Workflow{
-		Name: workflow.Name,
+func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error) {
+	workflow := &model.Workflow{
+		Name: req.Name,
 	}
-	exist, err := w.Store.IsExist(ctx, &nworkflow)
+	exist, err := w.Store.IsExist(ctx, workflow)
 	if err != nil {
 		klog.Errorf("check workflow name is exist failure %s", err.Error())
 		return nil, bcode.ErrWorkflowExist
@@ -43,23 +45,32 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, workflow a
 		return nil, bcode.ErrWorkflowExist
 	}
 
-	//// 校验工作流信息
-	//if err := wf.LintWorkflow(workflow); err != nil {
-	//	return err
-	//}
-	//
+	workflow = ConvertWorkflow(&req)
+
+	// 校验工作流信息
+	if err = wf.LintWorkflow(workflow); err != nil {
+		return nil, err
+	}
+
 	////初始化工作流
 	//if err := job.InstantiateWorkflow(workflow); err != nil {
 	//	klog.Error("instantiate workflow error: %s", err)
 	//	return err
 	//}
 	//
-	//return nil-
-	panic("implement me")
+
+	return nil, nil
 }
 
-func convertWorlflow(req *apis.CreateWorkflowRequest) *model.Workflow {
-	return &model.Workflow{}
+func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
+	return &model.Workflow{
+		ID:          utils.RandStringByNumLowercase(24),
+		Name:        req.Name,
+		Alias:       req.Alias,
+		Disabled:    true,
+		Project:     req.Project,
+		Description: req.Description,
+	}
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
