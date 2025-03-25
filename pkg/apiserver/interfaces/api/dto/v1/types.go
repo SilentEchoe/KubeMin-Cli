@@ -80,9 +80,9 @@ type CreateWorkflowRequest struct {
 }
 
 type CreateComponentRequest struct {
-	Name          string     `json:"name"`
-	ComponentType string     `json:"type"`
-	Properties    Properties `json:"properties"`
+	Name          string         `json:"name"`
+	ComponentType config.JobType `json:"type"`
+	Properties    Properties     `json:"properties"`
 }
 
 type Properties struct {
@@ -106,4 +106,5 @@ type WorkflowPolicies struct {
 }
 
 type CreateWorkflowResponse struct {
+	WorkflowId string `json:"workflowId"`
 }

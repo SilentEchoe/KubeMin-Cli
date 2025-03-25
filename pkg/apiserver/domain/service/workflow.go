@@ -3,6 +3,7 @@ package service
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils"
@@ -44,7 +45,6 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 	if exist {
 		return nil, bcode.ErrWorkflowExist
 	}
-
 	workflow = ConvertWorkflow(&req)
 
 	// 校验工作流信息
@@ -52,14 +52,31 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		return nil, err
 	}
 
-	////初始化工作流
-	//if err := job.InstantiateWorkflow(workflow); err != nil {
-	//	klog.Error("instantiate workflow error: %s", err)
-	//	return err
-	//}
-	//
+	err = repository.CreateWorkflow(ctx, w.Store, workflow)
+	if err != nil {
+		return nil, bcode.ErrCreateWorlflow
+	}
 
-	return nil, nil
+	// 存入Command信息
+	for _, component := range req.Component {
+		nComponent := ConvertComponent(&component, workflow.ID)
+		properties, err := model.NewJSONStructByStruct(component.Properties)
+		if err != nil {
+			klog.Errorf("new trait failure,%s", err.Error())
+			return nil, bcode.ErrInvalidProperties
+		}
+		nComponent.Properties = properties
+
+		err = repository.CreateComponents(ctx, w.Store, nComponent)
+		if err != nil {
+			klog.Errorf("Create Compoents err:", err)
+			return nil, bcode.ErrCreateComponents
+		}
+	}
+
+	return &apis.CreateWorkflowResponse{
+		WorkflowId: workflow.ID,
+	}, nil
 }
 
 func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
@@ -70,6 +87,14 @@ func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 		Disabled:    true,
 		Project:     req.Project,
 		Description: req.Description,
+	}
+}
+
+func ConvertComponent(req *apis.CreateComponentRequest, workflowId string) *model.WorkflowComponent {
+	return &model.WorkflowComponent{
+		WorkflowId:    workflowId,
+		Name:          req.Name,
+		ComponentType: req.ComponentType,
 	}
 }
 
