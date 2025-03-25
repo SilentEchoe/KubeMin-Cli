@@ -5,19 +5,22 @@ import (
 )
 
 func init() {
-	RegisterModel(&Workflow{}, &WorkflowComponent{})
+	RegisterModel(&Workflow{})
 }
 
 // Workflow application delivery database model
 type Workflow struct {
-	BaseModel
 	ID          string         `json:"id" gorm:"primaryKey"`
 	Name        string         `json:"name" `
 	Alias       string         `json:"alias"`    //别名
 	Disabled    bool           `json:"disabled"` //是否关闭，创建时默认为true
 	Project     string         `json:"project"`
+	AppID       string         `json:"appID"`
+	UserID      string         `json:"userID"`
 	Description string         `json:"description"`
 	Steps       []WorkflowStep `json:"steps,omitempty" gorm:"serializer:json"`
+
+	BaseModel
 }
 
 type WorkflowStep struct {
@@ -57,36 +60,6 @@ func (w *Workflow) ShortTableName() string {
 }
 
 func (w *Workflow) Index() map[string]interface{} {
-	index := make(map[string]interface{})
-	if w.Name != "" {
-		index["name"] = w.Name
-	}
-	return index
-}
-
-// WorkflowComponent delivery database model 组件信息
-type WorkflowComponent struct {
-	ID            int            `json:"id" gorm:"primaryKey"`
-	WorkflowId    string         `json:"workflowId"`
-	Name          string         `json:"name" `
-	ComponentType config.JobType `json:"componentType"`
-	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"`
-	BaseModel
-}
-
-func (w *WorkflowComponent) PrimaryKey() string {
-	return w.Name
-}
-
-func (w *WorkflowComponent) TableName() string {
-	return tableNamePrefix + "workflow_components"
-}
-
-func (w *WorkflowComponent) ShortTableName() string {
-	return "work_component"
-}
-
-func (w *WorkflowComponent) Index() map[string]interface{} {
 	index := make(map[string]interface{})
 	if w.Name != "" {
 		index["name"] = w.Name

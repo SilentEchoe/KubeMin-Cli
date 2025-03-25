@@ -90,9 +90,8 @@ func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 	}
 }
 
-func ConvertComponent(req *apis.CreateComponentRequest, workflowId string) *model.WorkflowComponent {
-	return &model.WorkflowComponent{
-		WorkflowId:    workflowId,
+func ConvertComponent(req *apis.CreateComponentRequest, workflowId string) *model.ApplicationComponent {
+	return &model.ApplicationComponent{
 		Name:          req.Name,
 		ComponentType: req.ComponentType,
 	}

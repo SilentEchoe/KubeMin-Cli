@@ -25,7 +25,7 @@ func CreateWorkflow(ctx context.Context, store datastore.DataStore, workflow *mo
 	return nil
 }
 
-func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *model.WorkflowComponent) error {
+func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *model.ApplicationComponent) error {
 	err := store.Add(ctx, workflow)
 	if err != nil {
 		return err

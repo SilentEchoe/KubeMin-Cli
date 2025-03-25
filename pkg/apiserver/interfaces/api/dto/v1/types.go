@@ -13,6 +13,7 @@ var (
 type ApplicationBase struct {
 	Name        string    `json:"name"`
 	Alias       string    `json:"alias"`
+	Project     string    `json:"project"`
 	Description string    `json:"description"`
 	CreateTime  time.Time `json:"createTime"`
 	UpdateTime  time.Time `json:"updateTime"`
@@ -37,12 +38,12 @@ type NameAlias struct {
 }
 
 type CreateApplicationsRequest struct {
-	Name        string            `json:"name"`
-	Alias       string            `json:"alias"`
-	Project     string            `json:"project"`
-	Description string            `json:"description"`
-	Icon        string            `json:"icon"`
-	Labels      map[string]string `json:"labels,omitempty"`
+	Name        string                   `json:"name"`
+	Alias       string                   `json:"alias"`
+	Project     string                   `json:"project"`
+	Description string                   `json:"description"`
+	Icon        string                   `json:"icon"`
+	Component   []CreateComponentRequest `json:"component"`
 }
 
 // ListApplicationResponse list applications by query params
