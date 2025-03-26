@@ -39,12 +39,25 @@ type NameAlias struct {
 }
 
 type CreateApplicationsRequest struct {
-	Name        string                   `json:"name" validate:"checkname"`
-	Alias       string                   `json:"alias"`
-	Project     string                   `json:"project" validate:"checkname"`
-	Description string                   `json:"description" optional:"true"`
-	Icon        string                   `json:"icon"`
-	Component   []CreateComponentRequest `json:"component"`
+	Name          string                      `json:"name" validate:"checkname"`
+	Alias         string                      `json:"alias"`
+	Project       string                      `json:"project" validate:"checkname"`
+	Description   string                      `json:"description" optional:"true"`
+	Icon          string                      `json:"icon"`
+	Component     []CreateComponentRequest    `json:"component"`
+	WorkflowSteps []CreateWorkflowStepRequest `json:"workflow"`
+}
+
+type CreateComponentRequest struct {
+	Name          string         `json:"name"`
+	ComponentType config.JobType `json:"type"`
+	Properties    Properties     `json:"properties"`
+}
+
+type CreateWorkflowStepRequest struct {
+	Name         string             `json:"name"`
+	WorkflowType config.JobType     `json:"jobType"`
+	Properties   WorkflowProperties `json:"properties"`
 }
 
 // ListApplicationResponse list applications by query params
@@ -81,12 +94,6 @@ type CreateWorkflowRequest struct {
 	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
 }
 
-type CreateComponentRequest struct {
-	Name          string         `json:"name"`
-	ComponentType config.JobType `json:"type"`
-	Properties    Properties     `json:"properties"`
-}
-
 type Properties struct {
 	Image string  `json:"image"`
 	Ports []Ports `json:"ports"`
@@ -95,6 +102,10 @@ type Properties struct {
 type Ports struct {
 	Port   int64 `json:"port"`
 	Expose bool  `json:"expose"`
+}
+
+type WorkflowProperties struct {
+	Policies []string `json:"policies"`
 }
 
 type CreateWorkflowStepsRequest struct {

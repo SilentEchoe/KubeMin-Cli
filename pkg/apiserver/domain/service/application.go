@@ -2,6 +2,7 @@ package service
 
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"context"
@@ -59,7 +60,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 		return nil, err
 	}
-
+	// 创建App组件
 	for _, component := range req.Component {
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
@@ -76,9 +77,68 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 	}
 
-	// render appUtil base info.
+	// 如果没有定义工作流，默认会自动按照组件和运维特征数组的顺序进行部署，并把Paas服务所在的当前集群作为目标集群。
+	workflowName := ""
+	workflowAlias := fmt.Sprintf("%s-%s", req.Alias, "default-workflow")
+	var workflowStep *model.JSONStruct
+	if len(req.WorkflowSteps) == 0 {
+		workflowName = fmt.Sprintf("%s-%s", req.Name, "default-workflow")
+		step := ConvertWorkflowStepByComponent(req.Component)
+		workflowStep, err = model.NewJSONStructByStruct(step)
+		if err != nil {
+			return nil, bcode.ErrCreateWorkflow
+		}
+	} else {
+		workflowName = req.Name + utils.RandStringByNumLowercase(16)
+		workflowSteps := new(model.WorkflowSteps)
+		for _, steps := range req.WorkflowSteps {
+			step := &model.WorkflowStep{
+				Name:         steps.Name,
+				WorkflowType: steps.WorkflowType,
+				Properties: []model.Policies{
+					{Policies: steps.Properties.Policies},
+				},
+			}
+			workflowSteps.Steps = append(workflowSteps.Steps, step)
+		}
+		workflowStep, err = model.NewJSONStructByStruct(workflowSteps)
+		if err != nil {
+			return nil, bcode.ErrCreateWorkflow
+		}
+	}
+	workflow := &model.Workflow{
+		ID:          utils.RandStringByNumLowercase(24),
+		Name:        workflowName,
+		Alias:       workflowAlias,
+		Disabled:    false,
+		Project:     application.Project,
+		AppID:       application.ID,
+		Description: application.Description,
+		Steps:       workflowStep,
+	}
+
+	err = repository.CreateWorkflow(ctx, c.Store, workflow)
+	if err != nil {
+		klog.Errorf("Create workflow err:", err)
+		return nil, bcode.ErrCreateWorkflow
+	}
 	base := assembler.ConvertAppModelToBase(&application)
 	return base, nil
+}
+
+func ConvertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) *model.WorkflowSteps {
+	workflowSteps := new(model.WorkflowSteps)
+	for _, compoent := range components {
+		step := &model.WorkflowStep{
+			Name:         compoent.Name,
+			WorkflowType: config.JobDeploy, //默认部署所有组件
+			Properties: []model.Policies{{
+				Policies: []string{compoent.Name},
+			}},
+		}
+		workflowSteps.Steps = append(workflowSteps.Steps, step)
+	}
+	return workflowSteps
 }
 
 // ListApplications list applications

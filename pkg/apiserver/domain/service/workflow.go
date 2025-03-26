@@ -54,10 +54,9 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 
 	err = repository.CreateWorkflow(ctx, w.Store, workflow)
 	if err != nil {
-		return nil, bcode.ErrCreateWorlflow
+		return nil, bcode.ErrCreateWorkflow
 	}
 
-	// 存入Command信息
 	for _, component := range req.Component {
 		nComponent := ConvertComponent(&component, workflow.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
