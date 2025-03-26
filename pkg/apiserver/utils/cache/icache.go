@@ -17,3 +17,12 @@ var (
 	CacheTypeRedis CacheType = "redis"
 	CacheTypeMem   CacheType = "memory"
 )
+
+func New(noCache bool, cacheType CacheType) ICache {
+	switch cacheType {
+	case CacheTypeMem:
+		return NewMemCache(noCache)
+	default:
+		return NewMemCache(noCache)
+	}
+}
