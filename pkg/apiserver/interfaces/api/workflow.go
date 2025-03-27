@@ -19,6 +19,7 @@ func NewWorkflow() Interface {
 
 func (w *workflow) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/workflow", w.createWorkflow)
+	group.POST("/workflow/exec", w.execWorkflowTask)
 }
 
 func (w *workflow) createWorkflow(c *gin.Context) {
@@ -34,6 +35,22 @@ func (w *workflow) createWorkflow(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	resp, err := w.WorkflowService.CreateWorkflowTask(ctx, req)
+	if err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func (w *workflow) execWorkflowTask(c *gin.Context) {
+	var req apis.ExecWorkflowRequest
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
+		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
+		return
+	}
+	ctx := c.Request.Context()
+	resp, err := w.WorkflowService.ExecWorkflowTask(ctx, req.WorkflowId)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return

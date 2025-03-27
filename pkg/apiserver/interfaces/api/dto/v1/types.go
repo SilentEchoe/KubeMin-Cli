@@ -121,3 +121,11 @@ type WorkflowPolicies struct {
 type CreateWorkflowResponse struct {
 	WorkflowId string `json:"workflowId"`
 }
+
+type ExecWorkflowRequest struct {
+	WorkflowId string `json:"workflowId"`
+}
+
+type ExecWorkflowResponse struct {
+	WorkflowId string `json:"workflowId"`
+}

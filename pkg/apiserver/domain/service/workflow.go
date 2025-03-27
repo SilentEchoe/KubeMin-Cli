@@ -2,6 +2,7 @@ package service
 
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
@@ -19,6 +20,7 @@ type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
 	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
+	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
 }
 
 type workflowServiceImpl struct {
@@ -95,6 +97,27 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 		AppId:         appID,
 		ComponentType: req.ComponentType,
 	}
+}
+
+// ExecWorkflowTask 执行工作流的任务
+func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error) {
+	//查询该工作流是否存在
+	workflow, err := repository.WorkflowById(ctx, w.Store, workflowId)
+	if err != nil {
+		return nil, err
+	}
+	switch workflow.Status {
+	case config.StatusPause:
+	default:
+		return nil, bcode.ErrExecWorkflow
+	}
+
+	if workflow.Steps == nil {
+		return nil, bcode.ErrExecWorkflow
+	}
+	//将工作里的阶段解析出来，让放入一个消息队列中，依次执行
+
+	return nil, nil
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {

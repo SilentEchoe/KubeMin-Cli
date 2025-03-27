@@ -7,3 +7,5 @@ var ErrWorkflowExist = NewBcode(400, 20001, "workflow name is exist")
 var ErrCreateWorkflow = NewBcode(400, 20002, "workflow create failure")
 
 var ErrCreateComponents = NewBcode(400, 20003, "workflow components create failure")
+
+var ErrExecWorkflow = NewBcode(400, 20004, "workflow exec failure")
