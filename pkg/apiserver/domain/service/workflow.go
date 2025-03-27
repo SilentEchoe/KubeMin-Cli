@@ -2,6 +2,7 @@ package service
 
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
@@ -107,11 +108,10 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	if err != nil {
 		return nil, err
 	}
-	//switch workflow.Status {
-	//case config.StatusPause:
-	//default:
-	//	return nil, bcode.ErrExecWorkflow
-	//}
+	switch workflow.Status {
+	case config.StatusPause:
+		return nil, bcode.ErrExecWorkflow
+	}
 
 	if workflow.Steps == nil {
 		return nil, bcode.ErrExecWorkflow

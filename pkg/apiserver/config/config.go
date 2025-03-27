@@ -10,7 +10,12 @@ import (
 
 var (
 	// Addr the address for starting profiling server
-	Addr = ""
+	Addr          = ""
+	CacheDB       = 0
+	RedisHost     = ""
+	RedisPort     = ""
+	RedisUserName = ""
+	RedisPassword = ""
 )
 
 type leaderConfig struct {
