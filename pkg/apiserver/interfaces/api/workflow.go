@@ -49,6 +49,10 @@ func (w *workflow) execWorkflowTask(c *gin.Context) {
 		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
 		return
 	}
+	if err := validate.Struct(req); err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
 	ctx := c.Request.Context()
 	resp, err := w.WorkflowService.ExecWorkflowTask(ctx, req.WorkflowId)
 	if err != nil {

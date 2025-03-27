@@ -28,6 +28,8 @@ type Config struct {
 
 	Datastore datastore.Config
 
+	Cache CacheConfig
+
 	// Istio Enable
 	IstioEnable bool
 
@@ -45,8 +47,12 @@ type Config struct {
 
 	//ExitOnLostLeader will exit the process if this server lost the leader election, set this to true for debugging
 	ExitOnLostLeader bool
+}
 
-	CacheDB string
+type CacheConfig struct {
+	CacheHost string
+	CacheType string
+	CacheDB   string
 }
 
 func NewConfig() *Config {

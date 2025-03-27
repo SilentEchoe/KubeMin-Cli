@@ -2,13 +2,13 @@ package service
 
 import (
 	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
-	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
+	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
 	"k8s.io/client-go/rest"
@@ -27,6 +27,7 @@ type workflowServiceImpl struct {
 	Store      datastore.DataStore `inject:"datastore"`
 	KubeClient client.Client       `inject:"kubeClient"`
 	KubeConfig *rest.Config        `inject:"kubeConfig"`
+	Cache      cache.ICache        `inject:"cache"`
 }
 
 // NewWorkflowService new workflow service
@@ -106,16 +107,27 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	if err != nil {
 		return nil, err
 	}
-	switch workflow.Status {
-	case config.StatusPause:
-	default:
-		return nil, bcode.ErrExecWorkflow
-	}
+	//switch workflow.Status {
+	//case config.StatusPause:
+	//default:
+	//	return nil, bcode.ErrExecWorkflow
+	//}
 
 	if workflow.Steps == nil {
 		return nil, bcode.ErrExecWorkflow
 	}
 	//将工作里的阶段解析出来，让放入一个消息队列中，依次执行
+
+	err = w.Cache.Store("test", workflowId)
+	if err != nil {
+		return nil, err
+	}
+
+	info, err := w.Cache.List()
+	if err != nil {
+		return nil, err
+	}
+	klog.Info(info)
 
 	return nil, nil
 }

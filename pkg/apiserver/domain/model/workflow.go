@@ -36,7 +36,7 @@ type Policies struct {
 }
 
 func (w *Workflow) PrimaryKey() string {
-	return w.Name
+	return w.ID
 }
 
 func (w *Workflow) TableName() string {
@@ -49,6 +49,9 @@ func (w *Workflow) ShortTableName() string {
 
 func (w *Workflow) Index() map[string]interface{} {
 	index := make(map[string]interface{})
+	if w.ID != "" {
+		index["id"] = w.ID
+	}
 	if w.Name != "" {
 		index["name"] = w.Name
 	}

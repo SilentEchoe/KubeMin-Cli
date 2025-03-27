@@ -9,6 +9,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
@@ -39,6 +40,7 @@ type restServer struct {
 	beanContainer *container.Container
 	cfg           config.Config
 	dataStore     datastore.DataStore
+	cache         cache.ICache
 	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
 	KubeConfig    *rest.Config  `inject:"kubeConfig"`
 }
@@ -101,9 +103,19 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
+	var iCache cache.ICache
+	switch s.cfg.Cache.CacheType {
+	case "":
+		iCache = cache.New(false, cache.CacheTypeMem)
+	}
+
 	// 将db 注入到IOC中
 	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
 		return fmt.Errorf("fail to provides the datastore bean to the container: %w", err)
+	}
+
+	if err := s.beanContainer.ProvideWithName("cache", iCache); err != nil {
+		return fmt.Errorf("fail to provides the cache bean to the container: %w", err)
 	}
 
 	// 将操作k8s的权限全都注入到IOC中
