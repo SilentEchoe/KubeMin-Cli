@@ -1,9 +1,7 @@
 package cache
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
 	"context"
-	"fmt"
 	"github.com/redis/go-redis/v9"
 	"time"
 )
@@ -16,16 +14,16 @@ var redisClient *redis.Client
 
 // NewRedisCache callers has to make sure the caller has the settings for redis in their env variables.
 func NewRedisCache(db int) *RedisCache {
-	if redisClient == nil {
-		redisConfig := &redis.Options{
-			Addr:     fmt.Sprintf("%s:%d", config.RedisHost, config.RedisPort),
-			DB:       db,
-			Password: config.RedisPassword,
-			Username: config.RedisUserName,
-		}
-
-		redisClient = redis.NewClient(redisConfig)
-	}
+	//if redisClient == nil {
+	//	redisConfig := &redis.Options{
+	//		Addr:     fmt.Sprintf("%s:%d", "", config.RedisPort),
+	//		DB:       db,
+	//		Password: config.RedisPassword,
+	//		Username: config.RedisUserName,
+	//	}
+	//
+	//	redisClient = redis.NewClient(redisConfig)
+	//}
 	return &RedisCache{redisClient: redisClient}
 }
 

@@ -10,12 +10,7 @@ import (
 
 var (
 	// Addr the address for starting profiling server
-	Addr          = ""
-	CacheDB       = 0
-	RedisHost     = ""
-	RedisPort     = ""
-	RedisUserName = ""
-	RedisPassword = ""
+	Addr = ""
 )
 
 type leaderConfig struct {
@@ -33,7 +28,7 @@ type Config struct {
 
 	Datastore datastore.Config
 
-	Cache CacheConfig
+	Cache RedisCacheConfig
 
 	// Istio Enable
 	IstioEnable bool
@@ -54,10 +49,12 @@ type Config struct {
 	ExitOnLostLeader bool
 }
 
-type CacheConfig struct {
+type RedisCacheConfig struct {
 	CacheHost string
 	CacheType string
-	CacheDB   string
+	CacheDB   int64
+	UserName  string
+	Password  string
 }
 
 func NewConfig() *Config {

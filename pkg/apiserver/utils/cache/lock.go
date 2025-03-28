@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
 	"github.com/go-redsync/redsync/v4"
 	goredis "github.com/go-redsync/redsync/v4/redis/goredis/v9"
 	"k8s.io/klog/v2"
@@ -12,7 +11,7 @@ import (
 var resync *redsync.Redsync
 
 func init() {
-	resync = redsync.New(goredis.NewPool(NewRedisCache(config.CacheDB).redisClient))
+	resync = redsync.New(goredis.NewPool(NewRedisCache(0).redisClient))
 }
 
 type RedisLock struct {
