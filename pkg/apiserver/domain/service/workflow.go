@@ -22,6 +22,7 @@ type WorkflowService interface {
 	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
+	WaitingTasks(ctx context.Context) (*model.WorkflowQueue, error)
 }
 
 type workflowServiceImpl struct {
@@ -140,4 +141,8 @@ func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *
 func (w *workflowServiceImpl) SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error {
 	//TODO implement me
 	panic("implement me")
+}
+
+func (w *workflowServiceImpl) WaitingTasks(ctx context.Context) (*model.WorkflowQueue, error) {
+
 }

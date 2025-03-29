@@ -12,6 +12,7 @@ const (
 type JobRunPolicy string
 type JobType string
 type JobErrorPolicy string
+type WorkflowTaskType string
 
 const (
 	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
@@ -27,6 +28,11 @@ const (
 
 	DefaultJobBuild  JobType = "default_build"
 	DefaultJobDeploy JobType = "default_deploy"
+
+	WorkflowTaskTypeWorkflow WorkflowTaskType = "workflow"
+	WorkflowTaskTypeTesting  WorkflowTaskType = "test"
+	WorkflowTaskTypeScanning WorkflowTaskType = "scan"
+	WorkflowTaskTypeDelivery WorkflowTaskType = "delivery"
 )
 
 type Status string

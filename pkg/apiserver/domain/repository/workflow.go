@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
@@ -44,4 +45,15 @@ func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *
 		return err
 	}
 	return nil
+}
+
+func WaitingTasks(ctx context.Context, store datastore.DataStore) ([]*model.WorkflowQueue, error) {
+	var workflow = &model.WorkflowQueue{
+		Status: config.StatusWaiting,
+	}
+	list, err := store.List(ctx, workflow, &datastore.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	return list
 }

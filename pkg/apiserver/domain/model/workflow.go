@@ -44,7 +44,7 @@ func (w *Workflow) TableName() string {
 }
 
 func (w *Workflow) ShortTableName() string {
-	return "work"
+	return "workflow"
 }
 
 func (w *Workflow) Index() map[string]interface{} {
