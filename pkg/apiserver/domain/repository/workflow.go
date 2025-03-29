@@ -47,13 +47,17 @@ func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *
 	return nil
 }
 
-func WaitingTasks(ctx context.Context, store datastore.DataStore) ([]*model.WorkflowQueue, error) {
-	var workflow = &model.WorkflowQueue{
+func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model.WorkflowQueue, err error) {
+	var workflowQueue = &model.WorkflowQueue{
 		Status: config.StatusWaiting,
 	}
-	list, err := store.List(ctx, workflow, &datastore.ListOptions{})
+	queues, err := store.List(ctx, workflowQueue, &datastore.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
-	return list
+	for _, policy := range queues {
+		wq := policy.(*model.WorkflowQueue)
+		list = append(list, wq)
+	}
+	return
 }
