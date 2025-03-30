@@ -6,17 +6,17 @@ import (
 )
 
 type WorkflowQueue struct {
-	ID                  string                  `json:"id,omitempty"`
-	TaskID              int64                   `json:"task_id"`
-	ProjectName         string                  `json:"project_name"`
-	WorkflowName        string                  ` json:"workflow_name"`
-	WorkflowDisplayName string                  `json:"workflow_display_name"`
-	Status              config.Status           `json:"status,omitempty"`
-	Stages              []*StageTask            `json:"stages"`
-	TaskCreator         string                  `json:"task_creator,omitempty"`
-	TaskRevoker         string                  `json:"task_revoker,omitempty"`
-	CreateTime          int64                   `json:"create_time,omitempty"`
-	Type                config.WorkflowTaskType `json:"type,omitempty"`
+	ID                  string        `json:"id,omitempty"`
+	TaskID              int64         `json:"task_id"`
+	ProjectName         string        `json:"project_name"`
+	WorkflowName        string        ` json:"workflow_name"`
+	WorkflowDisplayName string        `json:"workflow_display_name"`
+	Status              config.Status `json:"status,omitempty"`
+	Stages              []*StageTask  `json:"stages"`
+	TaskCreator         string        `json:"task_creator,omitempty"`
+	TaskRevoker         string        `json:"task_revoker,omitempty"`
+	//CreateTime          int64                   `json:"create_time,omitempty"`
+	Type config.WorkflowTaskType `json:"type,omitempty"`
 	BaseModel
 }
 
