@@ -23,6 +23,7 @@ type WorkflowService interface {
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
+	UpdateQueue(ctx context.Context, queue *model.WorkflowQueue) bool
 }
 
 type workflowServiceImpl struct {
@@ -149,4 +150,13 @@ func (w *workflowServiceImpl) WaitingTasks(ctx context.Context) ([]*model.Workfl
 		return nil, err
 	}
 	return list, err
+}
+
+func (w *workflowServiceImpl) UpdateQueue(ctx context.Context, task *model.WorkflowQueue) bool {
+	err := repository.UpdateQueue(ctx, w.Store, task)
+	if err != nil {
+		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
+		return false
+	}
+	return true
 }

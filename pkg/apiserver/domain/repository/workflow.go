@@ -61,3 +61,8 @@ func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model
 	}
 	return
 }
+
+func UpdateQueue(ctx context.Context, store datastore.DataStore, queue *model.WorkflowQueue) error {
+	err := store.Put(ctx, queue)
+	return err
+}
