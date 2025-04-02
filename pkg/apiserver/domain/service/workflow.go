@@ -131,7 +131,9 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 		return nil, err
 	}
 
-	return nil, nil
+	return &apis.ExecWorkflowResponse{
+		WorkflowId: workflowTask.ID,
+	}, nil
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
