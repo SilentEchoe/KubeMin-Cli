@@ -23,7 +23,9 @@ type WorkflowService interface {
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
-	UpdateQueue(ctx context.Context, queue *model.WorkflowQueue) bool
+	UpdateTask(ctx context.Context, queue *model.WorkflowQueue) bool
+	TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
+	CancelWorkflowTask(ctx context.Context, userName, workId string) error
 }
 
 type workflowServiceImpl struct {
@@ -154,8 +156,8 @@ func (w *workflowServiceImpl) WaitingTasks(ctx context.Context) ([]*model.Workfl
 	return list, err
 }
 
-func (w *workflowServiceImpl) UpdateQueue(ctx context.Context, task *model.WorkflowQueue) bool {
-	err := repository.UpdateQueue(ctx, w.Store, task)
+func (w *workflowServiceImpl) UpdateTask(ctx context.Context, task *model.WorkflowQueue) bool {
+	err := repository.UpdateTask(ctx, w.Store, task)
 	if err != nil {
 		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 		return false
@@ -166,4 +168,29 @@ func (w *workflowServiceImpl) UpdateQueue(ctx context.Context, task *model.Workf
 // AddQueueTask 添加Task到队列中
 func (w *workflowServiceImpl) AddQueueTask(ctx context.Context) {
 
+}
+
+// TaskRunning 所有正在运行的Task
+func (w *workflowServiceImpl) TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error) {
+	list, err := repository.TaskRunning(ctx, w.Store)
+	if err != nil {
+		return nil, err
+	}
+	return list, err
+}
+
+func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, workId string) error {
+	task, err := repository.TaskById(ctx, w.Store, workId)
+	if err != nil {
+		return err
+	}
+
+	task.TaskRevoker = userName
+	task.Status = config.StatusCancelled
+
+	err = repository.UpdateTask(ctx, w.Store, task)
+	if err != nil {
+		return err
+	}
+	return nil
 }

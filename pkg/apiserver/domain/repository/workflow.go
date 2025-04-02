@@ -8,17 +8,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func WorkflowByName(ctx context.Context, store datastore.DataStore, workflowName string) (*model.Workflow, error) {
-	var workflow = &model.Workflow{
-		ID: workflowName,
-	}
-	err := store.Get(ctx, workflow)
-	if err != nil {
-		return nil, err
-	}
-	return workflow, nil
-}
-
 func WorkflowById(ctx context.Context, store datastore.DataStore, workflowId string) (*model.Workflow, error) {
 	var workflow = &model.Workflow{
 		ID: workflowId,
@@ -72,7 +61,45 @@ func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model
 	return
 }
 
-func UpdateQueue(ctx context.Context, store datastore.DataStore, queue *model.WorkflowQueue) error {
-	err := store.Put(ctx, queue)
+func UpdateTask(ctx context.Context, store datastore.DataStore, task *model.WorkflowQueue) error {
+	err := store.Put(ctx, task)
 	return err
+}
+
+func TaskRunning(ctx context.Context, store datastore.DataStore) (list []*model.WorkflowQueue, err error) {
+	tasks, err := store.List(ctx, &model.WorkflowQueue{}, &datastore.ListOptions{FilterOptions: datastore.FilterOptions{In: []datastore.InQueryOption{
+		{
+			Key: "status",
+			Values: []string{
+				string(config.StatusCreated),
+				string(config.StatusRunning),
+				string(config.StatusWaiting),
+				string(config.StatusQueued),
+				string(config.StatusBlocked),
+				string(config.QueueItemPending),
+				string(config.StatusPrepare),
+				string(config.StatusWaitingApprove),
+				""},
+		},
+	}}})
+
+	if err != nil {
+		return nil, err
+	}
+	for _, v := range tasks {
+		task := v.(*model.WorkflowQueue)
+		list = append(list, task)
+	}
+	return
+}
+
+func TaskById(ctx context.Context, store datastore.DataStore, workId string) (*model.WorkflowQueue, error) {
+	var task = &model.WorkflowQueue{
+		ID: workId,
+	}
+	err := store.Get(ctx, task)
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
 }

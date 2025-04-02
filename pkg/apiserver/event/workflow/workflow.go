@@ -7,6 +7,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
@@ -15,6 +16,7 @@ import (
 
 type Workflow struct {
 	KubeClient      client.Client `inject:"kubeClient"`
+	KubeConfig      *rest.Config  `inject:"kubeConfig"`
 	Store           datastore.DataStore
 	workflowService service.WorkflowService
 }
@@ -25,9 +27,21 @@ func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 }
 
 func (w *Workflow) InitQueue() {
+	ctx := context.Background()
 	// 从数据库中查找未完成的任务
+	tasks, err := w.workflowService.TaskRunning(ctx)
+	if err != nil {
+		klog.Errorf(fmt.Sprintf("find task running error:%s", err))
+		return
+	}
 	// 如果重启Queue，则取消所有正在运行的tasks
-
+	for _, task := range tasks {
+		err := w.workflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.ID)
+		if err != nil {
+			klog.Errorf(fmt.Sprintf("cance task error:%s", err))
+			return
+		}
+	}
 }
 
 func (w *Workflow) WorkflowTaskSender() {
@@ -43,7 +57,7 @@ func (w *Workflow) WorkflowTaskSender() {
 		for _, task := range waitingTasks {
 			// TODO 判断Task是否符合执行条件
 
-			if success := w.workflowService.UpdateQueue(ctx, task); !success {
+			if success := w.workflowService.UpdateTask(ctx, task); !success {
 				continue
 			}
 			// go
