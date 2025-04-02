@@ -15,6 +15,7 @@ type JobCtl interface {
 
 // JobTask 是最小的执行单位
 type JobTask struct {
+	Name        string `json:"name"`
 	WorkflowKey string `json:"workflowKey"`
 	ProjectKey  string `json:"projectKey"`
 	JobInfo     interface{}
