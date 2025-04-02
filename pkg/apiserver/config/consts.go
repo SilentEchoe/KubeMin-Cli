@@ -13,6 +13,11 @@ type JobRunPolicy string
 type JobType string
 type JobErrorPolicy string
 type WorkflowTaskType string
+type Status string
+
+func (s Status) ToLower() Status {
+	return Status(strings.ToLower(string(s)))
+}
 
 const (
 	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
@@ -35,15 +40,9 @@ const (
 	WorkflowTaskTypeDelivery WorkflowTaskType = "delivery"
 )
 
-type Status string
-
-func (s Status) ToLower() Status {
-	return Status(strings.ToLower(string(s)))
-}
-
 const (
 	StatusDisabled       Status = "disabled"                       //已关闭
-	StatusCreated        Status = "created"                        // 创建
+	StatusCreated        Status = "created"                        //创建
 	StatusRunning        Status = "running"                        //运行中
 	StatusPassed         Status = "passed"                         //通过
 	StatusSkipped        Status = "skipped"                        //跳过

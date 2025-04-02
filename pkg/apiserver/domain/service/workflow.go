@@ -63,6 +63,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		return nil, bcode.ErrCreateWorkflow
 	}
 
+	// 创建组件
 	for _, component := range req.Component {
 		nComponent := ConvertComponent(&component, workflow.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
@@ -110,26 +111,25 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	if err != nil {
 		return nil, err
 	}
-	switch workflow.Status {
-	case config.StatusPause:
-		return nil, bcode.ErrExecWorkflow
-	}
 
 	if workflow.Steps == nil {
 		return nil, bcode.ErrExecWorkflow
 	}
-	//将工作里的阶段解析出来，让放入一个消息队列中，依次执行
+	//验证并解析工作流，生成Job并放入消息队列(WorkflowQueue表)中
+	workflowTask := &model.WorkflowQueue{
+		ID:                  utils.RandStringByNumLowercase(24),
+		ProjectName:         workflow.Project,
+		WorkflowName:        workflow.Name,
+		WorkflowDisplayName: workflow.Alias,
+		Type:                workflow.WorkflowType,
+		Status:              config.StatusWaiting,
+		AppID:               workflow.AppID,
+	}
 
-	err = w.Cache.Store("test", workflowId)
+	err = repository.CreateWorkflowQueue(ctx, w.Store, workflowTask)
 	if err != nil {
 		return nil, err
 	}
-
-	info, err := w.Cache.List()
-	if err != nil {
-		return nil, err
-	}
-	klog.Info(info)
 
 	return nil, nil
 }
@@ -159,4 +159,9 @@ func (w *workflowServiceImpl) UpdateQueue(ctx context.Context, task *model.Workf
 		return false
 	}
 	return true
+}
+
+// AddQueueTask 添加Task到队列中
+func (w *workflowServiceImpl) AddQueueTask(ctx context.Context) {
+
 }

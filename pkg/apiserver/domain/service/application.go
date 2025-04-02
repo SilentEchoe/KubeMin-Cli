@@ -89,7 +89,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 			return nil, bcode.ErrCreateWorkflow
 		}
 	} else {
-		workflowName = req.Name + utils.RandStringByNumLowercase(16)
+		workflowName = fmt.Sprintf("%s-%s", req.Name, utils.RandStringByNumLowercase(16))
 		workflowSteps := new(model.WorkflowSteps)
 		for _, steps := range req.WorkflowSteps {
 			step := &model.WorkflowStep{
@@ -107,14 +107,16 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 	}
 	workflow := &model.Workflow{
-		ID:          utils.RandStringByNumLowercase(24),
-		Name:        workflowName,
-		Alias:       workflowAlias,
-		Disabled:    false,
-		Project:     application.Project,
-		AppID:       application.ID,
-		Description: application.Description,
-		Steps:       workflowStep,
+		ID:           utils.RandStringByNumLowercase(24),
+		Name:         workflowName,
+		AppID:        application.ID,
+		Alias:        workflowAlias,
+		Disabled:     false,
+		Project:      application.Project,
+		Description:  application.Description,
+		WorkflowType: config.WorkflowTaskTypeWorkflow,
+		Status:       config.StatusCreated,
+		Steps:        workflowStep,
 	}
 
 	err = repository.CreateWorkflow(ctx, c.Store, workflow)

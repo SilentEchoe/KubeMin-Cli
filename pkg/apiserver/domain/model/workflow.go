@@ -8,16 +8,17 @@ func init() {
 
 // Workflow application delivery database model
 type Workflow struct {
-	ID          string        `json:"id" gorm:"primaryKey"`
-	Name        string        `json:"name" `
-	Alias       string        `json:"alias"`    //别名
-	Disabled    bool          `json:"disabled"` //是否关闭，创建时默认为false
-	Project     string        `json:"project"`
-	AppID       string        `json:"appID"`
-	UserID      string        `json:"userID"`
-	Description string        `json:"description"`
-	Status      config.Status `json:"status"`
-	Steps       *JSONStruct   `json:"steps,omitempty" gorm:"serializer:json"`
+	ID           string                  `json:"id" gorm:"primaryKey"`
+	Name         string                  `json:"name" `
+	Alias        string                  `json:"alias"`    //别名
+	Disabled     bool                    `json:"disabled"` //是否关闭，创建时默认为false
+	Project      string                  `json:"project"`
+	AppID        string                  `gorm:"column:appid" json:"appID"`
+	UserID       string                  `json:"userID"`
+	Description  string                  `json:"description"`
+	WorkflowType config.WorkflowTaskType `gorm:"column:workflow_type" json:"workflow_type"` //工作流类型
+	Status       config.Status           `json:"status"`                                    //分为开启和关闭等状态
+	Steps        *JSONStruct             `json:"steps,omitempty" gorm:"serializer:json"`
 	BaseModel
 }
 

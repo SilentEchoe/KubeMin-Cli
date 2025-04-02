@@ -47,11 +47,21 @@ func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *
 	return nil
 }
 
+func CreateWorkflowQueue(ctx context.Context, store datastore.DataStore, queue *model.WorkflowQueue) error {
+	err := store.Add(ctx, queue)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model.WorkflowQueue, err error) {
 	var workflowQueue = &model.WorkflowQueue{
 		Status: config.StatusWaiting,
 	}
-	queues, err := store.List(ctx, workflowQueue, &datastore.ListOptions{})
+	queues, err := store.List(ctx, workflowQueue, &datastore.ListOptions{
+		SortBy: []datastore.SortOption{{Key: "createTime", Order: datastore.SortOrderDescending}},
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -6,17 +6,16 @@ import (
 )
 
 type WorkflowQueue struct {
-	ID                  string        `json:"id,omitempty"`
-	TaskID              int64         `json:"task_id"`
-	ProjectName         string        `json:"project_name"`
-	WorkflowName        string        ` json:"workflow_name"`
-	WorkflowDisplayName string        `json:"workflow_display_name"`
-	Status              config.Status `json:"status,omitempty"`
-	Stages              []*StageTask  `json:"stages"`
-	TaskCreator         string        `json:"task_creator,omitempty"`
-	TaskRevoker         string        `json:"task_revoker,omitempty"`
-	//CreateTime          int64                   `json:"create_time,omitempty"`
-	Type config.WorkflowTaskType `json:"type,omitempty"`
+	ID                  string                  `json:"id,omitempty"`                           //动态ID
+	TaskID              int64                   `gorm:"type:int auto_increment" json:"task_id"` //任务ID，自生成
+	ProjectName         string                  `json:"project_name"`                           //所属项目
+	WorkflowName        string                  `json:"workflow_name"`                          //工作流名称(唯一)
+	AppID               string                  `json:"app_id"`
+	WorkflowDisplayName string                  `json:"workflow_display_name"`  //工作流显示名称
+	Status              config.Status           `json:"status,omitempty"`       //当前状态
+	TaskCreator         string                  `json:"task_creator,omitempty"` //任务创建者
+	TaskRevoker         string                  `json:"task_revoker,omitempty"` //任务取消者
+	Type                config.WorkflowTaskType `json:"type,omitempty"`         //工作流类型
 	BaseModel
 }
 

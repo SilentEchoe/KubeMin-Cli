@@ -123,7 +123,7 @@ type CreateWorkflowResponse struct {
 }
 
 type ExecWorkflowRequest struct {
-	WorkflowId string `json:"workflowId"`
+	WorkflowId string `json:"workflowId" validate:"checkname"`
 }
 
 type ExecWorkflowResponse struct {
