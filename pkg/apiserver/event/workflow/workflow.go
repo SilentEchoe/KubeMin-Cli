@@ -132,7 +132,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	// Step1.根据 appId 查询所有组件
 
 	workflow := model.Workflow{
-		ID: task.TaskID,
+		ID: task.WorkflowId,
 	}
 	err := ds.Get(ctx, &workflow)
 	if err != nil {
@@ -169,15 +169,15 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 
 	var jobs []*job.JobTask
 	for _, step := range workflowStep.Steps {
-		var jobTask *job.JobTask
+		jobTask := new(job.JobTask)
 		component := FindComponents(ComponentList, step.Name)
 
 		switch component.ComponentType {
 		case config.ServerJob:
-			// 如果是服务器类型，那就默认部署
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
 			// TODO  可以在这个阶段直接构建JobInfo 是个Yaml类型
+
 		}
 
 	}
