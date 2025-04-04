@@ -7,17 +7,17 @@ import (
 
 type JobCtl interface {
 	Run(ctx context.Context)
-	// do some clean stuff when workflow finished, like collect reports or clean up resources.
 	Clean(ctx context.Context)
-	// SaveInfo is used to update the basic information of the job task to the mongoDB
 	SaveInfo(ctx context.Context) error
 }
 
 // JobTask 是最小的执行单位
 type JobTask struct {
 	Name        string `json:"name"`
+	Namespace   string `json:"namespace"`
 	WorkflowKey string `json:"workflowKey"`
 	ProjectKey  string `json:"projectKey"`
+	APPKey      string `json:"APPKey"`
 	JobInfo     interface{}
 	JobType     string
 	Status      config.Status
@@ -25,7 +25,6 @@ type JobTask struct {
 	EndTime     int64
 	Error       string
 	Timeout     int64
-	Spec        interface{}
 	RetryCount  int //重试次数
 }
 

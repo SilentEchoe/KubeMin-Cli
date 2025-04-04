@@ -25,16 +25,17 @@ const (
 	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
 	WorkflowRegx = "^[a-zA-Z0-9-]+$"
 
-	JobBuild  JobType = "build"
+	//JobType 的类型分为几种：1.无状态服务 2.存储服务 3.网络服务
+	ServerJob JobType = "webservice"
+	StoreJob  JobType = "store"
+	Service   JobType = "service"
+
 	JobDeploy JobType = "deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"
 	ForceRun      JobRunPolicy = "force_run"
 	SkipRun       JobRunPolicy = "skip"
-
-	DefaultJobBuild  JobType = "default_build"
-	DefaultJobDeploy JobType = "default_deploy"
 
 	WorkflowTaskTypeWorkflow WorkflowTaskType = "workflow"
 	WorkflowTaskTypeTesting  WorkflowTaskType = "test"

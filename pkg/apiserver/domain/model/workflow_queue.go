@@ -5,12 +5,17 @@ import (
 	"time"
 )
 
+func init() {
+	RegisterModel(&WorkflowQueue{})
+}
+
 type WorkflowQueue struct {
-	ID                  string                  `json:"id,omitempty"`                           //动态ID
-	TaskID              int64                   `gorm:"type:int auto_increment" json:"task_id"` //任务ID，自生成
-	ProjectName         string                  `json:"project_name"`                           //所属项目
-	WorkflowName        string                  `json:"workflow_name"`                          //工作流名称(唯一)
+	ID                  int64                   `json:"id,omitempty"`  //动态ID
+	TaskID              string                  `json:"task_id"`       //任务ID，自生成
+	ProjectName         string                  `json:"project_name"`  //所属项目
+	WorkflowName        string                  `json:"workflow_name"` //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
+	WorkflowId          string                  `json:"workflow_id"`
 	WorkflowDisplayName string                  `json:"workflow_display_name"`  //工作流显示名称
 	Status              config.Status           `json:"status,omitempty"`       //当前状态
 	TaskCreator         string                  `json:"task_creator,omitempty"` //任务创建者
@@ -20,7 +25,7 @@ type WorkflowQueue struct {
 }
 
 func (wq *WorkflowQueue) PrimaryKey() string {
-	return wq.ID
+	return wq.TaskID
 }
 
 func (wq *WorkflowQueue) TableName() string {
@@ -33,8 +38,8 @@ func (wq *WorkflowQueue) ShortTableName() string {
 
 func (wq *WorkflowQueue) Index() map[string]interface{} {
 	index := make(map[string]interface{})
-	if wq.ID != "" {
-		index["id"] = wq.ID
+	if wq.TaskID != "" {
+		index["task_id"] = wq.TaskID
 	}
 
 	return index

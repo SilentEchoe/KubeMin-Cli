@@ -93,9 +93,9 @@ func TaskRunning(ctx context.Context, store datastore.DataStore) (list []*model.
 	return
 }
 
-func TaskById(ctx context.Context, store datastore.DataStore, workId string) (*model.WorkflowQueue, error) {
+func TaskById(ctx context.Context, store datastore.DataStore, taskId string) (*model.WorkflowQueue, error) {
 	var task = &model.WorkflowQueue{
-		ID: workId,
+		TaskID: taskId,
 	}
 	err := store.Get(ctx, task)
 	if err != nil {

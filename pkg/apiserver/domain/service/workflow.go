@@ -119,13 +119,14 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	}
 	//验证并解析工作流，生成Job并放入消息队列(WorkflowQueue表)中
 	workflowTask := &model.WorkflowQueue{
-		ID:                  utils.RandStringByNumLowercase(24),
+		TaskID:              utils.RandStringByNumLowercase(24),
+		AppID:               workflow.AppID,
+		WorkflowId:          workflowId,
 		ProjectName:         workflow.Project,
 		WorkflowName:        workflow.Name,
 		WorkflowDisplayName: workflow.Alias,
 		Type:                workflow.WorkflowType,
 		Status:              config.StatusWaiting,
-		AppID:               workflow.AppID,
 	}
 
 	err = repository.CreateWorkflowQueue(ctx, w.Store, workflowTask)
@@ -134,7 +135,7 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	}
 
 	return &apis.ExecWorkflowResponse{
-		WorkflowId: workflowTask.ID,
+		WorkflowId: workflowTask.TaskID,
 	}, nil
 }
 
@@ -165,11 +166,6 @@ func (w *workflowServiceImpl) UpdateTask(ctx context.Context, task *model.Workfl
 	return true
 }
 
-// AddQueueTask 添加Task到队列中
-func (w *workflowServiceImpl) AddQueueTask(ctx context.Context) {
-
-}
-
 // TaskRunning 所有正在运行的Task
 func (w *workflowServiceImpl) TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error) {
 	list, err := repository.TaskRunning(ctx, w.Store)
@@ -179,8 +175,8 @@ func (w *workflowServiceImpl) TaskRunning(ctx context.Context) ([]*model.Workflo
 	return list, err
 }
 
-func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, workId string) error {
-	task, err := repository.TaskById(ctx, w.Store, workId)
+func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, taskId string) error {
+	task, err := repository.TaskById(ctx, w.Store, taskId)
 	if err != nil {
 		return err
 	}
