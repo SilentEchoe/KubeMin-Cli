@@ -1,10 +1,8 @@
 package event
 
 import (
-	"KubeMin-Cli/pkg/apiserver/event/collect"
-	"KubeMin-Cli/pkg/apiserver/event/sync"
+	workflow "KubeMin-Cli/pkg/apiserver/event/workflow"
 	"context"
-	"k8s.io/client-go/util/workqueue"
 )
 
 var workers []Worker
@@ -16,13 +14,17 @@ type Worker interface {
 
 // InitEvent init all event worker
 func InitEvent() []interface{} {
-	application := &sync.ApplicationSync{
-		Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
-	}
+	//application := &sync.ApplicationSync{
+	//	Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
+	//}
 
-	collect := &collect.InfoCalculateCronJob{}
-	workers = append(workers, application, collect)
-	return []interface{}{application, collect}
+	//collect := &collect.InfoCalculateCronJob{}
+	//workers = append(workers, application, collect, workflow)
+
+	workflow := &workflow.Workflow{}
+	//debug code
+	workers = append(workers, workflow)
+	return []interface{}{workflow}
 }
 
 // StartEventWorker start all event worker

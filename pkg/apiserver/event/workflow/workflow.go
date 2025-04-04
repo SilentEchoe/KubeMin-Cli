@@ -9,36 +9,42 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
+	"time"
+
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sync"
-	"time"
 )
 
 type Workflow struct {
-	KubeClient      client.Client `inject:"kubeClient"`
-	KubeConfig      *rest.Config  `inject:"kubeConfig"`
-	Store           datastore.DataStore
-	workflowService service.WorkflowService
+	KubeClient      client.Client           `inject:"kubeClient"`
+	KubeConfig      *rest.Config            `inject:"kubeConfig"`
+	Store           datastore.DataStore     `inject:"datastore"`
+	WorkflowService service.WorkflowService `inject:""`
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
-	w.InitQueue()
+	//w.InitQueue()
 	go w.WorkflowTaskSender()
 }
 
 func (w *Workflow) InitQueue() {
 	ctx := context.Background()
 	// 从数据库中查找未完成的任务
-	tasks, err := w.workflowService.TaskRunning(ctx)
+
+	if w.Store == nil {
+		klog.Errorf("datastore is nil")
+		return
+	}
+	tasks, err := w.WorkflowService.TaskRunning(ctx)
 	if err != nil {
 		klog.Errorf(fmt.Sprintf("find task running error:%s", err))
 		return
 	}
 	// 如果重启Queue，则取消所有正在运行的tasks
 	for _, task := range tasks {
-		err := w.workflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID)
+		err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID)
 		if err != nil {
 			klog.Errorf(fmt.Sprintf("cance task error:%s", err))
 			return
@@ -51,7 +57,7 @@ func (w *Workflow) WorkflowTaskSender() {
 		time.Sleep(time.Second * 3)
 		//获取等待的任务
 		ctx := context.Background()
-		waitingTasks, err := w.workflowService.WaitingTasks(ctx)
+		waitingTasks, err := w.WorkflowService.WaitingTasks(ctx)
 		if err != nil || len(waitingTasks) == 0 {
 			continue
 		}
@@ -155,9 +161,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		klog.Errorf("Generate JobTask Components error:", err)
 		return nil
 	}
-
 	var ComponentList []*model.ApplicationComponent
-
 	for _, v := range component {
 		ac := v.(*model.ApplicationComponent)
 		ComponentList = append(ComponentList, ac)
@@ -173,6 +177,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			// 如果是服务器类型，那就默认部署
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
+			// TODO  可以在这个阶段直接构建JobInfo 是个Yaml类型
 		}
 
 	}
@@ -230,7 +235,7 @@ func statusStopped(status config.Status) bool {
 // 更改工作流队列的状态，并运行它
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
 	task.Status = config.StatusQueued
-	if success := w.workflowService.UpdateTask(ctx, task); !success {
+	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
 		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 		return fmt.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 	}

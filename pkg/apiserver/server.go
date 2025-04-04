@@ -128,8 +128,17 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// domain
-	if err := s.beanContainer.Provides(service.InitServiceBean(s.cfg)...); err != nil {
-		return fmt.Errorf("fail to provides the service bean to the container: %w", err)
+	services := service.InitServiceBean(s.cfg)
+	for _, svc := range services {
+		if err := s.beanContainer.Provides(svc); err != nil {
+			return fmt.Errorf("fail to provides the service bean to the container: %w", err)
+		}
+	}
+
+	// 注册 workflowService
+	workflowService := service.NewWorkflowService()
+	if err := s.beanContainer.ProvideWithName("workflowService", workflowService); err != nil {
+		return fmt.Errorf("fail to provides the workflowService bean to the container: %w", err)
 	}
 
 	// interfaces
@@ -187,14 +196,14 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 
 	s.RegisterAPIRoute()
 
-	//l, err := s.setupLeaderElection(errChan)
-	//if err != nil {
-	//	return err
-	//}
-	//
-	//go func() {
-	//	leaderelection.RunOrDie(ctx, *l)
-	//}()
+	l, err := s.setupLeaderElection(errChan)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		leaderelection.RunOrDie(ctx, *l)
+	}()
 
 	return s.startHTTP(ctx)
 }

@@ -15,7 +15,7 @@ type WorkflowQueue struct {
 	ProjectName         string                  `json:"project_name"`  //所属项目
 	WorkflowName        string                  `json:"workflow_name"` //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
-	WorkflowId          string                  `json:"workflow_id"`
+	WorkflowId          string                  `gorm:"column:workflowId" json:"workflow_id"`
 	WorkflowDisplayName string                  `json:"workflow_display_name"`  //工作流显示名称
 	Status              config.Status           `json:"status,omitempty"`       //当前状态
 	TaskCreator         string                  `json:"task_creator,omitempty"` //任务创建者
