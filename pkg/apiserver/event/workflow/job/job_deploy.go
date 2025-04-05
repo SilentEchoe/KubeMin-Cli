@@ -55,10 +55,8 @@ func (p *Pool) Run() {
 	for _, task := range p.Jobs {
 		p.jobsChan <- task
 	}
-
 	// all workers return
 	close(p.jobsChan)
-
 	p.wg.Wait()
 }
 

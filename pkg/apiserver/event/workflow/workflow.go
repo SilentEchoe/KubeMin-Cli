@@ -1,20 +1,24 @@
 package workflow
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/domain/service"
+	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
 type Workflow struct {
@@ -149,7 +153,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 
 	// Step2.对阶段进行反序列化
 	var workflowStep model.WorkflowSteps
-	err = json.Unmarshal(steps, &workflowStep) // 注意传递指针
+	err = json.Unmarshal(steps, &workflowStep)
 	if err != nil {
 		klog.Errorf("WorkflowSteps deserialization failure:", err)
 		return nil
@@ -172,16 +176,74 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		jobTask := new(job.JobTask)
 		component := FindComponents(ComponentList, step.Name)
 
+		jobTask.Name = component.Name
+		jobTask.Namespace = ""
+		jobTask.WorkflowKey = task.WorkflowId
+		jobTask.ProjectKey = task.ProjectId
+		jobTask.APPKey = task.AppID
+		jobTask.Status = config.StatusQueued
+		jobTask.Timeout = 60 // 默认执行六十分钟
+
+		cProperties, err := json.Marshal(component.Properties)
+		if err != nil {
+			klog.Errorf("Component.Properties deserialization failure:", err)
+			return nil
+		}
+
+		var properties model.Properties
+		err = json.Unmarshal(cProperties, &properties)
+		if err != nil {
+			klog.Errorf("WorkflowSteps deserialization failure:", err)
+			return nil
+		}
+
 		switch component.ComponentType {
 		case config.ServerJob:
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
-			// TODO  可以在这个阶段直接构建JobInfo 是个Yaml类型
-
+			jobTask.JobInfo = GenerateWebService(component, &properties)
 		}
 
+		jobs = append(jobs, jobTask)
 	}
 	return jobs
+}
+
+func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+	serviceName := component.Name
+	component.Labels["kube-min-cli-"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	var ContainerPort []corev1.ContainerPort
+	for _, v := range properties.Ports {
+		ContainerPort = append(ContainerPort, corev1.ContainerPort{
+			ContainerPort: v.Port,
+		})
+	}
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: serviceName,
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &component.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: component.Labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: component.Labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: properties.Image,
+							Ports: ContainerPort,
+						},
+					},
+				},
+			},
+		},
+	}
+	return deployment
 }
 
 func FindComponents(components []*model.ApplicationComponent, name string) *model.ApplicationComponent {
@@ -243,3 +305,5 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 	go NewWorkflowController(task, w.Store).Run(ctx, jobConcurrency)
 	return nil
 }
+
+func int32Ptr(i int32) *int32 { return &i }

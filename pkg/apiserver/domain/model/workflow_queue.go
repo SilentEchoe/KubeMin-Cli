@@ -12,7 +12,7 @@ func init() {
 type WorkflowQueue struct {
 	ID                  int64                   `json:"id,omitempty"`  //动态ID
 	TaskID              string                  `json:"task_id"`       //任务ID，自生成
-	ProjectName         string                  `json:"project_name"`  //所属项目
+	ProjectId           string                  `json:"projectId"`     //所属项目
 	WorkflowName        string                  `json:"workflow_name"` //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
 	WorkflowId          string                  `gorm:"column:workflowId" json:"workflow_id"`
