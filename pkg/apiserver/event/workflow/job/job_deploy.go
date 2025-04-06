@@ -2,6 +2,7 @@ package job
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/types"
 	"context"
 	"fmt"
 	"k8s.io/client-go/informers"
@@ -13,62 +14,21 @@ import (
 )
 
 type DeployJobCtl struct {
-	job       *JobTask
+	job       *types.JobTask
 	namespace string
 	informer  informers.SharedInformerFactory
 	clientSet *kubernetes.Clientset
 	ack       func()
 }
 
-type Pool struct {
-	Jobs        []*JobTask
-	concurrency int
-	jobsChan    chan *JobTask
-	ack         func()
-	ctx         context.Context
-	wg          sync.WaitGroup
-}
-
-func NewDeployJobCtl(job *JobTask, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *types.JobTask, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job: job,
 		ack: ack,
 	}
 }
 
-func NewPool(ctx context.Context, jobs []*JobTask, concurrency int, ack func()) *Pool {
-	return &Pool{
-		Jobs:        jobs,
-		concurrency: concurrency,
-		jobsChan:    make(chan *JobTask),
-		ack:         ack,
-		ctx:         ctx,
-	}
-}
-
-func (p *Pool) Run() {
-	for i := 0; i < p.concurrency; i++ {
-		go p.work()
-	}
-
-	p.wg.Add(len(p.Jobs))
-	for _, task := range p.Jobs {
-		p.jobsChan <- task
-	}
-	// all workers return
-	close(p.jobsChan)
-	p.wg.Wait()
-}
-
-// The work loop for any single goroutine.
-func (p *Pool) work() {
-	for job := range p.jobsChan {
-		runJob(p.ctx, job, p.ack)
-		p.wg.Done()
-	}
-}
-
-func runJob(ctx context.Context, job *JobTask, ack func()) {
+func runJob(ctx context.Context, job *types.JobTask, ack func()) {
 	// 如果Job的状态为暂停或者跳过，则直接返回
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return

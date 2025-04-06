@@ -1,5 +1,7 @@
 package model
 
+import "KubeMin-Cli/pkg/apiserver/config"
+
 type JobInfo struct {
 	ID            string `json:"id"`
 	Type          string `json:"type"`
@@ -13,6 +15,23 @@ type JobInfo struct {
 	ServiceModule string `json:"service_module"`
 	Production    bool   `json:"production"` // 是否生产
 	TargetEnv     string `json:"target_env"` //目标环境
+}
+
+// JobTask 是最小的执行单位
+type JobTask struct {
+	Name        string `json:"name"`
+	Namespace   string `json:"namespace"`
+	WorkflowKey string `json:"workflowKey"`
+	ProjectKey  string `json:"projectKey"`
+	APPKey      string `json:"APPKey"`
+	JobInfo     interface{}
+	JobType     string
+	Status      config.Status
+	StartTime   int64
+	EndTime     int64
+	Error       string
+	Timeout     int64
+	RetryCount  int //重试次数
 }
 
 func (j *JobInfo) PrimaryKey() string {

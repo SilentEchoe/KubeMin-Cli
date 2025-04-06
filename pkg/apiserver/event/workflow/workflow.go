@@ -17,7 +17,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
+	"KubeMin-Cli/pkg/apiserver/domain/types"
+
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
@@ -129,10 +130,10 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 	// TODO 将一个Task 组装成多个阶段(Job)
 	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
-	RunStages(ctx, task, 1, w.ack)
+	w.RunStages(ctx, task, 1, w.ack)
 }
 
-func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*job.JobTask {
+func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*types.JobTask {
 	// Step1.根据 appId 查询所有组件
 
 	workflow := model.Workflow{
@@ -171,13 +172,13 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		ComponentList = append(ComponentList, ac)
 	}
 
-	var jobs []*job.JobTask
+	var jobs []*types.JobTask
 	for _, step := range workflowStep.Steps {
-		jobTask := new(job.JobTask)
+		jobTask := new(types.JobTask)
 		component := FindComponents(ComponentList, step.Name)
 
 		jobTask.Name = component.Name
-		jobTask.Namespace = ""
+		jobTask.Namespace = "default"
 		jobTask.WorkflowKey = task.WorkflowId
 		jobTask.ProjectKey = task.ProjectId
 		jobTask.APPKey = task.AppID
@@ -234,7 +235,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  "nginx",
+							Name:  serviceName,
 							Image: properties.Image,
 							Ports: ContainerPort,
 						},
@@ -255,14 +256,15 @@ func FindComponents(components []*model.ApplicationComponent, name string) *mode
 	return nil
 }
 
-func RunStages(ctx context.Context, stages []*job.JobTask, concurrency int, ack func()) {
+func (w *WorkflowCtl) RunStages(ctx context.Context, stages []*types.JobTask, concurrency int, ack func()) {
 	// 执行workflow的每个阶段
+	// 这里可以控制是并行还是串行执行Job
 	for _, stage := range stages {
 		// 当工作流任务重新启动时，是否应该跳过已通过的阶段
 		if stage.Status == config.StatusPassed {
 			continue
 		}
-		runStage(ctx)
+		w.runStage(ctx, stage, concurrency, ack)
 		if statusStopped(stage.Status) {
 			return
 		}
@@ -270,19 +272,27 @@ func RunStages(ctx context.Context, stages []*job.JobTask, concurrency int, ack 
 }
 
 type StageTask struct {
-	Name      string         `json:"name"`
-	Status    config.Status  `json:"status"`
-	StartTime int64          `json:"start_time,omitempty"`
-	EndTime   int64          `json:"end_time,omitempty"`
-	Parallel  bool           `json:"parallel,omitempty"`
-	Jobs      []*job.JobTask `json:"jobs,omitempty"`
-	Error     string         `json:"error"`
+	Name      string           `json:"name"`
+	Status    config.Status    `json:"status"`
+	StartTime int64            `json:"start_time,omitempty"`
+	EndTime   int64            `json:"end_time,omitempty"`
+	Parallel  bool             `json:"parallel,omitempty"`
+	Jobs      []*types.JobTask `json:"jobs,omitempty"`
+	Error     string           `json:"error"`
 }
 
-func runStage(ctx context.Context) {
+func (w *WorkflowCtl) runStage(ctx context.Context, stage *types.JobTask, concurrency int, ack func()) {
 	// 将状态更改为
-	//stage.Status = config.StatusRunning
-
+	stage.Status = config.StatusRunning
+	ack()
+	klog.Infof("start stage: %s,status: %s", stage.Name, stage.Status)
+	// 更新阶段状态
+	defer func() {
+		stage.EndTime = time.Now().Unix()
+		klog.Infof("finish stage: %s,status: %s", stage.Name, stage.Status)
+		ack()
+	}()
+	stage.StartTime = time.Now().Unix()
 }
 
 func statusStopped(status config.Status) bool {

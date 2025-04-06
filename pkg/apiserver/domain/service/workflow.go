@@ -93,7 +93,7 @@ func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 		Name:        req.Name,
 		Alias:       req.Alias,
 		Disabled:    true,
-		Project:     req.Project,
+		ProjectId:   req.Project,
 		Description: req.Description,
 	}
 }
@@ -122,7 +122,7 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 		TaskID:              utils.RandStringByNumLowercase(24),
 		AppID:               workflow.AppID,
 		WorkflowId:          workflowId,
-		ProjectName:         workflow.Project,
+		ProjectId:           workflow.ProjectId,
 		WorkflowName:        workflow.Name,
 		WorkflowDisplayName: workflow.Alias,
 		Type:                workflow.WorkflowType,

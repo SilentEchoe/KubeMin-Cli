@@ -112,7 +112,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		AppID:        application.ID,
 		Alias:        workflowAlias,
 		Disabled:     false,
-		Project:      application.Project,
+		ProjectId:    application.Project,
 		Description:  application.Description,
 		WorkflowType: config.WorkflowTaskTypeWorkflow,
 		Status:       config.StatusCreated,

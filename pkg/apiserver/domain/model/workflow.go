@@ -12,9 +12,9 @@ type Workflow struct {
 	Name         string                  `json:"name" `
 	Alias        string                  `json:"alias"`    //别名
 	Disabled     bool                    `json:"disabled"` //是否关闭，创建时默认为false
-	Project      string                  `json:"project"`
-	AppID        string                  `gorm:"column:appid" json:"appID"`
-	UserID       string                  `json:"userID"`
+	ProjectId    string                  `json:"project_id"`
+	AppID        string                  `gorm:"column:appid" json:"app_id"`
+	UserID       string                  `json:"user_id"`
 	Description  string                  `json:"description"`
 	WorkflowType config.WorkflowTaskType `gorm:"column:workflow_type" json:"workflow_type"` //工作流类型
 	Status       config.Status           `json:"status"`                                    //分为开启和关闭等状态
