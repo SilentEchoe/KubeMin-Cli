@@ -6,9 +6,7 @@ import (
 	"context"
 	"fmt"
 	app "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"runtime/debug"
@@ -93,12 +91,18 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	result, err := c.client.AppsV1().Deployments(c.namespace).Create(ctx, deploy, metav1.CreateOptions{})
+	result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf(err.Error())
 		return err
 	}
-	fmt.Printf("Created deployment %q.\n", result.GetObjectMeta().GetName())
+	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
+
+	// 将这个任务标记为已完成
+	c.job.Status = config.StatusCompleted
+	c.ack()
+
+	// TODO 这里可能需要记录这个Job
 
 	return nil
 }
@@ -128,55 +132,3 @@ func (c *DeployJobCtl) wait(ctx context.Context) {
 	//}
 	//c.job.Status = status
 }
-
-func createSampleDeployment() *app.Deployment {
-	return &app.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "nginx-deployment",
-			Namespace: "default",
-			Labels: map[string]string{
-				"app": "nginx",
-			},
-		},
-		Spec: app.DeploymentSpec{
-			Replicas: int32Ptr(3),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": "nginx",
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"app": "nginx",
-					},
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "nginx",
-							Image: "nginx:1.14.2",
-							Ports: []corev1.ContainerPort{
-								{
-									ContainerPort: 80,
-								},
-							},
-							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/",
-										Port: intstr.FromInt(80),
-									},
-								},
-								InitialDelaySeconds: 30,
-								PeriodSeconds:       10,
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-}
-
-func int32Ptr(i int32) *int32 { return &i }
