@@ -47,6 +47,7 @@ type ApplicationComponent struct {
 	ID            int               `json:"id" gorm:"primaryKey"`
 	AppId         string            `json:"appId"`
 	Name          string            `json:"name"`
+	Namespace     string            `json:"namespace"`
 	Replicas      int32             `json:"replicas"`
 	ComponentType config.JobType    `json:"componentType"`
 	Properties    *JSONStruct       `json:"properties,omitempty" gorm:"serializer:json"` //属性

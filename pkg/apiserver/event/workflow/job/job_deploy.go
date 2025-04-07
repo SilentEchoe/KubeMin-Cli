@@ -5,7 +5,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"fmt"
+	app "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"runtime/debug"
@@ -14,8 +17,8 @@ import (
 )
 
 type DeployJobCtl struct {
-	job       *model.JobTask
 	namespace string
+	job       *model.JobTask
 	client    *kubernetes.Clientset
 	ack       func()
 }
@@ -79,33 +82,23 @@ func (c *DeployJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeployJobCtl) run(ctx context.Context) error {
-	//var (
-	//	err error
-	//)
-	// TODO 从数据库中获取环境
-
-	// TODO Step.1 创建一个ControllerRuntimeClient
-	//c.kubeClient, err = clientmanager.NewKubeClientManager().GetControllerRuntimeClient(c.jobTaskSpec.ClusterID)
-
 	if c.client == nil {
 		panic("client is nil")
 	}
 
-	pods, err := c.client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	var deploy *app.Deployment
+	if d, ok := c.job.JobInfo.(*app.Deployment); ok {
+		deploy = d
+	} else {
+		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
+	}
+
+	result, err := c.client.AppsV1().Deployments(c.namespace).Create(ctx, deploy, metav1.CreateOptions{})
 	if err != nil {
-		panic(err.Error())
+		klog.Errorf(err.Error())
+		return err
 	}
-	for _, pod := range pods.Items {
-		fmt.Printf("- %s (Status: %s)\n", pod.Name, pod.Status.Phase)
-	}
-
-	// TODO Step.2 获取KubeClient
-
-	// TODO Step.3  创建一个informer
-
-	// TODO Step.4 创建istio客户端连接
-
-	// TODO Step.5 根据Job的类型生成需要部署或更新的元数据
+	fmt.Printf("Created deployment %q.\n", result.GetObjectMeta().GetName())
 
 	return nil
 }
@@ -135,3 +128,55 @@ func (c *DeployJobCtl) wait(ctx context.Context) {
 	//}
 	//c.job.Status = status
 }
+
+func createSampleDeployment() *app.Deployment {
+	return &app.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "nginx-deployment",
+			Namespace: "default",
+			Labels: map[string]string{
+				"app": "nginx",
+			},
+		},
+		Spec: app.DeploymentSpec{
+			Replicas: int32Ptr(3),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "nginx",
+				},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "nginx",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "nginx",
+							Image: "nginx:1.14.2",
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 80,
+								},
+							},
+							LivenessProbe: &corev1.Probe{
+								ProbeHandler: corev1.ProbeHandler{
+									HTTPGet: &corev1.HTTPGetAction{
+										Path: "/",
+										Port: intstr.FromInt(80),
+									},
+								},
+								InitialDelaySeconds: 30,
+								PeriodSeconds:       10,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func int32Ptr(i int32) *int32 { return &i }
