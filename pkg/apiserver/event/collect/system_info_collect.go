@@ -5,9 +5,9 @@ import (
 	"github.com/docker/docker/libnetwork/datastore"
 	"github.com/robfig/cron/v3"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 )
 
@@ -25,7 +25,7 @@ var waitBackOff = wait.Backoff{
 // InfoCalculateCronJob is the cronJob to calculate the system info store in db
 // 用于定时任务
 type InfoCalculateCronJob struct {
-	KubeClient client.Client `inject:"kubeClient"`
+	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
 	Store      datastore.DataStore
 	cron       *cron.Cron
 }

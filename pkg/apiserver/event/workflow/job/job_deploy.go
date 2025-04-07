@@ -5,21 +5,23 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"fmt"
+	app "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"runtime/debug"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"time"
 )
 
 type DeployJobCtl struct {
-	job       *model.JobTask
 	namespace string
-	client    client.Client
+	job       *model.JobTask
+	client    *kubernetes.Clientset
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, client client.Client, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job:    job,
 		client: client,
@@ -27,7 +29,7 @@ func NewDeployJobCtl(job *model.JobTask, client client.Client, ack func()) *Depl
 	}
 }
 
-func runJob(ctx context.Context, job *model.JobTask, client client.Client, ack func()) {
+func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, ack func()) {
 	// 如果Job的状态为暂停或者跳过，则直接返回
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return
@@ -78,21 +80,29 @@ func (c *DeployJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeployJobCtl) run(ctx context.Context) error {
-	//var (
-	//	err error
-	//)
-	// TODO 从数据库中获取环境
+	if c.client == nil {
+		panic("client is nil")
+	}
 
-	// TODO Step.1 创建一个ControllerRuntimeClient
-	//c.kubeClient, err = clientmanager.NewKubeClientManager().GetControllerRuntimeClient(c.jobTaskSpec.ClusterID)
+	var deploy *app.Deployment
+	if d, ok := c.job.JobInfo.(*app.Deployment); ok {
+		deploy = d
+	} else {
+		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
+	}
 
-	// TODO Step.2 获取KubeClient
+	result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
+	if err != nil {
+		klog.Errorf(err.Error())
+		return err
+	}
+	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 
-	// TODO Step.3  创建一个informer
+	// 将这个任务标记为已完成
+	c.job.Status = config.StatusCompleted
+	c.ack()
 
-	// TODO Step.4 创建istio客户端连接
-
-	// TODO Step.5 根据Job的类型生成需要部署或更新的元数据
+	// TODO 这里可能需要记录这个Job
 
 	return nil
 }
@@ -104,21 +114,5 @@ func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
 }
 
 func (c *DeployJobCtl) wait(ctx context.Context) {
-	//timeout := time.After(60 * time.Second)
 
-	// TODO 从k8s元数据中获取PodOwnerUID
-	//resources, err := GetResourcesPodOwnerUID(c.kubeClient, c.namespace, c.jobTaskSpec.ServiceAndImages, c.jobTaskSpec.DeployContents, c.jobTaskSpec.ReplaceResources)
-	//if err != nil {
-	//	msg := fmt.Sprintf("get resource owner info error: %v", err)
-	//	logError(c.job, msg, c.logger)
-	//	return
-	//}
-	//c.jobTaskSpec.ReplaceResources = resources
-	// 判断状态
-	//status, err := CheckDeployStatus(ctx, c.kubeClient, c.namespace, c.jobTaskSpec, timeout, c.logger)
-	//if err != nil {
-	//	logError(c.job, err.Error(), c.logger)
-	//	return
-	//}
-	//c.job.Status = status
 }

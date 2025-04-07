@@ -4,7 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/kubernetes"
 	"sync"
 )
 
@@ -14,7 +14,7 @@ type JobCtl interface {
 	SaveInfo(ctx context.Context) error
 }
 
-func initJobCtl(job *model.JobTask, client client.Client, ack func()) JobCtl {
+func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) JobCtl {
 	var jobCtl JobCtl
 	switch job.JobType {
 	case string(config.JobDeploy):
@@ -23,7 +23,7 @@ func initJobCtl(job *model.JobTask, client client.Client, ack func()) JobCtl {
 	return jobCtl
 }
 
-func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client client.Client, ack func()) {
+func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, ack func()) {
 	if concurrency == 1 {
 		for _, job := range jobs {
 			runJob(ctx, job, client, ack)
@@ -47,7 +47,7 @@ func jobStatusFailed(status config.Status) bool {
 type Pool struct {
 	Jobs        []*model.JobTask
 	concurrency int
-	client      client.Client
+	client      *kubernetes.Clientset
 	jobsChan    chan *model.JobTask
 	ack         func()
 	ctx         context.Context
@@ -78,7 +78,7 @@ func (p *Pool) work() {
 
 // NewPool initializes a new pool with the given tasks and
 // at the given concurrency.
-func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client client.Client, ack func()) *Pool {
+func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, ack func()) *Pool {
 	return &Pool{
 		Jobs:        jobs,
 		client:      client,

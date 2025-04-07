@@ -14,6 +14,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/filters"
 	"context"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"net/http"
 	"strings"
 	"time"
@@ -25,7 +26,6 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // APIServer interface for call api server
@@ -41,8 +41,8 @@ type restServer struct {
 	cfg           config.Config
 	dataStore     datastore.DataStore
 	cache         cache.ICache
-	KubeClient    client.Client `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-	KubeConfig    *rest.Config  `inject:"kubeConfig"`
+	KubeClient    *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig    *rest.Config          `inject:"kubeConfig"`
 }
 
 // New create api server with config data
@@ -88,8 +88,6 @@ func (s *restServer) buildIoCContainer() error {
 	if err != nil {
 		return err
 	}
-	// 将这个k8s的连接与用户信息绑定在一起
-	authClient := pkgUtils.NewAuthClient(kubeClient)
 
 	var ds datastore.DataStore
 	switch s.cfg.Datastore.Type {
@@ -119,7 +117,7 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// 将操作k8s的权限全都注入到IOC中
-	if err := s.beanContainer.ProvideWithName("kubeClient", authClient); err != nil {
+	if err := s.beanContainer.ProvideWithName("kubeClient", kubeClient); err != nil {
 		return fmt.Errorf("fail to provides the kubeClient bean to the container: %w", err)
 	}
 

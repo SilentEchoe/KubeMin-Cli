@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sort"
 	"time"
 
@@ -30,8 +30,8 @@ type ApplicationsService interface {
 }
 
 type applicationsServiceImpl struct {
-	Store      datastore.DataStore `inject:"datastore"`
-	KubeClient client.Client       `inject:"kubeClient"`
+	Store      datastore.DataStore   `inject:"datastore"`
+	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
 }
 
 func NewApplicationService() ApplicationsService {

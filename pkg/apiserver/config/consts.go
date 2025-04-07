@@ -44,6 +44,7 @@ const (
 )
 
 const (
+	StatusCompleted      Status = "completed"                      //创建
 	StatusDisabled       Status = "disabled"                       //已关闭
 	StatusCreated        Status = "created"                        //创建
 	StatusRunning        Status = "running"                        //运行中
