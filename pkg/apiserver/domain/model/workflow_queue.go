@@ -2,7 +2,6 @@ package model
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/types"
 )
 
 func init() {
@@ -43,14 +42,4 @@ func (wq *WorkflowQueue) Index() map[string]interface{} {
 	}
 
 	return index
-}
-
-type StageTask struct {
-	Name      string           `json:"name"`
-	Status    config.Status    `json:"status"`
-	StartTime int64            `json:"start_time,omitempty"`
-	EndTime   int64            `json:"end_time,omitempty"`
-	Parallel  bool             `json:"parallel,omitempty"`
-	Jobs      []*types.JobTask `json:"jobs,omitempty"`
-	Error     string           `json:"error"`
 }

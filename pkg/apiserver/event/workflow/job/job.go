@@ -2,7 +2,7 @@ package job
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/types"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"sync"
 )
@@ -13,7 +13,7 @@ type JobCtl interface {
 	SaveInfo(ctx context.Context) error
 }
 
-func initJobCtl(job *types.JobTask, ack func()) JobCtl {
+func initJobCtl(job *model.JobTask, ack func()) JobCtl {
 	var jobCtl JobCtl
 	switch job.JobType {
 	case string(config.JobDeploy):
@@ -23,9 +23,9 @@ func initJobCtl(job *types.JobTask, ack func()) JobCtl {
 }
 
 type Pool struct {
-	Jobs        []*types.JobTask
+	Jobs        []*model.JobTask
 	concurrency int
-	jobsChan    chan *types.JobTask
+	jobsChan    chan *model.JobTask
 	ack         func()
 	ctx         context.Context
 	wg          sync.WaitGroup
@@ -53,7 +53,7 @@ func (p *Pool) work() {
 	}
 }
 
-func Run(ctx context.Context, jobs []*types.JobTask, workflow *types.WorkflowQueue, concurrency int, ack func()) {
+func RunJobs(ctx context.Context, jobs []*model.JobTask, workflow *model.WorkflowQueue, concurrency int, ack func()) {
 	if concurrency == 1 {
 		for _, job := range jobs {
 			runJob(ctx, job, ack)
@@ -76,11 +76,11 @@ func jobStatusFailed(status config.Status) bool {
 
 // NewPool initializes a new pool with the given tasks and
 // at the given concurrency.
-func NewPool(ctx context.Context, jobs []*types.JobTask, concurrency int, ack func()) *Pool {
+func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, ack func()) *Pool {
 	return &Pool{
 		Jobs:        jobs,
 		concurrency: concurrency,
-		jobsChan:    make(chan *types.JobTask),
+		jobsChan:    make(chan *model.JobTask),
 		ack:         ack,
 		ctx:         ctx,
 	}

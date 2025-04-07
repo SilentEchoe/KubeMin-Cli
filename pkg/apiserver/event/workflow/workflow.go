@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -17,7 +18,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/domain/types"
 
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
@@ -108,7 +108,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	w.workflowTask.Status = config.StatusRunning
 	w.workflowTask.CreateTime = time.Now()
 
-	w.ack() // 通知工作流
+	w.ack()
 	klog.Infof(fmt.Sprintf("start workflow: %s,status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status))
 
 	defer func() {
@@ -128,12 +128,13 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 		}
 	}()
 
-	// TODO 将一个Task 组装成多个阶段(Job)
+	//TODO 这里应该是生成阶段
 	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
-	w.RunStages(ctx, task, 1, w.ack)
+
+	job.RunJobs(ctx, task, w.workflowTask, concurrency, w.ack)
 }
 
-func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*types.JobTask {
+func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
 	// Step1.根据 appId 查询所有组件
 
 	workflow := model.Workflow{
@@ -172,16 +173,16 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		ComponentList = append(ComponentList, ac)
 	}
 
-	var jobs []*types.JobTask
+	var jobs []*model.JobTask
 	for _, step := range workflowStep.Steps {
-		jobTask := new(types.JobTask)
+		jobTask := new(model.JobTask)
 		component := FindComponents(ComponentList, step.Name)
 
 		jobTask.Name = component.Name
 		jobTask.Namespace = "default"
-		jobTask.WorkflowKey = task.WorkflowId
-		jobTask.ProjectKey = task.ProjectId
-		jobTask.APPKey = task.AppID
+		jobTask.WorkflowId = task.WorkflowId
+		jobTask.ProjectId = task.ProjectId
+		jobTask.AppId = task.AppID
 		jobTask.Status = config.StatusQueued
 		jobTask.Timeout = 60 // 默认执行六十分钟
 
@@ -212,7 +213,14 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	serviceName := component.Name
-	component.Labels["kube-min-cli-"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	labels := make(map[string]string)
+	labels["kube-min-cli-"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	if component.Labels != nil {
+		for k, v := range component.Labels {
+			labels[k] = v
+		}
+	}
+
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
 		ContainerPort = append(ContainerPort, corev1.ContainerPort{
@@ -254,54 +262,6 @@ func FindComponents(components []*model.ApplicationComponent, name string) *mode
 		}
 	}
 	return nil
-}
-
-func (w *WorkflowCtl) RunStages(ctx context.Context, stages []*types.JobTask, concurrency int, ack func()) {
-	// 执行workflow的每个阶段
-	// 这里可以控制是并行还是串行执行Job
-	for _, stage := range stages {
-		// 当工作流任务重新启动时，是否应该跳过已通过的阶段
-		if stage.Status == config.StatusPassed {
-			continue
-		}
-		w.runStage(ctx, stage, concurrency, ack)
-		if statusStopped(stage.Status) {
-			return
-		}
-	}
-}
-
-type StageTask struct {
-	Name      string           `json:"name"`
-	Status    config.Status    `json:"status"`
-	StartTime int64            `json:"start_time,omitempty"`
-	EndTime   int64            `json:"end_time,omitempty"`
-	Parallel  bool             `json:"parallel,omitempty"`
-	Jobs      []*types.JobTask `json:"jobs,omitempty"`
-	Error     string           `json:"error"`
-}
-
-func (w *WorkflowCtl) runStage(ctx context.Context, stage *types.JobTask, concurrency int, ack func()) {
-	// 将状态更改为
-	stage.Status = config.StatusRunning
-	ack()
-	klog.Infof("start stage: %s,status: %s", stage.Name, stage.Status)
-	// 更新阶段状态
-	defer func() {
-		stage.EndTime = time.Now().Unix()
-		klog.Infof("finish stage: %s,status: %s", stage.Name, stage.Status)
-		ack()
-	}()
-	stage.StartTime = time.Now().Unix()
-}
-
-func statusStopped(status config.Status) bool {
-	if status == config.StatusCancelled || status == config.StatusFailed ||
-		status == config.StatusTimeout || status == config.StatusReject ||
-		status == config.StatusPause {
-		return true
-	}
-	return false
 }
 
 // 更改工作流队列的状态，并运行它

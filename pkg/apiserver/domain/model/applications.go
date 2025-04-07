@@ -49,8 +49,8 @@ type ApplicationComponent struct {
 	Name          string            `json:"name"`
 	Replicas      int32             `json:"replicas"`
 	ComponentType config.JobType    `json:"componentType"`
-	Properties    *JSONStruct       `json:"properties,omitempty" gorm:"serializer:json"`
-	Labels        map[string]string `json:"labels"`
+	Properties    *JSONStruct       `json:"properties,omitempty" gorm:"serializer:json"` //属性
+	Labels        map[string]string `gorm:"-" json:"labels"`
 	BaseModel
 }
 

@@ -19,19 +19,19 @@ type JobInfo struct {
 
 // JobTask 是最小的执行单位
 type JobTask struct {
-	Name        string `json:"name"`
-	Namespace   string `json:"namespace"`
-	WorkflowKey string `json:"workflowKey"`
-	ProjectKey  string `json:"projectKey"`
-	APPKey      string `json:"APPKey"`
-	JobInfo     interface{}
-	JobType     string
-	Status      config.Status
-	StartTime   int64
-	EndTime     int64
-	Error       string
-	Timeout     int64
-	RetryCount  int //重试次数
+	Name       string `json:"name"`
+	Namespace  string `json:"namespace"`
+	WorkflowId string `json:"workflow_id"`
+	ProjectId  string `json:"project_id"`
+	AppId      string `json:"app_id"`
+	JobInfo    interface{}
+	JobType    string
+	Status     config.Status
+	StartTime  int64
+	EndTime    int64
+	Error      string
+	Timeout    int64
+	RetryCount int //重试次数
 }
 
 func (j *JobInfo) PrimaryKey() string {

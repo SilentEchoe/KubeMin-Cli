@@ -2,7 +2,7 @@ package job
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/types"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"fmt"
 	"k8s.io/client-go/informers"
@@ -14,21 +14,21 @@ import (
 )
 
 type DeployJobCtl struct {
-	job       *types.JobTask
+	job       *model.JobTask
 	namespace string
 	informer  informers.SharedInformerFactory
 	clientSet *kubernetes.Clientset
 	ack       func()
 }
 
-func NewDeployJobCtl(job *types.JobTask, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job: job,
 		ack: ack,
 	}
 }
 
-func runJob(ctx context.Context, job *types.JobTask, ack func()) {
+func runJob(ctx context.Context, job *model.JobTask, ack func()) {
 	// 如果Job的状态为暂停或者跳过，则直接返回
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return
