@@ -5,10 +5,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"fmt"
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"runtime/debug"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"time"
 )
@@ -16,19 +15,19 @@ import (
 type DeployJobCtl struct {
 	job       *model.JobTask
 	namespace string
-	informer  informers.SharedInformerFactory
-	clientSet *kubernetes.Clientset
+	client    client.Client
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, client client.Client, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
-		job: job,
-		ack: ack,
+		job:    job,
+		client: client,
+		ack:    ack,
 	}
 }
 
-func runJob(ctx context.Context, job *model.JobTask, ack func()) {
+func runJob(ctx context.Context, job *model.JobTask, client client.Client, ack func()) {
 	// 如果Job的状态为暂停或者跳过，则直接返回
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return
@@ -38,7 +37,7 @@ func runJob(ctx context.Context, job *model.JobTask, ack func()) {
 	ack()
 
 	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
-	jobCtl := initJobCtl(job, ack)
+	jobCtl := initJobCtl(job, client, ack)
 	defer func(jobInfo *JobCtl) {
 		if err := recover(); err != nil {
 			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)

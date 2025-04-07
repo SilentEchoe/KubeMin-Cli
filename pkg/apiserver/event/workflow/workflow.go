@@ -77,15 +77,17 @@ func (w *Workflow) WorkflowTaskSender() {
 type WorkflowCtl struct {
 	workflowTask      *model.WorkflowQueue
 	workflowTaskMutex sync.RWMutex
+	Client            client.Client
 	Store             datastore.DataStore
 	prefix            string
 	ack               func()
 }
 
-func NewWorkflowController(workflowTask *model.WorkflowQueue, store datastore.DataStore) *WorkflowCtl {
+func NewWorkflowController(workflowTask *model.WorkflowQueue, client client.Client, store datastore.DataStore) *WorkflowCtl {
 	ctl := &WorkflowCtl{
 		workflowTask: workflowTask,
 		Store:        store,
+		Client:       client,
 		prefix:       fmt.Sprintf("workflowctl-%s-%d", workflowTask.WorkflowName, workflowTask.TaskID),
 	}
 	ctl.ack = ctl.updateWorkflowTask
@@ -128,10 +130,8 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 		}
 	}()
 
-	//TODO 这里应该是生成阶段
 	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
-
-	job.RunJobs(ctx, task, w.workflowTask, concurrency, w.ack)
+	job.RunJobs(ctx, task, concurrency, w.Client, w.ack)
 }
 
 func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
@@ -272,7 +272,7 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 		return fmt.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 	}
 
-	go NewWorkflowController(task, w.Store).Run(ctx, jobConcurrency)
+	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
 	return nil
 }
 
