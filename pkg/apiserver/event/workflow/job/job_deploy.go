@@ -5,9 +5,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
 	"fmt"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	"runtime/debug"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"time"
 )
@@ -15,11 +16,11 @@ import (
 type DeployJobCtl struct {
 	job       *model.JobTask
 	namespace string
-	client    client.Client
+	client    *kubernetes.Clientset
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, client client.Client, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job:    job,
 		client: client,
@@ -27,7 +28,7 @@ func NewDeployJobCtl(job *model.JobTask, client client.Client, ack func()) *Depl
 	}
 }
 
-func runJob(ctx context.Context, job *model.JobTask, client client.Client, ack func()) {
+func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, ack func()) {
 	// 如果Job的状态为暂停或者跳过，则直接返回
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return
@@ -85,6 +86,18 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 
 	// TODO Step.1 创建一个ControllerRuntimeClient
 	//c.kubeClient, err = clientmanager.NewKubeClientManager().GetControllerRuntimeClient(c.jobTaskSpec.ClusterID)
+
+	if c.client == nil {
+		panic("client is nil")
+	}
+
+	pods, err := c.client.CoreV1().Pods("").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		panic(err.Error())
+	}
+	for _, pod := range pods.Items {
+		fmt.Printf("- %s (Status: %s)\n", pod.Name, pod.Status.Phase)
+	}
 
 	// TODO Step.2 获取KubeClient
 

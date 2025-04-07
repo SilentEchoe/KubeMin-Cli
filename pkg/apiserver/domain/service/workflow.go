@@ -12,9 +12,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 type WorkflowService interface {
@@ -29,10 +29,10 @@ type WorkflowService interface {
 }
 
 type workflowServiceImpl struct {
-	Store      datastore.DataStore `inject:"datastore"`
-	KubeClient client.Client       `inject:"kubeClient"`
-	KubeConfig *rest.Config        `inject:"kubeConfig"`
-	Cache      cache.ICache        `inject:"cache"`
+	Store      datastore.DataStore   `inject:"datastore"`
+	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
+	KubeConfig *rest.Config          `inject:"kubeConfig"`
+	Cache      cache.ICache          `inject:"cache"`
 }
 
 // NewWorkflowService new workflow service

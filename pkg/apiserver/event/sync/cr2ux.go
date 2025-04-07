@@ -7,15 +7,15 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 )
 
 // CR2UX provides the Add/Update/Delete method
 type CR2UX struct {
 	ds                 datastore.DataStore
-	cli                client.Client
+	cli                *kubernetes.Clientset
 	cache              sync.Map
 	applicationService service.ApplicationsService
 	workflowService    service.WorkflowService

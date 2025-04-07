@@ -5,25 +5,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/client-go/kubernetes"
 	"sync"
 	"time"
 
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/domain/service"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
 
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
 type Workflow struct {
-	KubeClient      client.Client           `inject:"kubeClient"`
+	KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
 	KubeConfig      *rest.Config            `inject:"kubeConfig"`
 	Store           datastore.DataStore     `inject:"datastore"`
 	WorkflowService service.WorkflowService `inject:""`
@@ -77,13 +76,13 @@ func (w *Workflow) WorkflowTaskSender() {
 type WorkflowCtl struct {
 	workflowTask      *model.WorkflowQueue
 	workflowTaskMutex sync.RWMutex
-	Client            client.Client
+	Client            *kubernetes.Clientset
 	Store             datastore.DataStore
 	prefix            string
 	ack               func()
 }
 
-func NewWorkflowController(workflowTask *model.WorkflowQueue, client client.Client, store datastore.DataStore) *WorkflowCtl {
+func NewWorkflowController(workflowTask *model.WorkflowQueue, client *kubernetes.Clientset, store datastore.DataStore) *WorkflowCtl {
 	ctl := &WorkflowCtl{
 		workflowTask: workflowTask,
 		Store:        store,

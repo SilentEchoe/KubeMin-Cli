@@ -12,11 +12,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/dynamic"
 	dynamicInformer "k8s.io/client-go/dynamic/dynamicinformer"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/util/workqueue"
 	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 )
 
@@ -26,9 +26,9 @@ const (
 
 // ApplicationSync 用于从k8s集群中的APP信息同步到数据库中
 type ApplicationSync struct {
-	KubeClient         client.Client       `inject:"kubeClient"`
-	KubeConfig         *rest.Config        `inject:"kubeConfig"`
-	Store              datastore.DataStore `inject:"datastore"`
+	KubeClient         *kubernetes.Clientset `inject:"kubeClient"`
+	KubeConfig         *rest.Config          `inject:"kubeConfig"`
+	Store              datastore.DataStore   `inject:"datastore"`
 	ApplicationService service.ApplicationsService
 	Queue              workqueue.TypedRateLimitingInterface[any]
 }
