@@ -21,7 +21,6 @@ func NewApplications() Interface {
 func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/applications", a.createApplications)
 	group.GET("/applications", a.listApplications)
-	group.POST("/applications/deploy", a.deployApplication)
 }
 
 func (a *applications) createApplications(c *gin.Context) {
@@ -52,25 +51,4 @@ func (a *applications) listApplications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
-}
-
-func (a *applications) deployApplication(c *gin.Context) {
-	var req apis.ApplicationsDeployRequest
-	if err := c.Bind(&req); err != nil {
-		klog.Error(err)
-		bcode.ReturnError(c, bcode.ErrApplicationConfig)
-		return
-	}
-
-	if err := validate.Struct(req); err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	ctx := c.Request.Context()
-	resp, err := a.ApplicationService.Deploy(ctx, req)
-	if err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, resp)
 }
