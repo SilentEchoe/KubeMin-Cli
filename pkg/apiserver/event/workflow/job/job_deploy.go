@@ -114,21 +114,5 @@ func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
 }
 
 func (c *DeployJobCtl) wait(ctx context.Context) {
-	//timeout := time.After(60 * time.Second)
 
-	// TODO 从k8s元数据中获取PodOwnerUID
-	//resources, err := GetResourcesPodOwnerUID(c.kubeClient, c.namespace, c.jobTaskSpec.ServiceAndImages, c.jobTaskSpec.DeployContents, c.jobTaskSpec.ReplaceResources)
-	//if err != nil {
-	//	msg := fmt.Sprintf("get resource owner info error: %v", err)
-	//	logError(c.job, msg, c.logger)
-	//	return
-	//}
-	//c.jobTaskSpec.ReplaceResources = resources
-	// 判断状态
-	//status, err := CheckDeployStatus(ctx, c.kubeClient, c.namespace, c.jobTaskSpec, timeout, c.logger)
-	//if err != nil {
-	//	logError(c.job, err.Error(), c.logger)
-	//	return
-	//}
-	//c.job.Status = status
 }
