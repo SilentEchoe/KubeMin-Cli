@@ -35,6 +35,7 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 	}
 	jobPool := NewPool(ctx, jobs, concurrency, client, ack)
 	jobPool.Run()
+
 }
 
 func jobStatusFailed(status config.Status) bool {

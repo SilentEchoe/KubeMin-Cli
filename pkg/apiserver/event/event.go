@@ -18,13 +18,9 @@ func InitEvent() []interface{} {
 	//	Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
 	//}
 
-	//collect := &collect.InfoCalculateCronJob{}
-	//workers = append(workers, application, collect, workflow)
-
-	workflow := &workflow.Workflow{}
-	//debug code
-	workers = append(workers, workflow)
-	return []interface{}{workflow}
+	workflowCol := &workflow.Workflow{}
+	workers = append(workers, workflowCol)
+	return []interface{}{workflowCol}
 }
 
 // StartEventWorker start all event worker

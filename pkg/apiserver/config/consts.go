@@ -30,7 +30,8 @@ const (
 	StoreJob  JobType = "store"
 	Service   JobType = "service"
 
-	JobDeploy JobType = "deploy"
+	JobDeploy        JobType = "deploy"
+	JobDeployService JobType = "deploy_service"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"

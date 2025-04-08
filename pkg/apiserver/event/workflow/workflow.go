@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"sync"
 	"time"
@@ -135,7 +136,6 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
 	// Step1.根据 appId 查询所有组件
-
 	workflow := model.Workflow{
 		ID: task.WorkflowId,
 	}
@@ -173,17 +173,10 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	}
 
 	var jobs []*model.JobTask
+	// 构建Jobs
 	for _, step := range workflowStep.Steps {
-		jobTask := new(model.JobTask)
 		component := FindComponents(ComponentList, step.Name)
-
-		jobTask.Name = component.Name
-		jobTask.Namespace = "default"
-		jobTask.WorkflowId = task.WorkflowId
-		jobTask.ProjectId = task.ProjectId
-		jobTask.AppId = task.AppID
-		jobTask.Status = config.StatusQueued
-		jobTask.Timeout = 60 // 默认执行六十分钟
+		jobTask := NewJobTask(component.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
 
 		cProperties, err := json.Marshal(component.Properties)
 		if err != nil {
@@ -205,9 +198,28 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = GenerateWebService(component, &properties)
 		}
 
+		// 创建Service
+		if len(properties.Ports) > 0 {
+			jobTaskService := NewJobTask(fmt.Sprintf("%s-service", component.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
+			jobTaskService.JobType = string(config.JobDeployService)
+			jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", component.Name), "default", nil, properties.Ports)
+			jobs = append(jobs, jobTaskService)
+		}
 		jobs = append(jobs, jobTask)
 	}
 	return jobs
+}
+
+func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.JobTask {
+	return &model.JobTask{
+		Name:       name,
+		Namespace:  namespace,
+		WorkflowId: workflowId,
+		ProjectId:  projectId,
+		AppId:      appId,
+		Status:     config.StatusQueued,
+		Timeout:    60,
+	}
 }
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
@@ -256,6 +268,28 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 	}
 
 	return deployment
+}
+
+func GenerateService(name, namespace string, lab map[string]string, ports []model.Ports) interface{} {
+	var servicePort []corev1.ServicePort
+	for _, v := range ports {
+		servicePort = append(servicePort, corev1.ServicePort{
+			Port:       v.Port,
+			TargetPort: intstr.FromInt32(v.Port),
+			Protocol:   corev1.ProtocolTCP,
+		})
+	}
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-service", name),
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: lab,
+			Ports:    servicePort,
+			Type:     corev1.ServiceTypeClusterIP,
+		},
+	}
 }
 
 func FindComponents(components []*model.ApplicationComponent, name string) *model.ApplicationComponent {
