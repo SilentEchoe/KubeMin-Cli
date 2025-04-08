@@ -9,19 +9,18 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"runtime/debug"
 	"sync"
 	"time"
 )
 
-type DeployJobCtl struct {
+type DeployServiceJobCtl struct {
 	namespace string
 	job       *model.JobTask
 	client    *kubernetes.Clientset
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) *DeployJobCtl {
+func NewDeployServiceJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job:    job,
 		client: client,
@@ -29,47 +28,14 @@ func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func(
 	}
 }
 
-func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, ack func()) {
-	// 如果Job的状态为暂停或者跳过，则直接返回
-	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
-		return
-	}
-	job.Status = config.StatusPrepare
-	job.StartTime = time.Now().Unix()
-	ack()
-
-	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
-	jobCtl := initJobCtl(job, client, ack)
-	defer func(jobInfo *JobCtl) {
-		if err := recover(); err != nil {
-			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
-			klog.Errorf(errMsg)
-			debug.PrintStack()
-			job.Status = config.StatusFailed
-			job.Error = errMsg
-		}
-		job.EndTime = time.Now().Unix()
-		klog.Infof("finish job: %s,status: %s", job.Name, job.Status)
-		ack()
-		klog.Infof("updating job info into db...")
-		err := jobCtl.SaveInfo(ctx)
-		if err != nil {
-			klog.Errorf("update job info: %s into db error: %v", err)
-		}
-	}(&jobCtl)
-
-	// 执行对应的JOb任务
-	jobCtl.Run(ctx)
-}
-
-func (c *DeployJobCtl) Clean(ctx context.Context) {}
+func (c *DeployServiceJobCtl) Clean(ctx context.Context) {}
 
 // SaveInfo  创建Job的详情信息
-func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
+func (c *DeployServiceJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployJobCtl) Run(ctx context.Context) {
+func (c *DeployServiceJobCtl) Run(ctx context.Context) {
 	c.job.Status = config.StatusRunning
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
@@ -79,7 +45,7 @@ func (c *DeployJobCtl) Run(ctx context.Context) {
 	c.wait(ctx)
 }
 
-func (c *DeployJobCtl) run(ctx context.Context) error {
+func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	if c.client == nil {
 		panic("client is nil")
 	}
@@ -100,19 +66,24 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 
 	// 将这个任务标记为已完成
 	c.job.Status = config.StatusCompleted
+	c.job.EndTime = time.Now().Unix()
 	c.ack()
-
-	// TODO 这里可能需要记录这个Job
-
 	return nil
 }
 
-func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
+func (c *DeployServiceJobCtl) updateServiceModuleImages(ctx context.Context) error {
 	wg := sync.WaitGroup{}
 	wg.Wait()
 	return nil
 }
 
-func (c *DeployJobCtl) wait(ctx context.Context) {
+func (c *DeployServiceJobCtl) timeout() int {
+	if c.job.Timeout == 0 {
+		c.job.Timeout = 60 * 10
+	}
+	return int(c.job.Timeout)
+}
+
+func (c *DeployServiceJobCtl) wait(ctx context.Context) {
 
 }

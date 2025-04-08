@@ -30,12 +30,11 @@ type Workflow struct {
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
-	//w.InitQueue()
+	//w.InitQueue(ctx)
 	go w.WorkflowTaskSender()
 }
 
-func (w *Workflow) InitQueue() {
-	ctx := context.Background()
+func (w *Workflow) InitQueue(ctx context.Context) {
 	// 从数据库中查找未完成的任务
 
 	if w.Store == nil {
@@ -131,7 +130,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	}()
 
 	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
-	job.RunJobs(ctx, task, concurrency, w.Client, w.ack)
+	job.RunJobs(ctx, task, concurrency, w.Client, w.Store, w.ack)
 }
 
 func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
@@ -245,8 +244,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			Namespace: "default",
 		},
 		Spec: appsv1.DeploymentSpec{
-			//Replicas: &component.Replicas,
-			Replicas: int32Ptr(1),
+			Replicas: &component.Replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: labels,
 			},
@@ -312,5 +310,3 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
 	return nil
 }
-
-func int32Ptr(i int32) *int32 { return &i }

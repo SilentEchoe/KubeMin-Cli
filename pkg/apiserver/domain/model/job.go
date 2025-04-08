@@ -1,20 +1,25 @@
 package model
 
-import "KubeMin-Cli/pkg/apiserver/config"
+import (
+	"KubeMin-Cli/pkg/apiserver/config"
+	"strconv"
+)
 
 type JobInfo struct {
-	ID            string `json:"id"`
-	Type          string `json:"type"`
-	WorkflowName  string `json:"workflow_name"`
-	ProductName   string `json:"product_name"`
-	Status        string `bson:"status" json:"status"`
-	StartTime     int64  `bson:"start_time" json:"start_time"`
-	EndTime       int64  `bson:"end_time" json:"end_time"`
-	ServiceType   string `json:"service_type"`
-	ServiceName   string `json:"service_name"`
-	ServiceModule string `json:"service_module"`
-	Production    bool   `json:"production"` // 是否生产
-	TargetEnv     string `json:"target_env"` //目标环境
+	ID          int    `json:"id" gorm:"primaryKey"`
+	Type        string `json:"type"`
+	WorkflowId  string `json:"workflow_id"`
+	ProductId   string `json:"product_Id"`
+	AppId       string `json:"app_id"`
+	Status      string `bson:"status" json:"status"`
+	StartTime   int64  `bson:"start_time" json:"start_time"`
+	EndTime     int64  `bson:"end_time" json:"end_time"`
+	Info        string `json:"service_type"`
+	ServiceName string `json:"service_name"`
+	Error       string `json:"error"`
+	Production  bool   `json:"production"` // 是否生产
+	TargetEnv   string `json:"target_env"` //目标环境
+	BaseModel
 }
 
 // JobTask 是最小的执行单位
@@ -35,7 +40,7 @@ type JobTask struct {
 }
 
 func (j *JobInfo) PrimaryKey() string {
-	return j.ID
+	return strconv.FormatInt(int64(j.ID), 10)
 }
 
 func (j *JobInfo) TableName() string {
@@ -43,13 +48,17 @@ func (j *JobInfo) TableName() string {
 }
 
 func (j *JobInfo) ShortTableName() string {
-	return "jobinfo"
+	return "job_info"
 }
 
 func (j *JobInfo) Index() map[string]interface{} {
 	index := make(map[string]interface{})
-	if j.ID != "" {
-		index["id"] = j.ID
-	}
 	return index
+}
+
+type JobDeployInfo struct {
+	Name          string
+	Ready         bool
+	Replicas      int32 //期望副本数量
+	ReadyReplicas int32 //就绪副本数量
 }

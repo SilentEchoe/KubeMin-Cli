@@ -64,3 +64,5 @@ func Sanitize(s string) string {
 	s = strings.ReplaceAll(s, "\r", "")
 	return s
 }
+
+func Int32Ptr(i int32) *int32 { return &i }

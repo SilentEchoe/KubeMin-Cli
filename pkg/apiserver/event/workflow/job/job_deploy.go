@@ -3,13 +3,13 @@ package job
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
 	app "k8s.io/api/apps/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -18,54 +18,37 @@ type DeployJobCtl struct {
 	namespace string
 	job       *model.JobTask
 	client    *kubernetes.Clientset
+	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployJobCtl {
 	return &DeployJobCtl{
 		job:    job,
 		client: client,
+		store:  store,
 		ack:    ack,
 	}
-}
-
-func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, ack func()) {
-	// 如果Job的状态为暂停或者跳过，则直接返回
-	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
-		return
-	}
-	job.Status = config.StatusPrepare
-	job.StartTime = time.Now().Unix()
-	ack()
-
-	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
-	jobCtl := initJobCtl(job, client, ack)
-	defer func(jobInfo *JobCtl) {
-		if err := recover(); err != nil {
-			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
-			klog.Errorf(errMsg)
-			debug.PrintStack()
-			job.Status = config.StatusFailed
-			job.Error = errMsg
-		}
-		job.EndTime = time.Now().Unix()
-		klog.Infof("finish job: %s,status: %s", job.Name, job.Status)
-		ack()
-		klog.Infof("updating job info into db...")
-		err := jobCtl.SaveInfo(ctx)
-		if err != nil {
-			klog.Errorf("update job info: %s into db error: %v", err)
-		}
-	}(&jobCtl)
-
-	// 执行对应的JOb任务
-	jobCtl.Run(ctx)
 }
 
 func (c *DeployJobCtl) Clean(ctx context.Context) {}
 
 // SaveInfo  创建Job的详情信息
 func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
+	var jobInfo model.JobInfo
+	jobInfo.Type = c.job.JobType
+	jobInfo.WorkflowId = c.job.WorkflowId
+	jobInfo.ProductId = c.job.ProjectId
+	jobInfo.AppId = c.job.AppId
+	jobInfo.Status = string(c.job.Status)
+	jobInfo.StartTime = c.job.StartTime
+	jobInfo.EndTime = c.job.EndTime
+	jobInfo.ServiceName = c.job.Name
+	jobInfo.Info = c.job.JobInfo.(string)
+	err := c.store.Add(ctx, &jobInfo)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -114,5 +97,74 @@ func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
 }
 
 func (c *DeployJobCtl) wait(ctx context.Context) {
+	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+	for {
+		select {
+		case <-timeout:
+			newResources, err := getDeploymentStatus(c.client, c.namespace, c.job.Name)
+			if err != nil || !newResources.Ready {
+				msg := fmt.Sprintf("get resource owner info error: %v", err)
+				klog.Errorf(msg)
+				c.job.Status = config.StatusFailed
+				return
+			}
+			return
+		default:
+			time.Sleep(2 * time.Second)
+			newResources, err := getDeploymentStatus(c.client, c.namespace, c.job.Name)
+			if err != nil {
+				msg := fmt.Sprintf("get resource owner info error: %v", err)
+				klog.Errorf(msg)
+				c.job.Status = config.StatusFailed
+			}
+			if newResources.Ready {
+				c.job.Status = config.StatusCompleted
+				return
+			}
+		}
+	}
+}
 
+func GetResourcesPodOwnerUID(kubeClient *kubernetes.Clientset, namespace string, name []string) ([]*model.JobDeployInfo, error) {
+	var newResources []*model.JobDeployInfo
+	var err error
+
+	for {
+		if len(newResources) > 0 || err != nil {
+			break
+		}
+		select {
+		case <-timeout:
+			newResources, err = getDeploymentByName(kubeClient, namespace, name)
+			break
+		default:
+			time.Sleep(2 * time.Second)
+			newResources, err = getDeploymentByName(kubeClient, namespace, name)
+			break
+		}
+	}
+	return newResources, nil
+}
+
+func getDeploymentStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
+	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		return nil, err
+	}
+	isOk := false
+	if *deploy.Spec.Replicas == deploy.Status.ReadyReplicas {
+		isOk = true
+	}
+	return &model.JobDeployInfo{
+		Name:          deploy.Name,
+		Replicas:      *deploy.Spec.Replicas,
+		ReadyReplicas: deploy.Status.ReadyReplicas,
+		Ready:         isOk}, nil
+}
+
+func (c *DeployJobCtl) timeout() int64 {
+	if c.job.Timeout == 0 {
+		c.job.Timeout = config.DeployTimeout
+	}
+	return c.job.Timeout
 }
