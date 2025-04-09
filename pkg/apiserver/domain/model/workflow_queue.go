@@ -15,11 +15,11 @@ type WorkflowQueue struct {
 	WorkflowName        string                  `json:"workflow_name"` //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
 	WorkflowId          string                  `gorm:"column:workflowId" json:"workflow_id"`
-	WorkflowDisplayName string                  `json:"workflow_display_name"`  //工作流显示名称
-	Status              config.Status           `json:"status,omitempty"`       //当前状态
-	TaskCreator         string                  `json:"task_creator,omitempty"` //任务创建者
-	TaskRevoker         string                  `json:"task_revoker,omitempty"` //任务取消者
-	Type                config.WorkflowTaskType `json:"type,omitempty"`         //工作流类型
+	WorkflowDisplayName string                  `json:"workflow_display_name"`                 //工作流显示名称
+	Status              config.Status           `gorm:"column:status" json:"status,omitempty"` //当前状态
+	TaskCreator         string                  `json:"task_creator,omitempty"`                //任务创建者
+	TaskRevoker         string                  `json:"task_revoker,omitempty"`                //任务取消者
+	Type                config.WorkflowTaskType `json:"type,omitempty"`                        //工作流类型
 	BaseModel
 }
 
@@ -40,6 +40,8 @@ func (wq *WorkflowQueue) Index() map[string]interface{} {
 	if wq.TaskID != "" {
 		index["task_id"] = wq.TaskID
 	}
-
+	if wq.Status != "" {
+		index["status"] = wq.Status
+	}
 	return index
 }

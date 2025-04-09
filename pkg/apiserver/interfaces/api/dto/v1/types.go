@@ -11,7 +11,7 @@ var (
 
 // ApplicationBase application base model
 type ApplicationBase struct {
-	ID          string    `json:"ID"`
+	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	Alias       string    `json:"alias"`
 	Project     string    `json:"project"`
@@ -19,6 +19,7 @@ type ApplicationBase struct {
 	CreateTime  time.Time `json:"createTime"`
 	UpdateTime  time.Time `json:"updateTime"`
 	Icon        string    `json:"icon"`
+	WorkflowId  string    `json:"workflow_id"`
 }
 
 // ProjectBase project base model
@@ -51,6 +52,7 @@ type CreateApplicationsRequest struct {
 type CreateComponentRequest struct {
 	Name          string         `json:"name"`
 	ComponentType config.JobType `json:"type"`
+	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
 }
 

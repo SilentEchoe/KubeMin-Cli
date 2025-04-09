@@ -5,6 +5,10 @@ import (
 	"strconv"
 )
 
+func init() {
+	RegisterModel(&JobInfo{})
+}
+
 type JobInfo struct {
 	ID          int    `json:"id" gorm:"primaryKey"`
 	Type        string `json:"type"`

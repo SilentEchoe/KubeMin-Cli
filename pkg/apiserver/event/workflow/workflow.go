@@ -197,13 +197,13 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = GenerateWebService(component, &properties)
 		}
 
-		// 创建Service
-		if len(properties.Ports) > 0 {
-			jobTaskService := NewJobTask(fmt.Sprintf("%s-service", component.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
-			jobTaskService.JobType = string(config.JobDeployService)
-			jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", component.Name), "default", nil, properties.Ports)
-			jobs = append(jobs, jobTaskService)
-		}
+		//// 创建Service
+		//if len(properties.Ports) > 0 {
+		//	jobTaskService := NewJobTask(fmt.Sprintf("%s-service", component.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
+		//	jobTaskService.JobType = string(config.JobDeployService)
+		//	jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", component.Name), "default", nil, properties.Ports)
+		//	jobs = append(jobs, jobTaskService)
+		//}
 		jobs = append(jobs, jobTask)
 	}
 	return jobs

@@ -4,13 +4,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"context"
-	"fmt"
-	app "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sync"
-	"time"
 )
 
 type DeployServiceJobCtl struct {
@@ -46,28 +41,7 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeployServiceJobCtl) run(ctx context.Context) error {
-	if c.client == nil {
-		panic("client is nil")
-	}
 
-	var deploy *app.Deployment
-	if d, ok := c.job.JobInfo.(*app.Deployment); ok {
-		deploy = d
-	} else {
-		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
-	}
-
-	result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
-	if err != nil {
-		klog.Errorf(err.Error())
-		return err
-	}
-	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
-
-	// 将这个任务标记为已完成
-	c.job.Status = config.StatusCompleted
-	c.job.EndTime = time.Now().Unix()
-	c.ack()
 	return nil
 }
 

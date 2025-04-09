@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"runtime/debug"
 	"sync"
 	"time"
 )
@@ -20,6 +19,11 @@ type JobCtl interface {
 }
 
 func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) JobCtl {
+	if store == nil {
+		klog.Errorf("initJobCtl store is nil")
+		return nil
+	}
+
 	var jobCtl JobCtl
 	switch job.JobType {
 	case string(config.JobDeploy):
@@ -52,13 +56,17 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	job.StartTime = time.Now().Unix()
 	ack()
 
+	if store == nil {
+		klog.Errorf(fmt.Sprintf("start job store is nil"))
+		return
+	}
+
 	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
 	jobCtl := initJobCtl(job, client, store, ack)
 	defer func(jobInfo *JobCtl) {
 		if err := recover(); err != nil {
 			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
 			klog.Errorf(errMsg)
-			debug.PrintStack()
 			job.Status = config.StatusFailed
 			job.Error = errMsg
 		}
@@ -75,8 +83,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	// 执行对应的JOb任务
 	jobCtl.Run(ctx)
 
-	//TODO 如果任务执行失败，则需要根据错误处理的策略进行处理
-
+	//如果任务执行失败，则需要根据错误处理的策略进行处理
 }
 
 func jobStatusFailed(status config.Status) bool {
@@ -101,7 +108,6 @@ func (p *Pool) Run() {
 	for i := 0; i < p.concurrency; i++ {
 		go p.work()
 	}
-
 	p.wg.Add(len(p.Jobs))
 	for _, task := range p.Jobs {
 		p.jobsChan <- task

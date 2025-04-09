@@ -77,7 +77,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 
 		err = repository.CreateComponents(ctx, w.Store, nComponent)
 		if err != nil {
-			klog.Errorf("Create Compoents err:", err)
+			klog.Errorf("Create Components err:", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}
@@ -99,10 +99,14 @@ func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 }
 
 func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.ApplicationComponent {
+	if req.Replicas <= 0 {
+		req.Replicas = 1
+	}
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppId:         appID,
 		ComponentType: req.ComponentType,
+		Replicas:      req.Replicas,
 	}
 }
 
