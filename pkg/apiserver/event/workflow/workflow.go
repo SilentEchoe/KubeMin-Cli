@@ -120,9 +120,22 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
+	// sub cancel signal from redis
+	// 从redis中订阅取消信号
+	//cancelChan, closeFunc := cache.NewRedisCache(config2.RedisCommonCacheTokenDB()).Subscribe(fmt.Sprintf("workflowctl-cancel-%s-%d", c.workflowTask.WorkflowName, c.workflowTask.TaskID))
+	//debugChan, closeDebugChanFunc := cache.NewRedisCache(config2.RedisCommonCacheTokenDB()).Subscribe(WorkflowDebugChanKey(c.workflowTask.WorkflowName, c.workflowTask.TaskID))
+	//defer func() {
+	//	log.Infof("pubsub channel: %s/%d closed", c.workflowTask.WorkflowName, c.workflowTask.TaskID)
+	//	_ = closeFunc()
+	//	_ = closeDebugChanFunc()
+	//}()
+
 	go func() {
 		for {
 			select {
+			//case <-cancelChan:
+			//	cancel()
+			//	return
 			case <-ctx.Done():
 				return
 			}
@@ -131,6 +144,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
 	job.RunJobs(ctx, task, concurrency, w.Client, w.Store, w.ack)
+	w.updateWorkflowStatus(ctx)
 }
 
 func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
@@ -309,4 +323,12 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 
 	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
 	return nil
+}
+
+func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
+	w.workflowTask.Status = config.StatusCompleted
+	err := w.Store.Put(ctx, w.workflowTask)
+	if err != nil {
+		klog.Errorf("update Workflow status err:%s", err)
+	}
 }
