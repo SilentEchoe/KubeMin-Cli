@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/client-go/util/homedir"
 	"k8s.io/klog/v2"
+	"math/big"
 	"path/filepath"
 	"time"
 )
@@ -23,6 +24,7 @@ type JobDeployInfo struct {
 }
 
 func main() {
+
 	var loadKubeClient *string
 	if home := homedir.HomeDir(); home != "" {
 		// 如果输入了kubeconfig参数，该参数的值就是kubeconfig文件的绝对路径，
@@ -73,6 +75,12 @@ func main() {
 	}
 }
 
+func fixBigInf(f *big.Float) *big.Float {
+	if f.IsInf() {
+		return big.NewFloat(0) // 如果是 ±Inf，返回 0
+	}
+	return f
+}
 func getDeploymentStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
 	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
