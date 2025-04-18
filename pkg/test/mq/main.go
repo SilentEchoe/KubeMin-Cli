@@ -1,7 +1,7 @@
 package main
 
 import (
-	"KubeMin-Cli/pkg/mq/kafka"
+	kafka2 "KubeMin-Cli/pkg/test/mq/kafka"
 	"context"
 	"os"
 	"os/signal"
@@ -16,11 +16,11 @@ func main() {
 	sigchan := make(chan os.Signal, 1)
 	signal.Notify(sigchan, syscall.SIGINT, syscall.SIGTERM)
 
-	go kafka.StartConsumer(ctx)
+	go kafka2.StartConsumer(ctx)
 
 	time.Sleep(2 * time.Second)
 
-	go kafka.StartProducer(ctx)
+	go kafka2.StartProducer(ctx)
 
 	<-sigchan
 	println("👋 Shutting down gracefully...")

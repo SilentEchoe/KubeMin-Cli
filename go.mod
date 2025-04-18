@@ -6,7 +6,6 @@ toolchain go1.24.0
 
 require (
 	github.com/barnettZQG/inject v0.0.1
-	github.com/confluentinc/confluent-kafka-go v1.9.2
 	github.com/emicklei/go-restful-openapi/v2 v2.9.1
 	github.com/emicklei/go-restful/v3 v3.11.0
 	github.com/fatih/color v1.15.0
