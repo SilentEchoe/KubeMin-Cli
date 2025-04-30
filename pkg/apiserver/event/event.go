@@ -14,10 +14,6 @@ type Worker interface {
 
 // InitEvent init all event worker
 func InitEvent() []interface{} {
-	//application := &sync.ApplicationSync{
-	//	Queue: workqueue.NewTypedRateLimitingQueue[any](workqueue.DefaultTypedControllerRateLimiter[any]()),
-	//}
-
 	workflowCol := &workflow.Workflow{}
 	workers = append(workers, workflowCol)
 	return []interface{}{workflowCol}

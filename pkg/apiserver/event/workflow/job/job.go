@@ -23,7 +23,6 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 		klog.Errorf("initJobCtl store is nil")
 		return nil
 	}
-
 	var jobCtl JobCtl
 	switch job.JobType {
 	case string(config.JobDeploy):
@@ -60,7 +59,6 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		klog.Errorf(fmt.Sprintf("start job store is nil"))
 		return
 	}
-
 	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
 	jobCtl := initJobCtl(job, client, store, ack)
 	defer func(jobInfo *JobCtl) {
@@ -79,11 +77,10 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 			klog.Errorf("update job info: %s into db error: %v", err)
 		}
 	}(&jobCtl)
-
 	// 执行对应的JOb任务
 	jobCtl.Run(ctx)
 
-	//如果任务执行失败，则需要根据错误处理的策略进行处理
+	//TODO 如果任务执行失败，则需要根据错误处理的策略进行处理
 }
 
 func jobStatusFailed(status config.Status) bool {

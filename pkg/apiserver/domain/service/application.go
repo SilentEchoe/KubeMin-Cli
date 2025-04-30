@@ -34,11 +34,15 @@ func NewApplicationService() ApplicationsService {
 }
 
 func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error) {
+	if req.Version == "" {
+		req.Version = "1.0.0"
+	}
 	application := model.Applications{
 		ID:          utils.RandStringByNumLowercase(24),
 		Name:        req.Name,
 		Alias:       req.Alias,
 		Project:     req.Project,
+		Version:     req.Version,
 		Description: req.Description,
 		Icon:        req.Icon,
 	}
@@ -119,18 +123,18 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		klog.Errorf("Create workflow err:", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
-	base := assembler.ConvertAppModelToBase(&application)
+	base := assembler.ConvertAppModelToBase(&application, workflow.ID)
 	return base, nil
 }
 
 func ConvertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) *model.WorkflowSteps {
 	workflowSteps := new(model.WorkflowSteps)
-	for _, compoent := range components {
+	for _, component := range components {
 		step := &model.WorkflowStep{
-			Name:         compoent.Name,
-			WorkflowType: config.JobDeploy, //默认部署所有组件
+			Name:         component.Name,
+			WorkflowType: config.JobDeploy,
 			Properties: []model.Policies{{
-				Policies: []string{compoent.Name},
+				Policies: []string{component.Name},
 			}},
 		}
 		workflowSteps.Steps = append(workflowSteps.Steps, step)
@@ -151,7 +155,8 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apis
 	}
 	var list []*apisv1.ApplicationBase
 	for _, app := range apps {
-		appBase := assembler.ConvertAppModelToBase(app)
+		// 这里应该是个WorkflowIds
+		appBase := assembler.ConvertAppModelToBase(app, "")
 		list = append(list, appBase)
 	}
 	sort.Slice(list, func(i, j int) bool {

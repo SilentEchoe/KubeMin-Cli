@@ -10,6 +10,7 @@ type Applications struct {
 	ID          string            `json:"id" gorm:"primaryKey"`
 	Name        string            `json:"name"` //应用名称
 	Namespace   string            //命名空间，但是不对外暴露
+	Version     string            `json:"version"`     //版本，如果为空则默认为1.0.0
 	Alias       string            `json:"alias"`       //别名
 	Project     string            `json:"project"`     //项目
 	Description string            `json:"description"` //详情

@@ -30,17 +30,16 @@ type Workflow struct {
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
-	//w.InitQueue(ctx)
+	w.InitQueue(ctx)
 	go w.WorkflowTaskSender()
 }
 
 func (w *Workflow) InitQueue(ctx context.Context) {
-	// 从数据库中查找未完成的任务
-
 	if w.Store == nil {
 		klog.Errorf("datastore is nil")
 		return
 	}
+	// 从数据库中查找未完成的任务
 	tasks, err := w.WorkflowService.TaskRunning(ctx)
 	if err != nil {
 		klog.Errorf(fmt.Sprintf("find task running error:%s", err))
@@ -53,19 +52,21 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 			klog.Errorf(fmt.Sprintf("cance task error:%s", err))
 			return
 		}
+		klog.Infof(fmt.Sprintf("cance task :%s", task.TaskID))
 	}
 }
 
 func (w *Workflow) WorkflowTaskSender() {
 	for {
 		time.Sleep(time.Second * 3)
-		//获取等待的任务
 		ctx := context.Background()
+		//获取等待的任务
 		waitingTasks, err := w.WorkflowService.WaitingTasks(ctx)
 		if err != nil || len(waitingTasks) == 0 {
 			continue
 		}
 		for _, task := range waitingTasks {
+			// TODO jobConcurrency 默认为1，表示串行执行
 			if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
 				continue
 			}
@@ -93,11 +94,12 @@ func NewWorkflowController(workflowTask *model.WorkflowQueue, client *kubernetes
 	return ctl
 }
 
+// 更改工作流的状态或信息
 func (w *WorkflowCtl) updateWorkflowTask() {
 	taskInColl := w.workflowTask
 	// 如果当前的task状态为：通过，暂停，超时，拒绝；则不处理，直接返回
 	if taskInColl.Status == config.StatusPassed || taskInColl.Status == config.StatusFailed || taskInColl.Status == config.StatusTimeout || taskInColl.Status == config.StatusReject {
-		klog.Info(fmt.Sprintf("%s:%d:%s task already done", taskInColl.WorkflowName, taskInColl.TaskID, taskInColl.Status))
+		klog.Info(fmt.Sprintf("%s:%s:%s task already done", taskInColl.WorkflowName, taskInColl.TaskID, taskInColl.Status))
 		return
 	}
 	if err := w.Store.Put(context.Background(), w.workflowTask); err != nil {
@@ -106,9 +108,9 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 }
 
 func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
+	// 将工作流的状态更改为运行中
 	w.workflowTask.Status = config.StatusRunning
 	w.workflowTask.CreateTime = time.Now()
-
 	w.ack()
 	klog.Infof(fmt.Sprintf("start workflow: %s,status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status))
 
@@ -123,11 +125,10 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	// sub cancel signal from redis
 	// 从redis中订阅取消信号
 	//cancelChan, closeFunc := cache.NewRedisCache(config2.RedisCommonCacheTokenDB()).Subscribe(fmt.Sprintf("workflowctl-cancel-%s-%d", c.workflowTask.WorkflowName, c.workflowTask.TaskID))
-	//debugChan, closeDebugChanFunc := cache.NewRedisCache(config2.RedisCommonCacheTokenDB()).Subscribe(WorkflowDebugChanKey(c.workflowTask.WorkflowName, c.workflowTask.TaskID))
 	//defer func() {
 	//	log.Infof("pubsub channel: %s/%d closed", c.workflowTask.WorkflowName, c.workflowTask.TaskID)
 	//	_ = closeFunc()
-	//	_ = closeDebugChanFunc()
+
 	//}()
 
 	go func() {
@@ -142,8 +143,8 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 		}
 	}()
 
-	task := GenerateJobTask(ctx, w.workflowTask, w.Store)
-	job.RunJobs(ctx, task, concurrency, w.Client, w.Store, w.ack)
+	tasks := GenerateJobTask(ctx, w.workflowTask, w.Store)
+	job.RunJobs(ctx, tasks, concurrency, w.Client, w.Store, w.ack)
 	w.updateWorkflowStatus(ctx)
 }
 
@@ -173,7 +174,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		return nil
 	}
 
-	// Step2.根据 appId 查询所有组件信息
+	// Step3.根据 appId 查询所有组件信息
 	component, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
 	if err != nil {
 		klog.Errorf("Generate JobTask Components error:", err)
@@ -185,13 +186,13 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		ComponentList = append(ComponentList, ac)
 	}
 
-	var jobs []*model.JobTask
 	// 构建Jobs
+	var jobs []*model.JobTask
 	for _, step := range workflowStep.Steps {
-		component := FindComponents(ComponentList, step.Name)
-		jobTask := NewJobTask(component.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
+		componentSteps := FindComponents(ComponentList, step.Name)
+		jobTask := NewJobTask(componentSteps.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
 
-		cProperties, err := json.Marshal(component.Properties)
+		cProperties, err := json.Marshal(componentSteps.Properties)
 		if err != nil {
 			klog.Errorf("Component.Properties deserialization failure:", err)
 			return nil
@@ -204,18 +205,18 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			return nil
 		}
 
-		switch component.ComponentType {
+		switch componentSteps.ComponentType {
 		case config.ServerJob:
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
-			jobTask.JobInfo = GenerateWebService(component, &properties)
+			jobTask.JobInfo = GenerateWebService(componentSteps, &properties)
 		}
 
 		//// 创建Service
 		//if len(properties.Ports) > 0 {
-		//	jobTaskService := NewJobTask(fmt.Sprintf("%s-service", component.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
+		//	jobTaskService := NewJobTask(fmt.Sprintf("%s-service", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
 		//	jobTaskService.JobType = string(config.JobDeployService)
-		//	jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", component.Name), "default", nil, properties.Ports)
+		//	jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
 		//	jobs = append(jobs, jobTaskService)
 		//}
 		jobs = append(jobs, jobTask)
@@ -315,12 +316,13 @@ func FindComponents(components []*model.ApplicationComponent, name string) *mode
 
 // 更改工作流队列的状态，并运行它
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
+	//将状态更改为队列中
 	task.Status = config.StatusQueued
 	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
 		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 		return fmt.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
 	}
-
+	// 执行新的任务
 	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
 	return nil
 }

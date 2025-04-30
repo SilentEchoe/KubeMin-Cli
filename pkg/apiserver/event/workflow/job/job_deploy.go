@@ -8,6 +8,7 @@ import (
 	"fmt"
 	app "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -79,20 +80,34 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
-	if err != nil {
+	// TODO 这里是防止重复创建，所以如果创建应该直接跳过，或者修改
+	isDeploy, err := c.client.AppsV1().Deployments("default").Get(ctx, deploy.Name, metav1.GetOptions{})
+
+	isAlreadyExists := false
+
+	if isDeploy != nil {
+		isAlreadyExists = true
+	}
+
+	// 如果不存在,并且这个错误并不是没有找到对应的组件，那么证明查询有错误
+	if !isAlreadyExists && k8serrors.IsNotFound(err) {
 		klog.Errorf(err.Error())
 		return err
 	}
-	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 
-	// 将这个任务标记为已完成
+	if !isAlreadyExists {
+		result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
+		if err != nil {
+			klog.Errorf(err.Error())
+			return err
+		}
+		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
+	}
+
 	c.job.Status = config.StatusCompleted
 	c.ack()
-
-	// TODO 这里可能需要记录这个Job
-
 	return nil
+
 }
 
 func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {

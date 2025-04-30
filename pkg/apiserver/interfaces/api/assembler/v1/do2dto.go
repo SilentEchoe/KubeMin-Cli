@@ -6,15 +6,17 @@ import (
 )
 
 // ConvertAppModelToBase assemble the Application model to DTO
-func ConvertAppModelToBase(app *model.Applications) *apisv1.ApplicationBase {
+func ConvertAppModelToBase(app *model.Applications, workflowId string) *apisv1.ApplicationBase {
 	appBase := &apisv1.ApplicationBase{
 		ID:          app.ID,
 		Name:        app.Name,
+		Project:     app.Project,
 		Alias:       app.Alias,
 		CreateTime:  app.CreateTime,
 		UpdateTime:  app.UpdateTime,
 		Description: app.Description,
 		Icon:        app.Icon,
+		WorkflowId:  workflowId,
 	}
 	return appBase
 }

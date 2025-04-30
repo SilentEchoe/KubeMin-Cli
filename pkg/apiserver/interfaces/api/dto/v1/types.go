@@ -42,6 +42,7 @@ type NameAlias struct {
 type CreateApplicationsRequest struct {
 	Name          string                      `json:"name" validate:"checkname"`
 	Alias         string                      `json:"alias"`
+	Version       string                      `json:"version"`
 	Project       string                      `json:"project" validate:"checkname"`
 	Description   string                      `json:"description" optional:"true"`
 	Icon          string                      `json:"icon"`
