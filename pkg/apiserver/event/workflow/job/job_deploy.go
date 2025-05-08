@@ -82,7 +82,6 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 
 	// TODO 这里是防止重复创建，所以如果创建应该直接跳过，或者修改,之后可以根据策略来判断是否重新部署
 	isDeploy, err := c.client.AppsV1().Deployments("default").Get(ctx, deploy.Name, metav1.GetOptions{})
-
 	isAlreadyExists := false
 	if isDeploy != nil {
 		isAlreadyExists = true
