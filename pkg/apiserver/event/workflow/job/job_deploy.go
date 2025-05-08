@@ -17,17 +17,17 @@ import (
 )
 
 type DeployJobCtl struct {
-	job    *model.JobTask
-	client *kubernetes.Clientset
-	store  datastore.DataStore
-	ack    func()
+	namespace string
+	job       *model.JobTask
+	client    *kubernetes.Clientset
+	store     datastore.DataStore
+	ack       func()
 }
 
 func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployJobCtl {
 	if client == nil || store == nil {
 		return nil
 	}
-
 	return &DeployJobCtl{
 		job:    job,
 		client: client,
@@ -80,11 +80,10 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	// TODO 这里是防止重复创建，所以如果创建应该直接跳过，或者修改
+	// TODO 这里是防止重复创建，所以如果创建应该直接跳过，或者修改,之后可以根据策略来判断是否重新部署
 	isDeploy, err := c.client.AppsV1().Deployments("default").Get(ctx, deploy.Name, metav1.GetOptions{})
 
 	isAlreadyExists := false
-
 	if isDeploy != nil {
 		isAlreadyExists = true
 	}
@@ -103,7 +102,6 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		}
 		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
-
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
