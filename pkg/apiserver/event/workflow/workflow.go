@@ -296,7 +296,7 @@ func GenerateService(name, namespace string, lab map[string]string, ports []mode
 	}
 	return &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-service", name),
+			Name:      name,
 			Namespace: namespace,
 		},
 		Spec: corev1.ServiceSpec{

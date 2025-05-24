@@ -128,6 +128,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) {
 		case <-ticker.C:
 			isExist, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
+				klog.Errorf("error checking service status: %v", err)
 				c.job.Status = config.StatusFailed
 				return
 			}
