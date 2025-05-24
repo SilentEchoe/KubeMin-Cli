@@ -24,19 +24,37 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 		klog.Errorf("initJobCtl store is nil")
 		return nil
 	}
+	if job == nil {
+		klog.Errorf("initJobCtl job is nil")
+		return nil
+	}
+	if client == nil {
+		klog.Errorf("initJobCtl client is nil")
+		return nil
+	}
+
 	var jobCtl JobCtl
 	switch job.JobType {
 	case string(config.JobDeploy):
 		jobCtl = NewDeployJobCtl(job, client, store, ack)
 	case string(config.JobDeployService):
 		jobCtl = NewDeployServiceJobCtl(job, client, store, ack)
+	default:
+		klog.Errorf("unknown job type: %s", job.JobType)
+		return nil
 	}
 	return jobCtl
 }
 
 func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
+	if len(jobs) == 0 {
+		klog.Info("no jobs to run")
+		return
+	}
+
 	if concurrency == 1 {
 		for _, job := range jobs {
+			klog.Info("Job started: ", job.Name, job.JobType)
 			runJob(ctx, job, client, store, ack)
 			if jobStatusFailed(job.Status) {
 				return
@@ -49,6 +67,11 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 }
 
 func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
+	if job == nil {
+		klog.Errorf("runJob received nil job")
+		return
+	}
+
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		return
 	}
@@ -62,7 +85,17 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	}
 	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
 	jobCtl := initJobCtl(job, client, store, ack)
-	defer func(jobInfo *JobCtl) {
+	if jobCtl == nil {
+		errMsg := fmt.Sprintf("failed to initialize job controller for job: %s", job.Name)
+		klog.Errorf(errMsg)
+		job.Status = config.StatusFailed
+		job.Error = errMsg
+		job.EndTime = time.Now().Unix()
+		ack()
+		return
+	}
+
+	defer func() {
 		if err := recover(); err != nil {
 			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
 			klog.Errorf(errMsg)
@@ -77,11 +110,9 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		if err != nil {
 			klog.Errorf("update job info into db error: %v", err)
 		}
-	}(&jobCtl)
+	}()
 	// 执行对应的JOb任务
 	jobCtl.Run(ctx)
-
-	//TODO 如果任务执行失败，则需要根据错误处理的策略进行处理
 }
 
 func jobStatusFailed(status config.Status) bool {

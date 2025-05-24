@@ -6,12 +6,14 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"sync"
 )
 
 type DeployServiceJobCtl struct {
@@ -22,8 +24,8 @@ type DeployServiceJobCtl struct {
 	ack       func()
 }
 
-func NewDeployServiceJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployJobCtl {
-	return &DeployJobCtl{
+func NewDeployServiceJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployServiceJobCtl {
+	return &DeployServiceJobCtl{
 		job:    job,
 		client: client,
 		store:  store,
@@ -57,6 +59,9 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) {
 	c.job.Status = config.StatusRunning
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
+		klog.Errorf("DeployServiceJob run error: %v", err)
+		c.job.Status = config.StatusFailed
+		c.ack()
 		return
 	}
 	//这里是部署完毕后，将状态进行同步
@@ -65,35 +70,32 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) {
 
 func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	if c.client == nil {
-		panic("client is nil")
+		return fmt.Errorf("client is nil")
 	}
 
-	var service *v1.Service
-	if s, ok := c.job.JobInfo.(*v1.Service); ok {
-		service = s
-	} else {
-		return fmt.Errorf("deploy Job Service Job.Info Conversion type failure")
+	if c.job == nil || c.job.JobInfo == nil {
+		return fmt.Errorf("job or job.JobInfo is nil")
 	}
 
-	isService, err := c.client.CoreV1().Services(c.namespace).Get(ctx, service.Name, metav1.GetOptions{})
-	isAlreadyExists := false
-	if isService != nil {
-		isAlreadyExists = true
+	service, ok := c.job.JobInfo.(*v1.Service)
+	if !ok {
+		return fmt.Errorf("job.JobInfo is not a *v1.Service (actual type: %T)", c.job.JobInfo)
 	}
-	// 如果不存在,并且这个错误并不是没有找到对应的组件，那么证明查询有错误
-	if !isAlreadyExists && k8serrors.IsNotFound(err) {
-		klog.Errorf(err.Error())
-		return err
+
+	isAlreadyExists, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
+	if err != nil {
+		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
 
 	if !isAlreadyExists {
-		result, err := c.client.CoreV1().Services(c.namespace).Create(ctx, service, metav1.CreateOptions{})
+		result, err := c.client.CoreV1().Services(c.job.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 		if err != nil {
-			klog.Errorf(err.Error())
+			klog.Errorf("failed to create service %q namespace: %q : %v", service.Name, service.Namespace, err)
 			return err
 		}
 		klog.Infof("JobTask Deploy Service Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
+
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
@@ -113,5 +115,42 @@ func (c *DeployServiceJobCtl) timeout() int {
 }
 
 func (c *DeployServiceJobCtl) wait(ctx context.Context) {
+	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
+	for {
+		select {
+		case <-timeout:
+			klog.Warning("timed out waiting for service: %s", c.job.Name)
+			c.job.Status = config.StatusFailed
+			return
+		case <-ticker.C:
+			isExist, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
+			if err != nil {
+				c.job.Status = config.StatusFailed
+				return
+			}
+			if isExist {
+				c.job.Status = config.StatusCompleted
+				return
+			}
+		}
+	}
+}
+
+func getServiceStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (bool, error) {
+	klog.Infof("Checking service: %s/%s", namespace, name)
+
+	_, err := kubeClient.CoreV1().Services(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			klog.Infof("service not found: %s/%s", namespace, name)
+			return false, nil
+		}
+		klog.Error("check service error:%s", err)
+		return false, err
+	}
+
+	return true, nil
 }

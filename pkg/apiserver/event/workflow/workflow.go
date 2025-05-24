@@ -5,14 +5,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes"
 	"sync"
 	"time"
+
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -212,13 +214,13 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = GenerateWebService(componentSteps, &properties)
 		}
 
-		//// 创建Service
-		//if len(properties.Ports) > 0 {
-		//	jobTaskService := NewJobTask(fmt.Sprintf("%s-service", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
-		//	jobTaskService.JobType = string(config.JobDeployService)
-		//	jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
-		//	jobs = append(jobs, jobTaskService)
-		//}
+		// 创建Service
+		if len(properties.Ports) > 0 {
+			jobTaskService := NewJobTask(fmt.Sprintf("%s-service", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
+			jobTaskService.JobType = string(config.JobDeployService)
+			jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
+			jobs = append(jobs, jobTaskService)
+		}
 		jobs = append(jobs, jobTask)
 	}
 	return jobs
