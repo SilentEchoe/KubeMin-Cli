@@ -1,7 +1,6 @@
 package service
 
 import (
-	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
@@ -12,6 +11,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
+
+	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -77,7 +78,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 
 		err = repository.CreateComponents(ctx, w.Store, nComponent)
 		if err != nil {
-			klog.Errorf("Create Components err:", err)
+			klog.Errorf("Create Components err: %s", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}

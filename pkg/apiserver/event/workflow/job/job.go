@@ -6,10 +6,11 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog/v2"
 	"sync"
 	"time"
+
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/klog/v2"
 )
 
 type JobCtl interface {
@@ -28,7 +29,7 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 	case string(config.JobDeploy):
 		jobCtl = NewDeployJobCtl(job, client, store, ack)
 	case string(config.JobDeployService):
-		jobCtl = NewDeployServiceJobCtl(job, client, ack)
+		jobCtl = NewDeployServiceJobCtl(job, client, store, ack)
 	}
 	return jobCtl
 }
@@ -56,7 +57,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	ack()
 
 	if store == nil {
-		klog.Errorf(fmt.Sprintf("start job store is nil"))
+		klog.Errorf("start job store is nil")
 		return
 	}
 	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
@@ -74,7 +75,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		klog.Infof("updating job info into db...")
 		err := jobCtl.SaveInfo(ctx)
 		if err != nil {
-			klog.Errorf("update job info: %s into db error: %v", err)
+			klog.Errorf("update job info into db error: %v", err)
 		}
 	}(&jobCtl)
 	// 执行对应的JOb任务

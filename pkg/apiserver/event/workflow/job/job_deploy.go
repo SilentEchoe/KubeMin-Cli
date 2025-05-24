@@ -6,14 +6,15 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
+	"sync"
+	"time"
+
 	app "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"sync"
-	"time"
 )
 
 type DeployJobCtl struct {
@@ -70,9 +71,8 @@ func (c *DeployJobCtl) Run(ctx context.Context) {
 
 func (c *DeployJobCtl) run(ctx context.Context) error {
 	if c.client == nil {
-		panic("client is nil")
+		return fmt.Errorf("client is nil")
 	}
-
 	var deploy *app.Deployment
 	if d, ok := c.job.JobInfo.(*app.Deployment); ok {
 		deploy = d
@@ -80,23 +80,15 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	// TODO 这里是防止重复创建，所以如果创建应该直接跳过，或者修改,之后可以根据策略来判断是否重新部署
-	isDeploy, err := c.client.AppsV1().Deployments("default").Get(ctx, deploy.Name, metav1.GetOptions{})
-	isAlreadyExists := false
-	if isDeploy != nil {
-		isAlreadyExists = true
-	}
-
-	// 如果不存在,并且这个错误并不是没有找到对应的组件，那么证明查询有错误
-	if !isAlreadyExists && k8serrors.IsNotFound(err) {
-		klog.Errorf(err.Error())
-		return err
+	isAlreadyExists, err := c.deploymentExists(ctx, deploy.Name, deploy.Namespace)
+	if err != nil {
+		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
 
 	if !isAlreadyExists {
-		result, err := c.client.AppsV1().Deployments("default").Create(ctx, deploy, metav1.CreateOptions{})
+		result, err := c.client.AppsV1().Deployments(deploy.Namespace).Create(ctx, deploy, metav1.CreateOptions{})
 		if err != nil {
-			klog.Errorf(err.Error())
+			klog.Errorf("failed to create deployment %q namespace: %q : %v", deploy.Name, deploy.Namespace, err)
 			return err
 		}
 		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
@@ -104,7 +96,6 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
-
 }
 
 func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
@@ -173,4 +164,15 @@ func (c *DeployJobCtl) timeout() int64 {
 		c.job.Timeout = config.DeployTimeout
 	}
 	return c.job.Timeout
+}
+
+func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces string) (bool, error) {
+	_, err := c.client.AppsV1().Deployments(namespaces).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
