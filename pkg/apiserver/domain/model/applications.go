@@ -48,14 +48,13 @@ func (a *Applications) Index() map[string]interface{} {
 
 // ApplicationComponent delivery database model 组件信息
 type ApplicationComponent struct {
-	ID            int               `json:"id" gorm:"primaryKey"`
-	AppId         string            `json:"appId"`
-	Name          string            `json:"name"`
-	Namespace     string            `json:"namespace"`
-	Replicas      int32             `json:"replicas"`
-	ComponentType config.JobType    `json:"componentType"`
-	Properties    *JSONStruct       `json:"properties,omitempty" gorm:"serializer:json"` //属性
-	Labels        map[string]string `gorm:"-" json:"labels"`
+	ID            int            `json:"id" gorm:"primaryKey"`
+	AppId         string         `json:"appId"`
+	Name          string         `json:"name"`
+	Namespace     string         `json:"namespace"`
+	Replicas      int32          `json:"replicas"`
+	ComponentType config.JobType `json:"componentType"`
+	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"` //属性
 	BaseModel
 }
 
@@ -80,9 +79,10 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 }
 
 type Properties struct {
-	Image string            `json:"image"`
-	Ports []Ports           `json:"ports"`
-	Env   map[string]string `json:"env"`
+	Image  string            `json:"image"`
+	Ports  []Ports           `json:"ports"`
+	Env    map[string]string `json:"env"`
+	Labels map[string]string `json:"labels"`
 }
 
 type Ports struct {

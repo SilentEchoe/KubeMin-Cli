@@ -98,8 +98,10 @@ type CreateWorkflowRequest struct {
 }
 
 type Properties struct {
-	Image string  `json:"image"`
-	Ports []Ports `json:"ports"`
+	Image  string            `json:"image"`
+	Ports  []Ports           `json:"ports"`
+	Env    map[string]string `json:"env"`
+	Labels map[string]string `json:"labels"`
 }
 
 type Ports struct {
