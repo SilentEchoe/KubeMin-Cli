@@ -8,16 +8,12 @@ import (
 	"sync"
 	"time"
 
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
@@ -211,14 +207,14 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		case config.ServerJob:
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
-			jobTask.JobInfo = GenerateWebService(componentSteps, &properties)
+			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
 		}
 
 		// 创建Service
 		if len(properties.Ports) > 0 {
 			jobTaskService := NewJobTask(fmt.Sprintf("%s-service", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
 			jobTaskService.JobType = string(config.JobDeployService)
-			jobTaskService.JobInfo = GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
+			jobTaskService.JobInfo = job.GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
 			jobs = append(jobs, jobTaskService)
 		}
 		jobs = append(jobs, jobTask)
@@ -235,75 +231,6 @@ func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.Job
 		AppId:      appId,
 		Status:     config.StatusQueued,
 		Timeout:    60,
-	}
-}
-
-func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
-	serviceName := component.Name
-	labels := make(map[string]string)
-	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
-	labels["kube-min-cli-appId"] = component.AppId
-	if component.Labels != nil {
-		for k, v := range component.Labels {
-			labels[k] = v
-		}
-	}
-
-	var ContainerPort []corev1.ContainerPort
-	for _, v := range properties.Ports {
-		ContainerPort = append(ContainerPort, corev1.ContainerPort{
-			ContainerPort: v.Port,
-		})
-	}
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
-			Namespace: "default",
-		},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: &component.Replicas,
-			Selector: &metav1.LabelSelector{
-				MatchLabels: labels,
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
-				},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  serviceName,
-							Image: properties.Image,
-							Ports: ContainerPort,
-						},
-					},
-				},
-			},
-		},
-	}
-
-	return deployment
-}
-
-func GenerateService(name, namespace string, lab map[string]string, ports []model.Ports) interface{} {
-	var servicePort []corev1.ServicePort
-	for _, v := range ports {
-		servicePort = append(servicePort, corev1.ServicePort{
-			Port:       v.Port,
-			TargetPort: intstr.FromInt32(v.Port),
-			Protocol:   corev1.ProtocolTCP,
-		})
-	}
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: lab,
-			Ports:    servicePort,
-			Type:     corev1.ServiceTypeClusterIP,
-		},
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	app "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -175,4 +176,51 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 		return false, err
 	}
 	return true, nil
+}
+
+func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+	serviceName := component.Name
+	labels := make(map[string]string)
+	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	labels["kube-min-cli-appId"] = component.AppId
+	if component.Labels != nil {
+		for k, v := range component.Labels {
+			labels[k] = v
+		}
+	}
+
+	var ContainerPort []corev1.ContainerPort
+	for _, v := range properties.Ports {
+		ContainerPort = append(ContainerPort, corev1.ContainerPort{
+			ContainerPort: v.Port,
+		})
+	}
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: "default",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &component.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  serviceName,
+							Image: properties.Image,
+							Ports: ContainerPort,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	return deployment
 }

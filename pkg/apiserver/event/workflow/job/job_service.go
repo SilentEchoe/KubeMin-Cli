@@ -12,6 +12,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
@@ -154,4 +155,26 @@ func getServiceStatus(kubeClient *kubernetes.Clientset, namespace string, name s
 	}
 
 	return true, nil
+}
+
+func GenerateService(name, namespace string, lab map[string]string, ports []model.Ports) interface{} {
+	var servicePort []corev1.ServicePort
+	for _, v := range ports {
+		servicePort = append(servicePort, corev1.ServicePort{
+			Port:       v.Port,
+			TargetPort: intstr.FromInt32(v.Port),
+			Protocol:   corev1.ProtocolTCP,
+		})
+	}
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: lab,
+			Ports:    servicePort,
+			Type:     corev1.ServiceTypeClusterIP,
+		},
+	}
 }
