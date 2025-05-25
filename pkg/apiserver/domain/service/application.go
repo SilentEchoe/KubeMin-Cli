@@ -12,9 +12,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
-	"sort"
 )
 
 type ApplicationsService interface {
@@ -46,7 +47,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		Description: req.Description,
 		Icon:        req.Icon,
 	}
-	exist, err := repository.IsExist(ctx, c.Store, req.Name)
+	exist, err := repository.IsExist(ctx, c.Store, req.Name, req.Version)
 	if err != nil {
 		return nil, bcode.ErrApplicationExist
 	}

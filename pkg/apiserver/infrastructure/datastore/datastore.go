@@ -24,6 +24,7 @@ import (
 )
 
 var (
+	
 	// ErrPrimaryEmpty Error that primary key is empty.
 	ErrPrimaryEmpty = NewDBError(fmt.Errorf("entity primary is empty"))
 
@@ -166,4 +167,7 @@ type DataStore interface {
 
 	// IsExist Name() and TableName() can't return zero value.
 	IsExist(ctx context.Context, entity Entity) (bool, error)
+
+	//IsExistByCondition 多条件判断实体是否存在
+	IsExistByCondition(ctx context.Context, table string, cond map[string]interface{}, dest interface{}) (bool, error)
 }

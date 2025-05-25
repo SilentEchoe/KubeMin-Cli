@@ -37,6 +37,9 @@ func (a *Applications) Index() map[string]interface{} {
 	if a.Name != "" {
 		index["name"] = a.Name
 	}
+	if a.Version != "" {
+		index["version"] = a.Version
+	}
 	if a.Project != "" {
 		index["project"] = a.Project
 	}
@@ -77,8 +80,9 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 }
 
 type Properties struct {
-	Image string  `json:"image"`
-	Ports []Ports `json:"ports"`
+	Image string            `json:"image"`
+	Ports []Ports           `json:"ports"`
+	Env   map[string]string `json:"env"`
 }
 
 type Ports struct {

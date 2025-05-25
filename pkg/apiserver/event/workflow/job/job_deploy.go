@@ -184,6 +184,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 	labels := make(map[string]string)
 	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
 	labels["kube-min-cli-appId"] = component.AppId
+
 	if component.Labels != nil {
 		for k, v := range component.Labels {
 			labels[k] = v
@@ -196,6 +197,12 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			ContainerPort: v.Port,
 		})
 	}
+
+	var envs []corev1.EnvVar
+	for k, v := range properties.Env {
+		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -216,6 +223,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 							Name:  serviceName,
 							Image: properties.Image,
 							Ports: ContainerPort,
+							Env:   envs,
 						},
 					},
 				},

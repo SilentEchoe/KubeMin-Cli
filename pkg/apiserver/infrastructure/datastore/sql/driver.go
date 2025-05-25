@@ -100,20 +100,54 @@ func (m *Driver) Put(ctx context.Context, entity datastore.Entity) error {
 
 // IsExist determine whether data exists.
 func (m *Driver) IsExist(ctx context.Context, entity datastore.Entity) (bool, error) {
-	if entity.PrimaryKey() == "" {
-		return false, datastore.ErrPrimaryEmpty
+	if entity == nil {
+		return false, datastore.ErrNilEntity
 	}
-	if entity.TableName() == "" {
+	table := entity.TableName()
+	if table == "" {
 		return false, datastore.ErrTableNameEmpty
 	}
 
-	if dbExist := m.Client.WithContext(ctx).First(entity); dbExist.Error != nil {
-		if errors.Is(dbExist.Error, gorm.ErrRecordNotFound) {
-			return false, nil
-		}
-		return false, datastore.NewDBError(dbExist.Error)
+	conds := entity.Index()
+	if len(conds) == 0 {
+		return false, fmt.Errorf("IsExist: no query condition provided")
 	}
 
+	dest, err := datastore.NewEntity(entity)
+	if err != nil {
+		return false, err
+	}
+	tx := m.Client.WithContext(ctx).Table(table).Where(conds).Limit(1).Find(dest)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, datastore.NewDBError(tx.Error)
+	}
+	if tx.RowsAffected == 0 {
+		return false, nil
+	}
+	return true, nil
+}
+
+func (m *Driver) IsExistByCondition(ctx context.Context, table string, cond map[string]interface{}, dest interface{}) (bool, error) {
+	if table == "" {
+		return false, datastore.ErrTableNameEmpty
+	}
+	if len(cond) == 0 {
+		return false, errors.New("condition map is empty")
+	}
+
+	tx := m.Client.WithContext(ctx).Table(table).Where(cond).Limit(1).Find(dest)
+	if tx.Error != nil {
+		if errors.Is(tx.Error, gorm.ErrRecordNotFound) {
+			return false, nil
+		}
+		return false, datastore.NewDBError(tx.Error)
+	}
+	if tx.RowsAffected == 0 {
+		return false, nil
+	}
 	return true, nil
 }
 

@@ -5,12 +5,14 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"context"
+
 	"k8s.io/klog/v2"
 )
 
-func IsExist(ctx context.Context, store datastore.DataStore, appName string) (bool, error) {
+func IsExist(ctx context.Context, store datastore.DataStore, appName, version string) (bool, error) {
 	application := model.Applications{
-		Name: appName,
+		Name:    appName,
+		Version: version,
 	}
 	exist, err := store.IsExist(ctx, &application)
 	if err != nil {
