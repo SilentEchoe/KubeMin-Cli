@@ -5,6 +5,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -15,8 +16,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 )
 
 type DeployJobCtl struct {
@@ -82,12 +86,30 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	isAlreadyExists, err := c.deploymentExists(ctx, deploy.Name, deploy.Namespace)
+	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deploy.Name, deploy.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
 
-	if !isAlreadyExists {
+	if isAlreadyExists {
+		//如果存在先进行对比，然后
+		if isDeploymentChanged(deployLast, deploy) {
+			deploy.ResourceVersion = deployLast.ResourceVersion // 必须设置才能更新
+			deploy.Spec.Selector = deployLast.Spec.Selector
+			deploy.Spec.Template.Labels = deployLast.Spec.Template.Labels
+			// TODO 这里需要更改为Apply
+			// TODO 这里应该通过策略实现多种，看是强制更新，软更新(apply) 或者Path
+			updated, err := c.ApplyDeployment(ctx, deploy)
+			if err != nil {
+				klog.Errorf("failed to update deployment %q: %v", deploy.Name, err)
+				return err
+			}
+			klog.Infof("Deployment %q updated successfully.", updated.Name)
+		} else {
+			klog.Infof("Deployment %q is up-to-date, skip apply.", deploy.Name)
+		}
+
+	} else {
 		result, err := c.client.AppsV1().Deployments(deploy.Namespace).Create(ctx, deploy, metav1.CreateOptions{})
 		if err != nil {
 			klog.Errorf("failed to create deployment %q namespace: %q : %v", deploy.Name, deploy.Namespace, err)
@@ -95,6 +117,7 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		}
 		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
+
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
@@ -168,15 +191,15 @@ func (c *DeployJobCtl) timeout() int64 {
 	return c.job.Timeout
 }
 
-func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces string) (bool, error) {
-	_, err := c.client.AppsV1().Deployments(namespaces).Get(ctx, name, metav1.GetOptions{})
+func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces string) (*appsv1.Deployment, bool, error) {
+	oldDeploy, err := c.client.AppsV1().Deployments(namespaces).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			return false, nil
+			return nil, false, nil
 		}
-		return false, err
+		return nil, false, err
 	}
-	return true, nil
+	return oldDeploy, true, nil
 }
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
@@ -230,4 +253,140 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 	}
 
 	return deployment
+}
+
+func (c *DeployJobCtl) ApplyDeployment(ctx context.Context, deploy *appsv1.Deployment) (*appsv1.Deployment, error) {
+	deploy.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "apps",
+		Version: "v1",
+		Kind:    "Deployment",
+	})
+
+	cleanObjectMeta(&deploy.ObjectMeta) // 清理会引发冲突的字段
+
+	patchBytes, err := json.Marshal(deploy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal deployment: %w", err)
+	}
+
+	result, err := c.client.AppsV1().Deployments(deploy.Namespace).Patch(ctx,
+		deploy.Name,
+		types.ApplyPatchType, // ✅ 关键：使用 ApplyPatchType 表示 SSA
+		patchBytes,
+		metav1.PatchOptions{
+			FieldManager: "kubemin-cli",      // 必须有：用于字段归属跟踪
+			Force:        pointer.Bool(true), // 避免字段冲突阻塞更新
+		})
+
+	if err != nil {
+		return nil, fmt.Errorf("apply deployment failed: %w", err)
+	}
+	return result, nil
+}
+
+func isDeploymentChanged(current, desired *appsv1.Deployment) bool {
+	c1 := current.Spec.Template.Spec.Containers
+	c2 := desired.Spec.Template.Spec.Containers
+
+	if len(c1) != len(c2) {
+		return true
+	}
+
+	for i := range c1 {
+		if c1[i].Image != c2[i].Image {
+			return true
+		}
+
+		if !compareContainerPorts(c1[i].Ports, c2[i].Ports) {
+			return true
+		}
+
+		if !compareEnvVars(c1[i].Env, c2[i].Env) {
+			return true
+		}
+
+		if !compareResources(c1[i].Resources, c2[i].Resources) {
+			return true
+		}
+
+		if !compareVolumeMounts(c1[i].VolumeMounts, c2[i].VolumeMounts) {
+			return true
+		}
+	}
+
+	if !compareVolumes(current.Spec.Template.Spec.Volumes, desired.Spec.Template.Spec.Volumes) {
+		return true
+	}
+
+	return false
+}
+
+func compareContainerPorts(a, b []corev1.ContainerPort) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].ContainerPort != b[i].ContainerPort {
+			return false
+		}
+	}
+	return true
+}
+
+func compareEnvVars(a, b []corev1.EnvVar) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Name != b[i].Name || a[i].Value != b[i].Value {
+			return false
+		}
+	}
+	return true
+}
+
+func compareResources(a, b corev1.ResourceRequirements) bool {
+	return a.Requests.Cpu().Cmp(*b.Requests.Cpu()) == 0 &&
+		a.Requests.Memory().Cmp(*b.Requests.Memory()) == 0 &&
+		a.Limits.Cpu().Cmp(*b.Limits.Cpu()) == 0 &&
+		a.Limits.Memory().Cmp(*b.Limits.Memory()) == 0
+}
+
+func compareVolumeMounts(a, b []corev1.VolumeMount) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].MountPath != b[i].MountPath || a[i].Name != b[i].Name {
+			return false
+		}
+	}
+	return true
+}
+
+func compareVolumes(a, b []corev1.Volume) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Name != b[i].Name {
+			return false
+		}
+		// 这里只对常见的 Volume 类型进行对比（如 EmptyDir、ConfigMap、Secret、PVC）
+		if a[i].VolumeSource.ConfigMap != nil || b[i].VolumeSource.ConfigMap != nil {
+			if a[i].VolumeSource.ConfigMap == nil || b[i].VolumeSource.ConfigMap == nil ||
+				a[i].VolumeSource.ConfigMap.Name != b[i].VolumeSource.ConfigMap.Name {
+				return false
+			}
+		}
+		// 可扩展支持 PVC、Secret、HostPath 等
+	}
+	return true
+}
+
+func cleanObjectMeta(meta *metav1.ObjectMeta) {
+	meta.ResourceVersion = ""
+	meta.UID = ""
+	meta.CreationTimestamp = metav1.Time{}
+	meta.ManagedFields = nil
 }
