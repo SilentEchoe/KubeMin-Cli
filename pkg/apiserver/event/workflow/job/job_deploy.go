@@ -97,8 +97,7 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 			deploy.ResourceVersion = deployLast.ResourceVersion // 必须设置才能更新
 			deploy.Spec.Selector = deployLast.Spec.Selector
 			deploy.Spec.Template.Labels = deployLast.Spec.Template.Labels
-			// TODO 这里需要更改为Apply
-			// TODO 这里应该通过策略实现多种，看是强制更新，软更新(apply) 或者Path
+			// TODO 这里应该通过策略实现多种，比如强制更新，软更新(apply) 或者Path
 			updated, err := c.ApplyDeployment(ctx, deploy)
 			if err != nil {
 				klog.Errorf("failed to update deployment %q: %v", deploy.Name, err)
