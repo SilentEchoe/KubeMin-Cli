@@ -4,7 +4,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	k "KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -13,9 +15,12 @@ import (
 	v1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"k8s.io/utils/pointer"
 )
 
 type DeployServiceJobCtl struct {
@@ -84,12 +89,23 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("job.JobInfo is not a *v1.Service (actual type: %T)", c.job.JobInfo)
 	}
 
-	isAlreadyExists, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
+	serviceLast, isAlreadyExists, err := k.ServiceExists(ctx, c.client, service.Name, service.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
 
-	if !isAlreadyExists {
+	if isAlreadyExists {
+		if isServiceChanged(serviceLast, service) {
+			updated, err := c.ApplyService(ctx, service)
+			if err != nil {
+				klog.Errorf("failed to update service %q: %v", service.Name, err)
+				return err
+			}
+			klog.Infof("Service %q updated successfully.", updated.Name)
+		} else {
+			klog.Infof("Service %q is up-to-date, skip apply.", service.Name)
+		}
+	} else {
 		result, err := c.client.CoreV1().Services(c.job.Namespace).Create(context.TODO(), service, metav1.CreateOptions{})
 		if err != nil {
 			klog.Errorf("failed to create service %q namespace: %q : %v", service.Name, service.Namespace, err)
@@ -97,7 +113,7 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 		}
 		klog.Infof("JobTask Deploy Service Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
-
+	
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
@@ -178,4 +194,79 @@ func GenerateService(name, namespace string, lab map[string]string, ports []mode
 			Type:     corev1.ServiceTypeClusterIP,
 		},
 	}
+}
+
+// isServiceChanged 判断两个 Service 是否存在需要更新的差异
+func isServiceChanged(current, desired *corev1.Service) bool {
+	// 比较类型（ClusterIP, NodePort, LoadBalancer 等）
+	if current.Spec.Type != desired.Spec.Type {
+		return true
+	}
+
+	// 比较 selector
+	if !compareStringMap(current.Spec.Selector, desired.Spec.Selector) {
+		return true
+	}
+
+	// 比较 ports
+	if len(current.Spec.Ports) != len(desired.Spec.Ports) {
+		return true
+	}
+	for i := range current.Spec.Ports {
+		cp := current.Spec.Ports[i]
+		dp := desired.Spec.Ports[i]
+
+		if cp.Port != dp.Port || cp.TargetPort.String() != dp.TargetPort.String() || cp.Protocol != dp.Protocol || cp.Name != dp.Name || cp.NodePort != dp.NodePort {
+			return true
+		}
+	}
+
+	// 比较 annotations（常用于 LB 的配置、external-dns 等）
+	if !compareStringMap(current.Annotations, desired.Annotations) {
+		return true
+	}
+
+	return false
+}
+
+// compareStringMap 比较两个 map[string]string 是否相同
+func compareStringMap(a, b map[string]string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for k, v := range a {
+		if b[k] != v {
+			return false
+		}
+	}
+	return true
+}
+
+func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
+	svc.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Service",
+	})
+
+	cleanObjectMeta(&svc.ObjectMeta) // 清理会引发冲突的字段（如 ResourceVersion、UID 等）
+
+	patchBytes, err := json.Marshal(svc)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal service: %w", err)
+	}
+
+	result, err := c.client.CoreV1().Services(svc.Namespace).Patch(ctx,
+		svc.Name,
+		types.ApplyPatchType, // ✅ 使用 Server-Side Apply
+		patchBytes,
+		metav1.PatchOptions{
+			FieldManager: "kubemin-cli",
+			Force:        pointer.Bool(true), // 强制更新冲突字段
+		})
+
+	if err != nil {
+		return nil, fmt.Errorf("apply service failed: %w", err)
+	}
+	return result, nil
 }
