@@ -36,6 +36,9 @@ func (wq *WorkflowQueue) ShortTableName() string {
 
 func (wq *WorkflowQueue) Index() map[string]interface{} {
 	index := make(map[string]interface{})
+	if wq.AppID != "" {
+		index["app_id"] = wq.AppID
+	}
 	if wq.TaskID != "" {
 		index["task_id"] = wq.TaskID
 	}

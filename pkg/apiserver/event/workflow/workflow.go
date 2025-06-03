@@ -153,14 +153,14 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	}
 	err := ds.Get(ctx, &workflow)
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error:", err)
+		klog.Errorf("Generate JobTask Components error: %s", err)
 		return nil
 	}
 
 	// 将 JSONStruct 序列化为字节切片
 	steps, err := json.Marshal(workflow.Steps)
 	if err != nil {
-		klog.Errorf("Workflow.Steps deserialization failure:", err)
+		klog.Errorf("Workflow.Steps deserialization failure: %s", err)
 		return nil
 	}
 
@@ -168,14 +168,15 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	var workflowStep model.WorkflowSteps
 	err = json.Unmarshal(steps, &workflowStep)
 	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure:", err)
+		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
 		return nil
 	}
 
 	// Step3.根据 appId 查询所有组件信息
 	component, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
+
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error:", err)
+		klog.Errorf("Generate JobTask Components error: %s", err)
 		return nil
 	}
 	var ComponentList []*model.ApplicationComponent
@@ -188,18 +189,21 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	var jobs []*model.JobTask
 	for _, step := range workflowStep.Steps {
 		componentSteps := FindComponents(ComponentList, step.Name)
+		if componentSteps == nil {
+			continue
+		}
 		jobTask := NewJobTask(componentSteps.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
 
 		cProperties, err := json.Marshal(componentSteps.Properties)
 		if err != nil {
-			klog.Errorf("Component.Properties deserialization failure:", err)
+			klog.Errorf("Component.Properties deserialization failure: %s", err)
 			return nil
 		}
 
 		var properties model.Properties
 		err = json.Unmarshal(cProperties, &properties)
 		if err != nil {
-			klog.Errorf("WorkflowSteps deserialization failure:", err)
+			klog.Errorf("WorkflowSteps deserialization failure: %s", err)
 			return nil
 		}
 
@@ -212,9 +216,9 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 
 		// 创建Service
 		if len(properties.Ports) > 0 {
-			jobTaskService := NewJobTask(fmt.Sprintf("%s-service", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
+			jobTaskService := NewJobTask(fmt.Sprintf("%s", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
 			jobTaskService.JobType = string(config.JobDeployService)
-			jobTaskService.JobInfo = job.GenerateService(fmt.Sprintf("%s-service", componentSteps.Name), "default", nil, properties.Ports)
+			jobTaskService.JobInfo = job.GenerateService(fmt.Sprintf("%s", componentSteps.Name), "default", nil, properties.Ports)
 			jobs = append(jobs, jobTaskService)
 		}
 		jobs = append(jobs, jobTask)

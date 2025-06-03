@@ -205,53 +205,58 @@ func _applyFilterOptions(clauses []clause.Expression, filterOptions datastore.Fi
 
 // List list entity function
 func (m *Driver) List(ctx context.Context, entity datastore.Entity, op *datastore.ListOptions) ([]datastore.Entity, error) {
-	if entity.TableName() == "" {
+	if entity == nil {
+		return nil, datastore.ErrNilEntity
+	}
+	table := entity.TableName()
+	if table == "" {
 		return nil, datastore.ErrTableNameEmpty
 	}
+
 	var (
-		clauses []clause.Expression
 		exprs   []clause.Expression
-		limit   int
-		offset  int
+		clauses []clause.Expression
 	)
-	if op != nil && op.PageSize > 0 && op.Page > 0 {
-		limit = op.PageSize
-		offset = op.PageSize * (op.Page - 1)
-		clauses = append(clauses, clause.Limit{
-			Limit:  &limit,
-			Offset: offset,
-		})
-	}
+
+	// 加入 entity.Index() 条件
 	for k, v := range entity.Index() {
 		exprs = append(exprs, clause.Eq{
 			Column: strings.ToLower(k),
 			Value:  v,
 		})
 	}
+
+	// 应用外部传入的 FilterOptions
 	if op != nil {
 		exprs = _applyFilterOptions(exprs, op.FilterOptions)
 	}
+
 	if len(exprs) > 0 {
-		clauses = append(clauses, clause.Where{
-			Exprs: exprs,
-		})
+		clauses = append(clauses, clause.Where{Exprs: exprs})
 	}
-	if op != nil && op.SortBy != nil {
-		var sortOption []clause.OrderByColumn
-		for _, v := range op.SortBy {
-			sortOption = append(sortOption, clause.OrderByColumn{
-				Column: clause.Column{
-					Name: strings.ToLower(v.Key),
-				},
-				Desc: v.Order == datastore.SortOrderDescending,
+
+	// 分页处理
+	if op != nil && op.PageSize > 0 && op.Page > 0 {
+		limit := op.PageSize
+		offset := op.PageSize * (op.Page - 1)
+		clauses = append(clauses, clause.Limit{Limit: &limit, Offset: offset})
+	}
+
+	// 排序处理
+	if op != nil && len(op.SortBy) > 0 {
+		var orderBy []clause.OrderByColumn
+		for _, sort := range op.SortBy {
+			orderBy = append(orderBy, clause.OrderByColumn{
+				Column: clause.Column{Name: strings.ToLower(sort.Key)},
+				Desc:   sort.Order == datastore.SortOrderDescending,
 			})
 		}
-		clauses = append(clauses, clause.OrderBy{
-			Columns: sortOption,
-		})
+		clauses = append(clauses, clause.OrderBy{Columns: orderBy})
 	}
+
+	// 查询执行
 	var list []datastore.Entity
-	rows, err := m.Client.WithContext(ctx).Model(entity).Clauses(clauses...).Rows()
+	rows, err := m.Client.WithContext(ctx).Table(table).Clauses(clauses...).Rows()
 	if err != nil {
 		return nil, datastore.NewDBError(err)
 	}
@@ -260,20 +265,22 @@ func (m *Driver) List(ctx context.Context, entity datastore.Entity, op *datastor
 			klog.Warningf("close rows failure %s", err.Error())
 		}
 	}()
+
 	for rows.Next() {
 		item, err := datastore.NewEntity(entity)
 		if err != nil {
 			return nil, datastore.NewDBError(err)
 		}
-		err = m.Client.WithContext(ctx).ScanRows(rows, &item)
-		if err != nil {
+		if err := m.Client.WithContext(ctx).ScanRows(rows, item); err != nil {
 			return nil, datastore.NewDBError(fmt.Errorf("row scan failure %w", err))
 		}
 		list = append(list, item)
 	}
+
 	if err := rows.Err(); err != nil {
 		return nil, datastore.NewDBError(err)
 	}
+
 	return list, nil
 }
 

@@ -2,11 +2,13 @@ package utils
 
 import (
 	"math/rand"
+	"regexp"
+	"strings"
 	"time"
 )
 
 // RandomString 创建一个随机数(包含大小写)
-func RandomString(n int) string {
+func RandStringBytesRandomString(n int) string {
 	var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	result := make([]byte, n)
 	for i := range result {
@@ -43,6 +45,27 @@ func RandStringByNumLowercase(n int) string {
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[r.Intn(len(letterBytes))]
+	}
+	return string(b)
+}
+
+var rfc1123Pattern = regexp.MustCompile(`[^a-z0-9-]+`)
+
+func ToRFC1123Name(s string) string {
+	s = strings.ToLower(s)
+	s = rfc1123Pattern.ReplaceAllString(s, "-")
+	s = strings.Trim(s, "-")
+	if len(s) == 0 {
+		return "port"
+	}
+	return s
+}
+
+func RandRFC1123Suffix(n int) string {
+	const letters = "abcdefghijklmnopqrstuvwxyz0123456789"
+	b := make([]byte, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(b)
 }

@@ -75,6 +75,9 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 	if w.Name != "" {
 		index["name"] = w.Name
 	}
+	if w.AppId != "" {
+		index["appid"] = w.AppId
+	}
 	return index
 }
 

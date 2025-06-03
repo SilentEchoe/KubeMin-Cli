@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	k "KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
 	"encoding/json"
@@ -17,6 +18,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
+	_ "k8s.io/client-go/applyconfigurations/meta/v1"
+
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -113,7 +117,7 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 		}
 		klog.Infof("JobTask Deploy Service Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
-	
+
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
@@ -174,27 +178,68 @@ func getServiceStatus(kubeClient *kubernetes.Clientset, namespace string, name s
 	return true, nil
 }
 
-func GenerateService(name, namespace string, lab map[string]string, ports []model.Ports) interface{} {
-	var servicePort []corev1.ServicePort
-	for _, v := range ports {
-		servicePort = append(servicePort, corev1.ServicePort{
-			Port:       v.Port,
-			TargetPort: intstr.FromInt32(v.Port),
-			Protocol:   corev1.ProtocolTCP,
-		})
+func GenerateService(name, namespace string, labels map[string]string, ports []model.Ports) *applyv1.ServiceApplyConfiguration {
+	var servicePorts []*applyv1.ServicePortApplyConfiguration
+	base := utils.ToRFC1123Name(name)
+
+	for _, p := range ports {
+		portName := fmt.Sprintf("%s-%s", base, utils.RandRFC1123Suffix(6))
+		servicePorts = append(servicePorts, applyv1.ServicePort().
+			WithName(portName).
+			WithPort(p.Port).
+			WithTargetPort(intstr.FromInt(int(p.Port))).
+			WithProtocol(corev1.ProtocolTCP))
 	}
-	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: lab,
-			Ports:    servicePort,
-			Type:     corev1.ServiceTypeClusterIP,
-		},
+
+	if len(labels) == 0 {
+		labels = map[string]string{"app": base}
 	}
+
+	return applyv1.Service(name, namespace).
+		WithLabels(labels).
+		WithSpec(applyv1.ServiceSpec().
+			WithSelector(labels).
+			WithPorts(servicePorts...).
+			WithType(corev1.ServiceTypeClusterIP)).
+		WithKind("Service").
+		WithAPIVersion("v1").
+		WithName(name).
+		WithNamespace(namespace).
+		WithLabels(labels)
 }
+
+//func GenerateService(name, namespace string, labels map[string]string, ports []model.Ports) *corev1.Service {
+//	var servicePorts []corev1.ServicePort
+//	baseName := utils.ToRFC1123Name(name)
+//
+//	for _, p := range ports {
+//		portName := fmt.Sprintf("%s-%s", baseName, utils.RandRFC1123Suffix(6)) // RFC1123 兼容
+//		servicePorts = append(servicePorts, corev1.ServicePort{
+//			Name:       portName,
+//			Port:       p.Port,
+//			TargetPort: intstr.FromInt32(p.Port),
+//			Protocol:   corev1.ProtocolTCP,
+//		})
+//	}
+//
+//	// labels 必须非空，否则 selector 无法生效
+//	if len(labels) == 0 {
+//		labels = map[string]string{"app": baseName}
+//	}
+//
+//	return &corev1.Service{
+//		ObjectMeta: metav1.ObjectMeta{
+//			Name:      name,
+//			Namespace: namespace,
+//			Labels:    labels,
+//		},
+//		Spec: corev1.ServiceSpec{
+//			Selector: labels,
+//			Ports:    servicePorts,
+//			Type:     corev1.ServiceTypeClusterIP,
+//		},
+//	}
+//}
 
 // isServiceChanged 判断两个 Service 是否存在需要更新的差异
 func isServiceChanged(current, desired *corev1.Service) bool {
@@ -243,30 +288,38 @@ func compareStringMap(a, b map[string]string) bool {
 }
 
 func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *corev1.Service) (*corev1.Service, error) {
+	// 设置资源 GVK
 	svc.SetGroupVersionKind(schema.GroupVersionKind{
 		Group:   "",
 		Version: "v1",
 		Kind:    "Service",
 	})
 
-	cleanObjectMeta(&svc.ObjectMeta) // 清理会引发冲突的字段（如 ResourceVersion、UID 等）
+	// 清理可能冲突的字段
+	cleanObjectMeta(&svc.ObjectMeta)
 
-	patchBytes, err := json.Marshal(svc)
+	// 打印 JSON 以便调试
+	raw, err := json.MarshalIndent(svc, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal service: %w", err)
+		return nil, fmt.Errorf("marshal service before apply failed: %w", err)
 	}
+	fmt.Println("Final Service spec to apply:\n", string(raw))
 
-	result, err := c.client.CoreV1().Services(svc.Namespace).Patch(ctx,
+	// 实际发起 Apply 请求
+	appliedSvc, err := c.client.CoreV1().Services(svc.Namespace).Patch(ctx,
 		svc.Name,
-		types.ApplyPatchType, // ✅ 使用 Server-Side Apply
-		patchBytes,
+		types.ApplyPatchType,
+		raw,
 		metav1.PatchOptions{
 			FieldManager: "kubemin-cli",
-			Force:        pointer.Bool(true), // 强制更新冲突字段
-		})
-
+			Force:        pointer.Bool(true),
+		},
+	)
 	if err != nil {
+		fmt.Printf("Patch failed: %v\n", err)
 		return nil, fmt.Errorf("apply service failed: %w", err)
 	}
-	return result, nil
+
+	fmt.Printf("Service applied: %s/%s\n", appliedSvc.Namespace, appliedSvc.Name)
+	return appliedSvc, nil
 }
