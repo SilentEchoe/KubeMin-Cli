@@ -326,7 +326,7 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 				klog.Errorf("Create failed: %v", err)
 				return nil, fmt.Errorf("create service failed: %w", err)
 			}
-			klog.Infof("Service created: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
+			klog.InfoS("Service created", "namespace", appliedSvc.Namespace, "name", appliedSvc.Name)
 			return appliedSvc, nil
 		}
 		return nil, fmt.Errorf("failed to check service existence: %w", err)
