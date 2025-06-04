@@ -5,11 +5,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
-	k "KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
-	"encoding/json"
 	"fmt"
-	"reflect"
 	"sync"
 	"time"
 
@@ -95,41 +92,14 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	if service.Name == nil || service.Namespace == nil {
 		return fmt.Errorf("service name or namespace is nil")
 	}
-	name := *service.Name
-	namespace := *service.Namespace
 
-	// 检查是否已存在 Service
-	serviceLast, isAlreadyExists, err := k.ServiceExists(ctx, c.client, name, namespace)
+	// 直接使用 ApplyService 处理创建或更新
+	updated, err := c.ApplyService(ctx, service)
 	if err != nil {
-		return fmt.Errorf("failed to check service existence: %w", err)
+		klog.Errorf("failed to apply service %q: %v", *service.Name, err)
+		return fmt.Errorf("apply service failed: %w", err)
 	}
-
-	// 如果存在则判断是否变化（轻量级对比）
-	if isAlreadyExists {
-		if isServiceChanged(serviceLast, service) {
-			updated, err := c.ApplyService(ctx, service)
-			if err != nil {
-				klog.Errorf("failed to update service %q: %v", name, err)
-				return fmt.Errorf("apply service failed: %w", err)
-			}
-			klog.Infof("Service %q updated successfully.", updated.Name)
-		} else {
-			klog.Infof("Service %q is up-to-date. Skipping apply.", name)
-		}
-	} else {
-		// 若不存在则将 SSA 对象转换为 corev1.Service，调用 Create
-		coreService, err := convertApplyToCoreV1Service(service)
-		if err != nil {
-			return fmt.Errorf("failed to convert applyv1.Service: %w", err)
-		}
-
-		result, err := c.client.CoreV1().Services(namespace).Create(ctx, coreService, metav1.CreateOptions{})
-		if err != nil {
-			klog.Errorf("failed to create service %q: %v", name, err)
-			return fmt.Errorf("create service failed: %w", err)
-		}
-		klog.Infof("Service %q created successfully.", result.GetName())
-	}
+	klog.Infof("Service %q applied successfully.", updated.Name)
 
 	// 任务完成
 	c.job.Status = config.StatusCompleted
@@ -209,8 +179,6 @@ func GenerateService(name, namespace string, labels map[string]string, ports []m
 			WithPort(p.Port).
 			WithTargetPort(intstr.FromInt32(p.Port)).
 			WithProtocol(corev1.ProtocolTCP)
-		// 打印端口配置以便调试
-		klog.Infof("Generated port configuration: name=%s, port=%d", portName, p.Port)
 		servicePorts = append(servicePorts, port)
 	}
 
@@ -229,9 +197,9 @@ func GenerateService(name, namespace string, labels map[string]string, ports []m
 		WithName(name).
 		WithNamespace(namespace)
 
-	// 打印完整的 service 配置以便调试
-	raw, _ := json.MarshalIndent(svc, "", "  ")
-	klog.Infof("Generated service configuration:\n%s", string(raw))
+	//// 打印完整的 service 配置以便调试
+	//raw, _ := json.MarshalIndent(svc, "", "  ")
+	//klog.Infof("Generated service configuration:\n%s", string(raw))
 
 	return svc
 }
@@ -298,38 +266,6 @@ func isServiceChanged(current *corev1.Service, desired *applyv1.ServiceApplyConf
 	return false
 }
 
-func isServiceChangedSSA(current, desired *corev1.Service) bool {
-	// 类型不同
-	if current.Spec.Type != desired.Spec.Type {
-		return true
-	}
-
-	// Selector 不同
-	if !reflect.DeepEqual(current.Spec.Selector, desired.Spec.Selector) {
-		return true
-	}
-
-	// Ports 数量不同
-	if len(current.Spec.Ports) != len(desired.Spec.Ports) {
-		return true
-	}
-
-	// 对比每个 Port 的关键字段（跳过 Name 和 NodePort）
-	for i := range current.Spec.Ports {
-		c := current.Spec.Ports[i]
-		d := desired.Spec.Ports[i]
-
-		if c.Port != d.Port ||
-			c.Protocol != d.Protocol ||
-			c.TargetPort.String() != d.TargetPort.String() {
-			return true
-		}
-	}
-
-	// 一切相同，无需更新
-	return false
-}
-
 // compareStringMap 比较两个 map[string]string 是否相同
 func compareStringMap(a, b map[string]string) bool {
 	if a == nil && b == nil {
@@ -380,21 +316,30 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 		}
 	}
 
-	// 打印 JSON 以便调试
-	raw, err := json.MarshalIndent(coreService, "", "  ")
+	// 检查 service 是否存在
+	_, err := c.client.CoreV1().Services(coreService.Namespace).Get(ctx, coreService.Name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("marshal service before apply failed: %w", err)
+		if k8serrors.IsNotFound(err) {
+			// 如果不存在，则创建
+			appliedSvc, err := c.client.CoreV1().Services(coreService.Namespace).Create(ctx, coreService, metav1.CreateOptions{})
+			if err != nil {
+				klog.Errorf("Create failed: %v", err)
+				return nil, fmt.Errorf("create service failed: %w", err)
+			}
+			klog.Infof("Service created: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
+			return appliedSvc, nil
+		}
+		return nil, fmt.Errorf("failed to check service existence: %w", err)
 	}
-	klog.Infof("Final Service spec to apply:\n%s", string(raw))
 
-	// 使用 Update 而不是 Patch
+	// 如果存在，则更新
 	appliedSvc, err := c.client.CoreV1().Services(coreService.Namespace).Update(ctx, coreService, metav1.UpdateOptions{})
 	if err != nil {
 		klog.Errorf("Update failed: %v", err)
-		return nil, fmt.Errorf("apply service failed: %w", err)
+		return nil, fmt.Errorf("update service failed: %w", err)
 	}
 
-	klog.Infof("Service applied: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
+	klog.Infof("Service updated: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
 	return appliedSvc, nil
 }
 
