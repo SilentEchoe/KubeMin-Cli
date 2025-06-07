@@ -7,6 +7,9 @@ import (
 	"context"
 	"fmt"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
@@ -80,3 +83,59 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 }
 
 func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {}
+
+func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+	serviceName := component.Name
+	labels := make(map[string]string)
+	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	labels["kube-min-cli-appId"] = component.AppId
+
+	if component.Namespace == "" {
+		component.Namespace = "default"
+	}
+
+	var ContainerPort []corev1.ContainerPort
+	for _, v := range properties.Ports {
+		ContainerPort = append(ContainerPort, corev1.ContainerPort{
+			ContainerPort: v.Port,
+		})
+	}
+
+	var envs []corev1.EnvVar
+	for k, v := range properties.Env {
+		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
+	}
+
+	for k, v := range properties.Labels {
+		labels[k] = v
+	}
+
+	statefulSet := &appsv1.StatefulSet{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      serviceName,
+			Namespace: component.Namespace,
+		},
+		Spec: appsv1.StatefulSetSpec{
+			Replicas: &component.Replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  serviceName,
+							Image: properties.Image,
+							Ports: ContainerPort,
+							Env:   envs,
+						},
+					},
+				},
+			},
+		},
+	}
+	return statefulSet
+}
