@@ -54,7 +54,8 @@ type ApplicationComponent struct {
 	Namespace     string         `json:"namespace"`
 	Replicas      int32          `json:"replicas"`
 	ComponentType config.JobType `json:"componentType"`
-	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"` //属性
+	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"`
+	Traits        *JSONStruct    `json:"traits" gorm:"serializer:json"`
 	BaseModel
 }
 

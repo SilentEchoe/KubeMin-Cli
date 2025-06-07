@@ -55,6 +55,7 @@ type CreateComponentRequest struct {
 	ComponentType config.JobType `json:"type"`
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
+	Traits        Traits         `json:"properties"`
 }
 
 type CreateWorkflowStepRequest struct {
@@ -68,23 +69,9 @@ type ListApplicationResponse struct {
 	Applications []*ApplicationBase `json:"applications"`
 }
 
-// ListApplicationOptions list application  query options
-type ListApplicationOptions struct {
-	Projects   []string          `json:"projects"`
-	Env        string            `json:"env"`
-	TargetName string            `json:"targetName"`
-	Query      string            `json:"query"`
-	Labels     map[string]string `json:"labels"`
-}
-
 type ApplicationsDeployRequest struct {
 	WorkflowName string `json:"workflowName"`
 	Name         string `json:"appName"`
-}
-
-type ApplicationsDeployResponse struct {
-	CreateTime time.Time `json:"createTime"`
-	Version    string    `json:"version"`
 }
 
 type CreateWorkflowRequest struct {
@@ -104,6 +91,11 @@ type Properties struct {
 	Labels map[string]string `json:"labels"`
 }
 
+type Traits struct {
+	Type       string                 `json:"type"`
+	Properties map[string]interface{} `json:"properties"`
+}
+
 type Ports struct {
 	Port   int64 `json:"port"`
 	Expose bool  `json:"expose"`
@@ -111,6 +103,11 @@ type Ports struct {
 
 type WorkflowProperties struct {
 	Policies []string `json:"policies"`
+}
+
+type WorkflowTraits struct {
+	Type       string                 `json:"type"`
+	Properties map[string]interface{} `json:"properties"`
 }
 
 type CreateWorkflowStepsRequest struct {

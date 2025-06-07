@@ -65,14 +65,22 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
-			klog.Errorf("new trait failure,%s", err.Error())
+			klog.Errorf("new properties failure,%s", err.Error())
 			return nil, bcode.ErrInvalidProperties
 		}
 		nComponent.Properties = properties
 
+		traits, err := model.NewJSONStructByStruct(component.Traits)
+		if err != nil {
+			klog.Errorf("new trait failure,%s", err.Error())
+			return nil, bcode.ErrInvalidProperties
+		}
+
+		nComponent.Traits = traits
+
 		err = repository.CreateComponents(ctx, c.Store, nComponent)
 		if err != nil {
-			klog.Errorf("Create Components err:", err)
+			klog.Errorf("Create Components err:%s", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}
