@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 
@@ -109,6 +110,8 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		labels[k] = v
 	}
 
+	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits, &envs)
+
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -131,12 +134,13 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 							Image:        properties.Image,
 							Ports:        ContainerPort,
 							Env:          envs,
-							VolumeMounts: make([]corev1.VolumeMount, 0),
+							VolumeMounts: volumeMounts,
 						},
 					},
+					Volumes: volumes,
 				},
 			},
-			VolumeClaimTemplates: make([]corev1.PersistentVolumeClaim, 0),
+			VolumeClaimTemplates: volumeClaims,
 		},
 	}
 	return statefulSet
@@ -153,27 +157,82 @@ func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 	return labels
 }
 
-// BuildPVC 构造一个标准 PVC 模板
-func BuildPVC(name string, storageClass string, size string) corev1.PersistentVolumeClaim {
-	qty, err := resource.ParseQuantity(size)
-	if err != nil {
-		panic(fmt.Errorf("invalid storage size %s: %w", size, err))
+func BuildStorageResources(serviceName string, traits *model.Traits, envs *[]corev1.EnvVar) ([]corev1.VolumeMount, []corev1.Volume, []corev1.PersistentVolumeClaim) {
+	var volumeMounts []corev1.VolumeMount
+	var volumes []corev1.Volume
+	var volumeClaims []corev1.PersistentVolumeClaim
+	if traits != nil && traits.Storage != nil {
+		for _, vol := range traits.Storage.Volumes {
+			volName := vol.Name
+			if volName == "" {
+				volName = fmt.Sprintf("%s-%s", serviceName, utils.RandStringBytes(5))
+			}
+			switch vol.Type {
+			case "pvc":
+				qty, _ := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
+				volumeClaims = append(volumeClaims, corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: volName},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						Resources: corev1.VolumeResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceStorage: qty,
+							},
+						},
+					},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
+			case "emptyDir":
+				volumes = append(volumes, corev1.Volume{
+					Name:         volName,
+					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
+			case "configMap":
+				volumes = append(volumes, corev1.Volume{
+					Name: volName,
+					VolumeSource: corev1.VolumeSource{
+						ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: volName}},
+					},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
+				if vol.Env != "" {
+					*envs = append(*envs, corev1.EnvVar{
+						Name: vol.Env,
+						ValueFrom: &corev1.EnvVarSource{
+							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: volName},
+								Key:                  vol.ConfigKey,
+							},
+						},
+					})
+				}
+			case "secret":
+				volumes = append(volumes, corev1.Volume{
+					Name:         volName,
+					VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: volName}},
+				})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
+				if vol.Env != "" {
+					*envs = append(*envs, corev1.EnvVar{
+						Name: vol.Env,
+						ValueFrom: &corev1.EnvVarSource{
+							SecretKeyRef: &corev1.SecretKeySelector{
+								LocalObjectReference: corev1.LocalObjectReference{Name: volName},
+								Key:                  vol.SecretKey,
+							},
+						},
+					})
+				}
+			}
+		}
 	}
+	return volumeMounts, volumes, volumeClaims
+}
 
-	return corev1.PersistentVolumeClaim{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: corev1.PersistentVolumeClaimSpec{
-			AccessModes: []corev1.PersistentVolumeAccessMode{
-				corev1.ReadWriteOnce,
-			},
-			StorageClassName: &storageClass,
-			Resources: corev1.VolumeResourceRequirements{
-				Requests: corev1.ResourceList{
-					corev1.ResourceStorage: qty,
-				},
-			},
-		},
+func defaultOr(value, fallback string) string {
+	if value == "" {
+		return fallback
 	}
+	return value
 }
