@@ -269,7 +269,7 @@ func (c *DeployJobCtl) ApplyDeployment(ctx context.Context, deploy *appsv1.Deplo
 
 	result, err := c.client.AppsV1().Deployments(deploy.Namespace).Patch(ctx,
 		deploy.Name,
-		types.ApplyPatchType, // ✅ 关键：使用 ApplyPatchType 表示 SSA
+		types.ApplyPatchType,
 		patchBytes,
 		metav1.PatchOptions{
 			FieldManager: "kubemin-cli",      // 必须有：用于字段归属跟踪

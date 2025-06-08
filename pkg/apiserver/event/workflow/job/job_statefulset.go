@@ -9,6 +9,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -84,15 +85,13 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 
 func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {}
 
-func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
-	serviceName := component.Name
-	labels := make(map[string]string)
-	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
-	labels["kube-min-cli-appId"] = component.AppId
-
+func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties, traits *model.Traits) interface{} {
 	if component.Namespace == "" {
-		component.Namespace = "default"
+		component.Namespace = config.DefaultNamespace
 	}
+
+	serviceName := component.Name
+	labels := buildLabels(component, properties)
 
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
@@ -125,17 +124,56 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					//TerminationGracePeriodSeconds: ,
 					Containers: []corev1.Container{
 						{
-							Name:  serviceName,
-							Image: properties.Image,
-							Ports: ContainerPort,
-							Env:   envs,
+							Name:         serviceName,
+							Image:        properties.Image,
+							Ports:        ContainerPort,
+							Env:          envs,
+							VolumeMounts: make([]corev1.VolumeMount, 0),
 						},
 					},
 				},
 			},
+			VolumeClaimTemplates: make([]corev1.PersistentVolumeClaim, 0),
 		},
 	}
 	return statefulSet
+}
+
+func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
+	labels := map[string]string{
+		"kube-min-cli":       fmt.Sprintf("%s-%s", c.AppId, c.Name),
+		"kube-min-cli-appId": c.AppId,
+	}
+	for k, v := range p.Labels {
+		labels[k] = v
+	}
+	return labels
+}
+
+// BuildPVC 构造一个标准 PVC 模板
+func BuildPVC(name string, storageClass string, size string) corev1.PersistentVolumeClaim {
+	qty, err := resource.ParseQuantity(size)
+	if err != nil {
+		panic(fmt.Errorf("invalid storage size %s: %w", size, err))
+	}
+
+	return corev1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: corev1.PersistentVolumeClaimSpec{
+			AccessModes: []corev1.PersistentVolumeAccessMode{
+				corev1.ReadWriteOnce,
+			},
+			StorageClassName: &storageClass,
+			Resources: corev1.VolumeResourceRequirements{
+				Requests: corev1.ResourceList{
+					corev1.ResourceStorage: qty,
+				},
+			},
+		},
+	}
 }

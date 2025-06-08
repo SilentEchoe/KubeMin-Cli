@@ -194,24 +194,19 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		}
 		jobTask := NewJobTask(componentSteps.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
 
-		cProperties, err := json.Marshal(componentSteps.Properties)
-		if err != nil {
-			klog.Errorf("Component.Properties deserialization failure: %s", err)
-			return nil
-		}
+		properties := ParseProperties(componentSteps.Properties)
 
-		var properties model.Properties
-		err = json.Unmarshal(cProperties, &properties)
-		if err != nil {
-			klog.Errorf("WorkflowSteps deserialization failure: %s", err)
-			return nil
-		}
+		traits := ParseTraits(componentSteps.Traits)
 
 		switch componentSteps.ComponentType {
 		case config.ServerJob:
 			jobTask.JobType = string(config.JobDeploy)
 			// webservice 默认为无状态服务，使用Deployment 构建
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
+		case config.StoreJob:
+			jobTask.JobType = string(config.JobStoreDeploy)
+			// webservice 默认为无状态服务，使用Deployment 构建
+			jobTask.JobInfo = job.GenerateStoreService(componentSteps, &properties, &traits)
 		}
 
 		// 创建Service
@@ -266,4 +261,36 @@ func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
 	if err != nil {
 		klog.Errorf("update Workflow status err:%s", err)
 	}
+}
+
+func ParseProperties(properties *model.JSONStruct) model.Properties {
+	cProperties, err := json.Marshal(properties)
+	if err != nil {
+		klog.Errorf("Component.Properties deserialization failure: %s", err)
+		return model.Properties{}
+	}
+
+	var propertied model.Properties
+	err = json.Unmarshal(cProperties, &propertied)
+	if err != nil {
+		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
+		return model.Properties{}
+	}
+	return propertied
+}
+
+func ParseTraits(traits *model.JSONStruct) model.Traits {
+	cTraits, err := json.Marshal(traits)
+	if err != nil {
+		klog.Errorf("Component.Properties deserialization failure: %s", err)
+		return model.Traits{}
+	}
+
+	var trait model.Traits
+	err = json.Unmarshal(cTraits, &trait)
+	if err != nil {
+		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
+		return model.Traits{}
+	}
+	return trait
 }

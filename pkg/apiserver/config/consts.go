@@ -21,6 +21,7 @@ func (s Status) ToLower() Status {
 
 const (
 	DefaultTaskRevoker = "system"
+	DefaultNamespace   = "default"
 	DeployTimeout      = 60 * 10 // 10 minutes
 
 	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
@@ -33,6 +34,7 @@ const (
 
 	JobDeploy        JobType = "deploy"
 	JobDeployService JobType = "deploy_service"
+	JobStoreDeploy   JobType = "store_deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"

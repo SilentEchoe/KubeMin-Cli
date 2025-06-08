@@ -93,3 +93,8 @@ type Ports struct {
 	Port   int32 `json:"port"`
 	Expose bool  `json:"expose"`
 }
+
+type Traits struct {
+	Type       string                 `json:"type"`
+	Properties map[string]interface{} `json:"properties"`
+}
