@@ -53,9 +53,10 @@ type CreateApplicationsRequest struct {
 type CreateComponentRequest struct {
 	Name          string         `json:"name"`
 	ComponentType config.JobType `json:"type"`
+	Image         string         `json:"image"`
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
-	Traits        Traits         `json:"properties"`
+	Traits        Traits         `json:"traits"`
 }
 
 type CreateWorkflowStepRequest struct {

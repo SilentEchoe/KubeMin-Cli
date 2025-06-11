@@ -77,7 +77,6 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 
 		nComponent.Traits = traits
-
 		err = repository.CreateComponents(ctx, c.Store, nComponent)
 		if err != nil {
 			klog.Errorf("Create Components err:%s", err)
@@ -129,7 +128,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 
 	err = repository.CreateWorkflow(ctx, c.Store, workflow)
 	if err != nil {
-		klog.Errorf("Create workflow err:", err)
+		klog.Errorln("Create workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
 	base := assembler.ConvertAppModelToBase(&application, workflow.ID)

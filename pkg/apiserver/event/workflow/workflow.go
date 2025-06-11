@@ -192,7 +192,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		if componentSteps == nil {
 			continue
 		}
-		jobTask := NewJobTask(componentSteps.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask := NewJobTask(componentSteps.Name, componentSteps.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
 
 		properties := ParseProperties(componentSteps.Properties)
 
@@ -205,7 +205,6 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
 		case config.StoreJob:
 			jobTask.JobType = string(config.JobStoreDeploy)
-			// webservice 默认为无状态服务，使用Deployment 构建
 			jobTask.JobInfo = job.GenerateStoreService(componentSteps, &properties, &traits)
 		}
 

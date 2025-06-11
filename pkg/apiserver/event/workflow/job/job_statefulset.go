@@ -81,6 +81,20 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	var statefulSet *appsv1.StatefulSet
+	if d, ok := c.job.JobInfo.(*appsv1.StatefulSet); ok {
+		statefulSet = d
+	} else {
+		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
+	}
+
+	result, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Create(ctx, statefulSet, metav1.CreateOptions{})
+	if err != nil {
+		klog.Errorf("failed to create statefulSet %q namespace: %q : %v", statefulSet.Name, statefulSet.Namespace, err)
+		return err
+	}
+	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
+
 	// 任务完成
 	c.job.Status = config.StatusCompleted
 	c.ack()
@@ -175,7 +189,7 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Containers: []corev1.Container{
 						{
 							Name:         serviceName,
-							Image:        properties.Image,
+							Image:        component.Image,
 							Ports:        ContainerPort,
 							Env:          envs,
 							VolumeMounts: volumeMounts,
@@ -285,7 +299,8 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 	statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			klog.Infof("deploy is nil")
+			klog.Infof("StatefulSet deploy is nil")
+			klog.Infoln(fmt.Sprintf("StatefulSet Name :%s, Namespace: %s", name, namespace))
 			return nil, nil
 		}
 		return nil, err

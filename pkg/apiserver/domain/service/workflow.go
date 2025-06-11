@@ -12,7 +12,6 @@ import (
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
 	"context"
 
-	v1beta1 "KubeMin-Cli/apis/core.kubemincli.dev/v1alpha1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -20,7 +19,6 @@ import (
 
 type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
-	SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
@@ -106,8 +104,10 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppId:         appID,
-		ComponentType: req.ComponentType,
+		Namespace:     "",
+		Image:         req.Image,
 		Replicas:      req.Replicas,
+		ComponentType: req.ComponentType,
 	}
 }
 
@@ -145,11 +145,6 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (w *workflowServiceImpl) SyncWorkflowRecord(ctx context.Context, appKey, recordName string, app *v1beta1.Applications, workflowContext map[string]string) error {
 	//TODO implement me
 	panic("implement me")
 }
