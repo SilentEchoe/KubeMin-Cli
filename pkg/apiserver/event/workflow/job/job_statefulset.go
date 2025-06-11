@@ -5,11 +5,14 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
 	"fmt"
+	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -84,7 +87,46 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {}
+func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {
+	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+
+	for {
+		select {
+		case <-timeout:
+			klog.Infof(fmt.Sprintf("%s", c.job.Name))
+			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
+			if err != nil || newResources == nil {
+				msg := fmt.Sprintf("get resource owner info error: %v", err)
+				klog.Errorf(msg)
+				c.job.Status = config.StatusFailed
+			}
+		default:
+			time.Sleep(2 * time.Second)
+			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
+			if err != nil {
+				msg := fmt.Sprintf("get resource owner info error: %v", err)
+				klog.Errorf(msg)
+				c.job.Status = config.StatusFailed
+				return
+			}
+			if newResources != nil {
+				klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", newResources.Name, newResources.Replicas, newResources.ReadyReplicas))
+				if newResources.Ready {
+					c.job.Status = config.StatusCompleted
+					return
+				}
+			}
+		}
+	}
+
+}
+
+func (c *DeployStatefulSetJobCtl) timeout() int64 {
+	if c.job.Timeout == 0 {
+		c.job.Timeout = config.DeployTimeout
+	}
+	return c.job.Timeout
+}
 
 func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties, traits *model.Traits) interface{} {
 	if component.Namespace == "" {
@@ -92,8 +134,13 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 	}
 
 	serviceName := component.Name
+	// 构建标签
 	labels := buildLabels(component, properties)
+	for k, v := range properties.Labels {
+		labels[k] = v
+	}
 
+	// 构建需要开放的端口
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
 		ContainerPort = append(ContainerPort, corev1.ContainerPort{
@@ -101,13 +148,10 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		})
 	}
 
+	// 构建环境变量
 	var envs []corev1.EnvVar
 	for k, v := range properties.Env {
 		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
-	}
-
-	for k, v := range properties.Labels {
-		labels[k] = v
 	}
 
 	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits, &envs)
@@ -127,7 +171,7 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					//TerminationGracePeriodSeconds: ,
+					TerminationGracePeriodSeconds: kube.ParseInt64(30),
 					Containers: []corev1.Container{
 						{
 							Name:         serviceName,
@@ -235,4 +279,25 @@ func defaultOr(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
+	statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	if err != nil {
+		if errors.IsNotFound(err) {
+			klog.Infof("deploy is nil")
+			return nil, nil
+		}
+		return nil, err
+	}
+	klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas))
+	isOk := false
+	if *statefulSet.Spec.Replicas == statefulSet.Status.ReadyReplicas {
+		isOk = true
+	}
+	return &model.JobDeployInfo{
+		Name:          statefulSet.Name,
+		Replicas:      *statefulSet.Spec.Replicas,
+		ReadyReplicas: statefulSet.Status.ReadyReplicas,
+		Ready:         isOk}, nil
 }

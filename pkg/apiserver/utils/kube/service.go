@@ -20,3 +20,7 @@ func ServiceExists(ctx context.Context, client *kubernetes.Clientset, name, name
 	}
 	return svc, true, nil
 }
+
+func ParseInt64(i int64) *int64 {
+	return &i
+}
