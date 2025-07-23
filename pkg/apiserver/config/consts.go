@@ -73,3 +73,31 @@ const (
 	StatusUnstable       Status = "unstable"                       //不稳定
 	StatusManualApproval Status = "wait_for_manual_error_handling" //等待手动错误处理
 )
+
+// 用户侧声明的存储类型（API 入参）
+const (
+	StorageTypePersistent = "persistent"
+	StorageTypeEphemeral  = "ephemeral"
+	StorageTypeConfig     = "config"
+	StorageTypeSecret     = "secret"
+)
+
+// Kubernetes 中内部映射的 Volume 类型
+const (
+	VolumeTypePVC       = "pvc"
+	VolumeTypeEmptyDir  = "emptyDir"
+	VolumeTypeConfigMap = "configMap"
+	VolumeTypeSecret    = "secret"
+)
+
+var StorageTypeMapping = map[string]string{
+	StorageTypePersistent: VolumeTypePVC,
+	StorageTypeEphemeral:  VolumeTypeEmptyDir,
+	StorageTypeConfig:     VolumeTypeConfigMap,
+	StorageTypeSecret:     VolumeTypeSecret,
+}
+
+const (
+	LabelCli   = "kube-min-cli"
+	LabelAppId = "kube-min-cli-appId"
+)

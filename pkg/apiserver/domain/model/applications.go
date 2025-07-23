@@ -97,20 +97,12 @@ type Ports struct {
 
 // Traits 附加特性
 type Traits struct {
-	Storage *StorageTrait `json:"storage,omitempty"` //存储特性
+	Storage []StorageTrait `json:"storage,omitempty"` //存储特性
 }
 
 type StorageTrait struct {
-	Volumes []VolumeSpec `json:"volumes"`
-}
-
-type VolumeSpec struct {
-	Type      string            `json:"type"` // pvc, configMap, secret, emptyDir
-	Name      string            `json:"name,omitempty"`
-	MountPath string            `json:"mountPath"`
-	Size      string            `json:"size,omitempty"`         // for PVC
-	Data      map[string]string `json:"data,omitempty"`         // for configMap/secret
-	Env       string            `json:"env,omitempty"`          // optional: mount as env var
-	ConfigKey string            `json:"configMapKey,omitempty"` // for configMap/env
-	SecretKey string            `json:"secretKey,omitempty"`    // for secret/env
+	Type      string `json:"type"`
+	Name      string `json:"name,omitempty"`
+	MountPath string `json:"mountPath"`
+	Size      string `json:"size"`
 }

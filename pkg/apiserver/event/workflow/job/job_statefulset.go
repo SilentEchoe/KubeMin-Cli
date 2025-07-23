@@ -8,12 +8,12 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
 	"fmt"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
@@ -168,7 +168,7 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 	}
 
-	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits, &envs)
+	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits)
 
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -206,8 +206,8 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 
 func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
 	labels := map[string]string{
-		"kube-min-cli":       fmt.Sprintf("%s-%s", c.AppId, c.Name),
-		"kube-min-cli-appId": c.AppId,
+		config.LabelCli:   fmt.Sprintf("%s-%s", c.AppId, c.Name),
+		config.LabelAppId: c.AppId,
 	}
 	for k, v := range p.Labels {
 		labels[k] = v
@@ -215,18 +215,21 @@ func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 	return labels
 }
 
-func BuildStorageResources(serviceName string, traits *model.Traits, envs *[]corev1.EnvVar) ([]corev1.VolumeMount, []corev1.Volume, []corev1.PersistentVolumeClaim) {
+func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.VolumeMount, []corev1.Volume, []corev1.PersistentVolumeClaim) {
 	var volumeMounts []corev1.VolumeMount
 	var volumes []corev1.Volume
 	var volumeClaims []corev1.PersistentVolumeClaim
-	if traits != nil && traits.Storage != nil {
-		for _, vol := range traits.Storage.Volumes {
+
+	if traits != nil && len(traits.Storage) > 0 {
+		for _, vol := range traits.Storage {
+			volType := config.StorageTypeMapping[vol.Type]
 			volName := vol.Name
 			if volName == "" {
 				volName = fmt.Sprintf("%s-%s", serviceName, utils.RandStringBytes(5))
 			}
-			switch vol.Type {
-			case "pvc":
+			mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volName))
+			switch volType {
+			case config.VolumeTypePVC:
 				qty, _ := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
 				volumeClaims = append(volumeClaims, corev1.PersistentVolumeClaim{
 					ObjectMeta: metav1.ObjectMeta{Name: volName},
@@ -239,49 +242,27 @@ func BuildStorageResources(serviceName string, traits *model.Traits, envs *[]cor
 						},
 					},
 				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
-			case "emptyDir":
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
+			case config.VolumeTypeEmptyDir:
 				volumes = append(volumes, corev1.Volume{
 					Name:         volName,
 					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
-			case "configMap":
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
+			case config.StorageTypeConfig:
 				volumes = append(volumes, corev1.Volume{
 					Name: volName,
 					VolumeSource: corev1.VolumeSource{
 						ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: volName}},
 					},
 				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
-				if vol.Env != "" {
-					*envs = append(*envs, corev1.EnvVar{
-						Name: vol.Env,
-						ValueFrom: &corev1.EnvVarSource{
-							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: volName},
-								Key:                  vol.ConfigKey,
-							},
-						},
-					})
-				}
-			case "secret":
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
+			case config.StorageTypeSecret:
 				volumes = append(volumes, corev1.Volume{
 					Name:         volName,
 					VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: volName}},
 				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: vol.MountPath})
-				if vol.Env != "" {
-					*envs = append(*envs, corev1.EnvVar{
-						Name: vol.Env,
-						ValueFrom: &corev1.EnvVarSource{
-							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: volName},
-								Key:                  vol.SecretKey,
-							},
-						},
-					})
-				}
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 			}
 		}
 	}
