@@ -33,7 +33,7 @@ func (c *Container) ProvideWithName(name string, bean interface{}) error {
 	return c.graph.Provide(&inject.Object{Name: name, Value: bean})
 }
 
-// Populate populate dependency fields for all beans.
+// Populate dependency fields for all beans.
 // this function must be called after providing all beans
 func (c *Container) Populate() error {
 	start := time.Now()

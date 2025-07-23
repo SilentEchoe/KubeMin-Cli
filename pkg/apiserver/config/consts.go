@@ -9,6 +9,11 @@ const (
 	DBNAME_KUBEMINCLI = "kubemincli"
 )
 
+const (
+	LabelCli   = "kube-min-cli"
+	LabelAppId = "kube-min-cli-appId"
+)
+
 type JobRunPolicy string
 type JobType string
 type JobErrorPolicy string
@@ -96,8 +101,3 @@ var StorageTypeMapping = map[string]string{
 	StorageTypeConfig:     VolumeTypeConfigMap,
 	StorageTypeSecret:     VolumeTypeSecret,
 }
-
-const (
-	LabelCli   = "kube-min-cli"
-	LabelAppId = "kube-min-cli-appId"
-)

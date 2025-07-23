@@ -93,8 +93,24 @@ type Properties struct {
 }
 
 type Traits struct {
-	Type       string                 `json:"type"`
-	Properties map[string]interface{} `json:"properties"`
+	Storage []StorageSpec   `json:"storage"`
+	Config  []ConfigMapSpec `json:"config"` //配置文件
+	Secret  []SecretSpec    `json:"secret"` //密钥信息
+}
+
+type StorageSpec struct {
+	Type      string `json:"type"`
+	MountPath string `json:"mountPath"`
+	Size      string `json:"size"`
+	Name      string `json:"name"`
+}
+
+type ConfigMapSpec struct {
+	Data map[string]string `json:"data"`
+}
+
+type SecretSpec struct {
+	Data map[string]string `json:"data"`
 }
 
 type Ports struct {

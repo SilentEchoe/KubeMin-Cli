@@ -97,12 +97,22 @@ type Ports struct {
 
 // Traits 附加特性
 type Traits struct {
-	Storage []StorageTrait `json:"storage,omitempty"` //存储特性
+	Storage []StorageTrait  `json:"storage,omitempty"` //存储特性
+	Config  []ConfigMapSpec `json:"config,omitempty"`  //配置文件
+	Secret  []SecretSpec    `json:"secret,omitempty"`  //密钥信息
 }
 
 type StorageTrait struct {
-	Type      string `json:"type"`
 	Name      string `json:"name,omitempty"`
+	Type      string `json:"type"`
 	MountPath string `json:"mountPath"`
 	Size      string `json:"size"`
+}
+
+type ConfigMapSpec struct {
+	Data map[string]string `json:"data"`
+}
+
+type SecretSpec struct {
+	Data map[string]string `json:"data"`
 }

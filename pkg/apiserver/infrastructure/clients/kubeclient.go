@@ -13,10 +13,9 @@ import (
 )
 
 /*
-这里没有遵从 kubevela的做法,而是直接使用k8s的Clients
+这里没有遵从 kubevela的做法,而是直接使用k8s的Clients,初期版本迭代先使用k8s内置的基础资源，所以先使用Clientset
 */
 
-// TODO 这里用的都是k8s内置的基础资源，所以先使用Clientset
 var kubeClient *kubernetes.Clientset
 var kubeConfig *rest.Config
 
@@ -37,7 +36,7 @@ func setKubeConfig(conf *rest.Config) (err error) {
 	return nil
 }
 
-// SetKubeConfig generate the kube config from the config of apiserver
+// SetKubeConfig generate the kube config from the config of appserver
 func SetKubeConfig(c apiConfig.Config) error {
 	conf, err := config.GetConfig()
 	if err != nil {
