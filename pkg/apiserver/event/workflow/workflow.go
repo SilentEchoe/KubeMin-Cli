@@ -101,7 +101,7 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 		return
 	}
 	if err := w.Store.Put(context.Background(), w.workflowTask); err != nil {
-		klog.Errorf("%s:%d update t status error", w.workflowTask.WorkflowName, w.workflowTask.TaskID)
+		klog.Errorf("%s:%s update t status error", w.workflowTask.WorkflowName, w.workflowTask.TaskID)
 	}
 }
 

@@ -70,6 +70,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 		nComponent.Properties = properties
 
+		//附加特性
 		traits, err := model.NewJSONStructByStruct(component.Traits)
 		if err != nil {
 			klog.Errorf("new trait failure,%s", err.Error())

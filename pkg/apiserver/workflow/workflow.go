@@ -22,7 +22,7 @@ func LintWorkflow(workflow *model.Workflow) error {
 		return err
 	}
 	if !match {
-		errMsg := "工作流标识支持大小写字母、数字和中划线"
+		errMsg := "workflow identifier supports uppercase and lowercase letters, digits, and hyphens"
 		klog.Errorf(errMsg)
 		return fmt.Errorf(errMsg)
 	}

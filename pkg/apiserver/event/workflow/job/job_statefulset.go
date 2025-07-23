@@ -314,5 +314,6 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 		Name:          statefulSet.Name,
 		Replicas:      *statefulSet.Spec.Replicas,
 		ReadyReplicas: statefulSet.Status.ReadyReplicas,
-		Ready:         isOk}, nil
+		Ready:         isOk,
+	}, nil
 }

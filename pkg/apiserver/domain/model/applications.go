@@ -95,8 +95,9 @@ type Ports struct {
 	Expose bool  `json:"expose"`
 }
 
+// Traits 附加特性
 type Traits struct {
-	Storage *StorageTrait `json:"storage,omitempty"`
+	Storage *StorageTrait `json:"storage,omitempty"` //存储特性
 }
 
 type StorageTrait struct {
