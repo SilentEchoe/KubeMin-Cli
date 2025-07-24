@@ -93,9 +93,10 @@ type Properties struct {
 }
 
 type Traits struct {
-	Storage []StorageSpec   `json:"storage"`
-	Config  []ConfigMapSpec `json:"config"` //配置文件
-	Secret  []SecretSpec    `json:"secret"` //密钥信息
+	Storage []StorageSpec   `json:"storage"`           //存储特性
+	Config  []ConfigMapSpec `json:"config"`            //配置文件
+	Secret  []SecretSpec    `json:"secret"`            //密钥信息
+	Sidecar []SidecarSpec   `json:"sidecar,omitempty"` //容器边车
 }
 
 type StorageSpec struct {
@@ -111,6 +112,15 @@ type ConfigMapSpec struct {
 
 type SecretSpec struct {
 	Data map[string]string `json:"data"`
+}
+
+type SidecarSpec struct {
+	Name    string            `json:"name"`  //如果用户不填写，可以根据组件的名称来自定义
+	Image   string            `json:"image"` //必填镜像
+	Command []string          `json:"command,omitempty"`
+	Args    []string          `json:"args,omitempty"`
+	Env     map[string]string `json:"env,omitempty"`
+	Traits  Traits            `json:"mounts,omitempty"` //可以附加各种特征，但是边车容器内不能附加边车容器，这点需要进行校验
 }
 
 type Ports struct {

@@ -170,6 +170,27 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 
 	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits)
 
+	// 构建主容器
+	mainContainer := corev1.Container{
+		Name:         serviceName,
+		Image:        component.Image,
+		Ports:        ContainerPort,
+		Env:          envs,
+		VolumeMounts: volumeMounts,
+	}
+	allContainers := []corev1.Container{mainContainer}
+	// 构建并添加 sidecar 容器
+	if traits != nil && len(traits.Sidecar) > 0 {
+		sidecarContainers, sidecarVolumes, sidecarClaims, err := BuildAllSidecars(serviceName, traits.Sidecar)
+		if err != nil {
+			klog.Errorf("failed to build sidecars for component %s: %v", serviceName, err)
+		} else {
+			allContainers = append(allContainers, sidecarContainers...)
+			volumes = append(volumes, sidecarVolumes...)
+			volumeClaims = append(volumeClaims, sidecarClaims...)
+		}
+	}
+
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -186,16 +207,7 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 				},
 				Spec: corev1.PodSpec{
 					TerminationGracePeriodSeconds: kube.ParseInt64(30),
-					Containers: []corev1.Container{
-						{
-							Name:         serviceName,
-							Image:        component.Image,
-							Ports:        ContainerPort,
-							Env:          envs,
-							VolumeMounts: volumeMounts,
-						},
-					},
-					Volumes: volumes,
+					Volumes:                       volumes,
 				},
 			},
 			VolumeClaimTemplates: volumeClaims,
@@ -297,4 +309,51 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 		ReadyReplicas: statefulSet.Status.ReadyReplicas,
 		Ready:         isOk,
 	}, nil
+}
+
+// BuildAllSidecars 构建所有 sidecar 容器及其资源
+func BuildAllSidecars(compName string, specs []model.SidecarSpec) ([]corev1.Container, []corev1.Volume, []corev1.PersistentVolumeClaim, error) {
+	var containers []corev1.Container
+	var volumes []corev1.Volume
+	var claims []corev1.PersistentVolumeClaim
+	volumeNameSet := map[string]bool{}
+
+	for _, sc := range specs {
+		if len(sc.Traits.Sidecar) > 0 {
+			return nil, nil, nil, fmt.Errorf("sidecar '%s' must not contain nested sidecars", sc.Name)
+		}
+		sidecarName := sc.Name
+		if sidecarName == "" {
+			sidecarName = fmt.Sprintf("%s-sidecar-%s", compName, utils.RandStringBytes(4))
+		}
+
+		// 构建 env
+		var containerEnvs []corev1.EnvVar
+		for k, v := range sc.Env {
+			containerEnvs = append(containerEnvs, corev1.EnvVar{Name: k, Value: v})
+		}
+
+		// 构建挂载
+		mounts, vols, pvcs := BuildStorageResources(sidecarName, &sc.Traits)
+
+		c := corev1.Container{
+			Name:         sidecarName,
+			Image:        sc.Image,
+			Command:      sc.Command,
+			Args:         sc.Args,
+			Env:          containerEnvs,
+			VolumeMounts: mounts,
+		}
+
+		containers = append(containers, c)
+		for _, v := range vols {
+			if !volumeNameSet[v.Name] {
+				volumes = append(volumes, v)
+				volumeNameSet[v.Name] = true
+			}
+		}
+		claims = append(claims, pvcs...)
+	}
+
+	return containers, volumes, claims, nil
 }
