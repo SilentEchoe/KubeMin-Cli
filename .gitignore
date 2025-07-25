@@ -16,3 +16,6 @@
 
 *.idea/
 *.DS_Store
+
+# Local log files
+/logs/

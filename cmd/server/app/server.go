@@ -3,9 +3,11 @@ package app
 import (
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 	"KubeMin-Cli/version"
 	"context"
+	"flag"
 	"fmt"
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -13,11 +15,16 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 // NewAPIServerCommand creates a *cobra.Command object with default parameters
 func NewAPIServerCommand() *cobra.Command {
 	s := options.NewServerRunOptions()
+
+	// Initialize klog flags
+	klog.InitFlags(nil)
+
 	cmd := &cobra.Command{
 		Use:  "ApiServer",
 		Long: `The KubeMin-CLI API service, which provides application deployment and Istio operations`,
@@ -32,6 +39,9 @@ func NewAPIServerCommand() *cobra.Command {
 
 	fs := cmd.Flags()
 	namedFlagSets := s.Flags()
+	// Add klog flags to the command's flag set
+	namedFlagSets.FlagSet("klog").AddGoFlagSet(flag.CommandLine)
+
 	for _, set := range namedFlagSets.FlagSets {
 		fs.AddFlagSet(set)
 	}
@@ -52,6 +62,18 @@ func Run(s *options.ServerRunOptions) error {
 	//开启分析服务
 	go profiling.StartProfilingServer(errChan)
 
+	// Start log cleanup service
+	logDir := flag.Lookup("log_dir").Value.String()
+
+	// Ensure the log directory exists before starting services that log to files.
+	if logDir != "" {
+		if err := os.MkdirAll(logDir, 0755); err != nil {
+			klog.Fatalf("Failed to create log directory %s: %v", logDir, err)
+		}
+	}
+
+	go utils.StartLogCleanup(logDir, 7*24*time.Hour)
+
 	go func() {
 		if err := run(ctx, s, errChan); err != nil {
 			errChan <- fmt.Errorf("failed to run apiserver: %w", err)
@@ -68,6 +90,7 @@ func Run(s *options.ServerRunOptions) error {
 		return err
 	}
 	klog.Infof("See you next time!")
+	klog.Flush()
 	return nil
 }
 
