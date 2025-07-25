@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -203,8 +204,8 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	serviceName := component.Name
 	labels := make(map[string]string)
-	labels["kube-min-cli"] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
-	labels["kube-min-cli-appId"] = component.AppId
+	labels[config.LabelCli] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
+	labels[config.LabelAppId] = component.AppId
 
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
@@ -248,6 +249,13 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 				},
 			},
 		},
+	}
+
+	// Apply all registered traits to the deployment.
+	// If applying traits fails, we return nil to prevent deploying a misconfigured workload.
+	if err := traits.ApplyTraits(component, deployment); err != nil {
+		klog.Errorf("Failed to apply traits to component %s: %v. Aborting resource generation.", component.Name, err)
+		return nil
 	}
 
 	return deployment
