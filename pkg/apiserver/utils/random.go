@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// RandomString 创建一个随机数(包含大小写)
+// RandStringBytesRandomString 创建一个随机数(包含大小写)
 func RandStringBytesRandomString(n int) string {
 	var letters = []byte("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 	result := make([]byte, n)
@@ -29,7 +29,6 @@ func RandomStringWithNumber(n int) string {
 
 func RandStringBytes(n int) string {
 	letterBytes := "abcdefghijklmnopqrstuvwxyz"
-	rand.Seed(time.Now().UnixNano())
 	b := make([]byte, n)
 	for i := range b {
 		b[i] = letterBytes[rand.Intn(len(letterBytes))]
@@ -54,6 +53,9 @@ var rfc1123Pattern = regexp.MustCompile(`[^a-z0-9-]+`)
 func ToRFC1123Name(s string) string {
 	s = strings.ToLower(s)
 	s = rfc1123Pattern.ReplaceAllString(s, "-")
+	for strings.Contains(s, "--") {
+		s = strings.ReplaceAll(s, "--", "-")
+	}
 	s = strings.Trim(s, "-")
 	if len(s) == 0 {
 		return "port"
