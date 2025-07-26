@@ -31,17 +31,24 @@ func (s *SidecarProcessor) Process(workload interface{}, traitData interface{}, 
 		return err
 	}
 
+	if len(podTemplate.Spec.Containers) == 0 {
+		return fmt.Errorf("cannot apply sidecar trait to component %s with no main container", component.Name)
+	}
+	// Assume the first container is the main application container.
+	mainContainer := &podTemplate.Spec.Containers[0]
+
 	for _, sc := range sidecarTraits {
 		if sc.Image == "" {
 			return fmt.Errorf("sidecar for component %s must have an image", component.Name)
 		}
 
 		sidecarContainer := corev1.Container{
-			Name:    sc.Name,
-			Image:   sc.Image,
-			Command: sc.Command,
-			Args:    sc.Args,
-			Env:     toKubeEnvVars(sc.Env),
+			Name:         sc.Name,
+			Image:        sc.Image,
+			Command:      sc.Command,
+			Args:         sc.Args,
+			Env:          toKubeEnvVars(sc.Env),
+			VolumeMounts: mainContainer.VolumeMounts,
 		}
 
 		podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, sidecarContainer)
