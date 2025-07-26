@@ -8,8 +8,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
 	"fmt"
-	"k8s.io/apimachinery/pkg/api/resource"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -233,8 +234,26 @@ func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.V
 	var volumeClaims []corev1.PersistentVolumeClaim
 
 	if traits != nil && len(traits.Storage) > 0 {
+		// 首先检查是否有 PVC 类型的存储配置
+		hasPVC := false
 		for _, vol := range traits.Storage {
 			volType := config.StorageTypeMapping[vol.Type]
+			if volType == config.VolumeTypePVC {
+				hasPVC = true
+				break
+			}
+		}
+
+		// 处理存储配置
+		for _, vol := range traits.Storage {
+			volType := config.StorageTypeMapping[vol.Type]
+
+			// 如果存在 PVC 类型，则跳过 EmptyDir 类型的配置
+			if hasPVC && volType == config.VolumeTypeEmptyDir {
+				klog.Infof("Skipping EmptyDir storage '%s' because PVC storage is configured", vol.Name)
+				continue
+			}
+
 			volName := vol.Name
 			if volName == "" {
 				volName = fmt.Sprintf("%s-%s", serviceName, utils.RandStringBytes(5))
