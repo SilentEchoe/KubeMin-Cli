@@ -1,6 +1,6 @@
-<mxfile host="Electron" modified="2025-04-11T09:22:19.776Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.5 Chrome/114.0.5735.243 Electron/25.3.1 Safari/537.36" etag="yC2Z466gJRAKJZuFSY1n" version="21.6.5" type="device">
+<mxfile host="Electron" modified="2025-07-26T15:50:53.774Z" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/21.6.5 Chrome/114.0.5735.243 Electron/25.3.1 Safari/537.36" etag="EDqJSbR7ixqsKnpOQQPY" version="21.6.5" type="device">
   <diagram name="第 1 页" id="KbaOmbjP4u-p-hVNiSLN">
-    <mxGraphModel dx="2620" dy="1099" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+    <mxGraphModel dx="2261" dy="879" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
@@ -32,10 +32,10 @@
             <mxRectangle y="270" width="110" height="30" as="alternateBounds" />
           </mxGeometry>
         </mxCell>
-        <mxCell id="eYoJU8vu-C8G9DPtYkyj-13" value="Service-Name" style="rounded=1;whiteSpace=wrap;html=1;" parent="eYoJU8vu-C8G9DPtYkyj-12" vertex="1">
+        <mxCell id="eYoJU8vu-C8G9DPtYkyj-13" value="Service Name" style="rounded=1;whiteSpace=wrap;html=1;" parent="eYoJU8vu-C8G9DPtYkyj-12" vertex="1">
           <mxGeometry x="10" y="40" width="120" height="60" as="geometry" />
         </mxCell>
-        <mxCell id="eYoJU8vu-C8G9DPtYkyj-14" value="" style="rounded=1;whiteSpace=wrap;html=1;" parent="eYoJU8vu-C8G9DPtYkyj-12" vertex="1">
+        <mxCell id="eYoJU8vu-C8G9DPtYkyj-14" value="Target Env" style="rounded=1;whiteSpace=wrap;html=1;" parent="eYoJU8vu-C8G9DPtYkyj-12" vertex="1">
           <mxGeometry x="150" y="40" width="120" height="60" as="geometry" />
         </mxCell>
         <mxCell id="eYoJU8vu-C8G9DPtYkyj-15" value="" style="rounded=1;whiteSpace=wrap;html=1;" parent="eYoJU8vu-C8G9DPtYkyj-12" vertex="1">
