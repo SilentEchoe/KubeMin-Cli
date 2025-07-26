@@ -128,7 +128,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) {
 	for {
 		select {
 		case <-timeout:
-			klog.Warning("timed out waiting for service: %s", c.job.Name)
+			klog.Warningf("timed out waiting for service: %s", c.job.Name)
 			c.job.Status = config.StatusFailed
 			return
 		case <-ticker.C:
@@ -155,7 +155,7 @@ func getServiceStatus(kubeClient *kubernetes.Clientset, namespace string, name s
 			klog.Infof("service not found: %s/%s", namespace, name)
 			return false, nil
 		}
-		klog.Error("check service error:%s", err)
+		klog.Errorf("check service error:%s", err)
 		return false, err
 	}
 
@@ -197,92 +197,7 @@ func GenerateService(name, namespace string, labels map[string]string, ports []m
 		WithName(name).
 		WithNamespace(namespace)
 
-	//// 打印完整的 service 配置以便调试
-	//raw, _ := json.MarshalIndent(svc, "", "  ")
-	//klog.Infof("Generated service configuration:\n%s", string(raw))
-
 	return svc
-}
-
-// isServiceChanged 判断两个 Service 是否存在需要更新的差异
-func isServiceChanged(current *corev1.Service, desired *applyv1.ServiceApplyConfiguration) bool {
-	if current == nil || desired == nil {
-		return true
-	}
-
-	// 比较类型（ClusterIP, NodePort, LoadBalancer 等）
-	if desired.Spec != nil && desired.Spec.Type != nil && *desired.Spec.Type != current.Spec.Type {
-		return true
-	}
-
-	// 比较 selector
-	if desired.Spec != nil && desired.Spec.Selector != nil {
-		if !compareStringMap(current.Spec.Selector, desired.Spec.Selector) {
-			return true
-		}
-	}
-
-	// 比较 ports
-	if desired.Spec != nil && desired.Spec.Ports != nil {
-		if len(current.Spec.Ports) != len(desired.Spec.Ports) {
-			return true
-		}
-		for i := range current.Spec.Ports {
-			cp := current.Spec.Ports[i]
-			dp := desired.Spec.Ports[i]
-
-			if dp.Port != nil && *dp.Port != cp.Port {
-				return true
-			}
-			if dp.TargetPort != nil && dp.TargetPort.String() != cp.TargetPort.String() {
-				return true
-			}
-			if dp.Protocol != nil && *dp.Protocol != cp.Protocol {
-				return true
-			}
-			if dp.Name != nil && *dp.Name != cp.Name {
-				return true
-			}
-			if dp.NodePort != nil && *dp.NodePort != cp.NodePort {
-				return true
-			}
-		}
-	}
-
-	// 比较 labels
-	if desired.Labels != nil {
-		if !compareStringMap(current.Labels, desired.Labels) {
-			return true
-		}
-	}
-
-	// 比较 annotations
-	if desired.Annotations != nil {
-		if !compareStringMap(current.Annotations, desired.Annotations) {
-			return true
-		}
-	}
-
-	return false
-}
-
-// compareStringMap 比较两个 map[string]string 是否相同
-func compareStringMap(a, b map[string]string) bool {
-	if a == nil && b == nil {
-		return true
-	}
-	if a == nil || b == nil {
-		return false
-	}
-	if len(a) != len(b) {
-		return false
-	}
-	for k, v := range a {
-		if b[k] != v {
-			return false
-		}
-	}
-	return true
 }
 
 func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.ServiceApplyConfiguration) (*corev1.Service, error) {
@@ -341,41 +256,4 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 
 	klog.Infof("Service updated: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
 	return appliedSvc, nil
-}
-
-func convertApplyToCoreV1Service(applySvc *applyv1.ServiceApplyConfiguration) (*corev1.Service, error) {
-	if applySvc.Name == nil || applySvc.Namespace == nil || applySvc.Spec == nil {
-		return nil, fmt.Errorf("missing required fields in apply service")
-	}
-
-	core := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        *applySvc.Name,
-			Namespace:   *applySvc.Namespace,
-			Labels:      applySvc.Labels,
-			Annotations: applySvc.Annotations,
-		},
-		Spec: corev1.ServiceSpec{
-			Selector: applySvc.Spec.Selector,
-			Type:     corev1.ServiceTypeClusterIP, // 默认值
-		},
-	}
-
-	if applySvc.Spec.Type != nil {
-		core.Spec.Type = *applySvc.Spec.Type
-	}
-
-	for i, p := range applySvc.Spec.Ports {
-		if p.Port == nil || p.TargetPort == nil || p.Protocol == nil || p.Name == nil {
-			return nil, fmt.Errorf("service port[%d] has missing fields", i)
-		}
-		core.Spec.Ports = append(core.Spec.Ports, corev1.ServicePort{
-			Name:       *p.Name,
-			Port:       *p.Port,
-			TargetPort: *p.TargetPort,
-			Protocol:   *p.Protocol,
-		})
-	}
-
-	return core, nil
 }

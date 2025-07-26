@@ -5,8 +5,6 @@ import (
 	server "KubeMin-Cli/pkg/apiserver"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/profiling"
-	_ "KubeMin-Cli/pkg/apiserver/workflow/traits/storage"
-	_ "KubeMin-Cli/pkg/apiserver/workflow/traits/sidecar"
 	"KubeMin-Cli/version"
 	"context"
 	"flag"

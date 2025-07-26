@@ -207,6 +207,7 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					Containers:                    allContainers,
 					TerminationGracePeriodSeconds: kube.ParseInt64(30),
 					Volumes:                       volumes,
 				},
