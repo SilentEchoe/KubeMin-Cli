@@ -110,6 +110,7 @@ type StorageTrait struct {
 	Type      string `json:"type"`
 	MountPath string `json:"mountPath"`
 	Size      string `json:"size"`
+	ReadOnly  bool   `json:"readOnly"`
 }
 
 type ConfigMapSpec struct {

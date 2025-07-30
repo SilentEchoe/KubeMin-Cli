@@ -173,11 +173,12 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 
 	// 构建主容器
 	mainContainer := corev1.Container{
-		Name:         serviceName,
-		Image:        component.Image,
-		Ports:        ContainerPort,
-		Env:          envs,
-		VolumeMounts: volumeMounts,
+		Name:            serviceName,
+		Image:           component.Image,
+		Ports:           ContainerPort,
+		Env:             envs,
+		VolumeMounts:    volumeMounts,
+		ImagePullPolicy: corev1.PullAlways,
 	}
 	allContainers := []corev1.Container{mainContainer}
 	// 构建并添加 sidecar 容器
@@ -229,6 +230,7 @@ func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 	return labels
 }
 
+// BuildStorageResources 构建存储的信息(Pvc,hostPath....)
 func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.VolumeMount, []corev1.Volume, []corev1.PersistentVolumeClaim) {
 	var volumeMounts []corev1.VolumeMount
 	var volumes []corev1.Volume
@@ -285,14 +287,22 @@ func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.V
 				volumes = append(volumes, corev1.Volume{
 					Name: volName,
 					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{LocalObjectReference: corev1.LocalObjectReference{Name: volName}},
+						ConfigMap: &corev1.ConfigMapVolumeSource{
+							LocalObjectReference: corev1.LocalObjectReference{Name: volName},
+							DefaultMode:          kube.ParseInt32(config.DefaultStorageMode),
+						},
 					},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 			case config.StorageTypeSecret:
 				volumes = append(volumes, corev1.Volume{
-					Name:         volName,
-					VolumeSource: corev1.VolumeSource{Secret: &corev1.SecretVolumeSource{SecretName: volName}},
+					Name: volName,
+					VolumeSource: corev1.VolumeSource{
+						Secret: &corev1.SecretVolumeSource{
+							SecretName:  volName,
+							DefaultMode: kube.ParseInt32(config.DefaultStorageMode),
+						},
+					},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 			}
