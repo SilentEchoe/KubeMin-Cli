@@ -158,7 +158,7 @@ func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.V
 					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			case config.StorageTypeConfig:
+			case config.VolumeTypeConfigMap:
 				volumes = append(volumes, corev1.Volume{
 					Name: volName,
 					VolumeSource: corev1.VolumeSource{
@@ -169,7 +169,7 @@ func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.V
 					},
 				})
 				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			case config.StorageTypeSecret:
+			case config.VolumeTypeSecret:
 				volumes = append(volumes, corev1.Volume{
 					Name: volName,
 					VolumeSource: corev1.VolumeSource{

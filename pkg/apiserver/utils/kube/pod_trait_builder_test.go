@@ -1,0 +1,55 @@
+package kube
+
+import (
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"fmt"
+	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
+	"testing"
+)
+
+// 测试Init容器的构建信息
+func TestBuildAllInitContainers_SingleTrait(t *testing.T) {
+	mockInitTrait := []model.InitTrait{
+		{
+			Name: "init-mysql",
+			Properties: model.Properties{
+				Image:   "docker.yu3.co/3os/kubectl:1.28.5",
+				Command: []string{"bash", "-c", "set -ex\n[[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1\nprefix_name=${BASH_REMATCH[1]}\nordinal=${BASH_REMATCH[2]}\necho [mysqld] > /mnt/conf.d/server-id.cnf\necho server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf\nif [[ ${ordinal} -eq 0 ]]; then\n  cp /mnt/config-map/master.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$MASTER_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nelse\n  cp /mnt/config-map/slave.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$SLAVE_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nfi\n\n[[ -d /var/lib/mysql/mysql ]] && exit 0\noutput_dir=/docker-entrypoint-initdb.d\necho \"use $MYSQL_DATABASE\" > $output_dir/00-init.sql\nfor i in $(seq 1 5); do\n\techo \"尝试下载初始化脚本...第 $i 次\"\n\tcurl -f --connect-timeout 10 --max-time 60 -o \"$output_dir/01-init.sql\" --retry 3 --retry-delay 5 \"$SQL_URL\" && break || sleep 5\ndone\n[ -f \"$output_dir/01-init.sql\" ] || { echo \"下载失败\"; exit 1; }"},
+				Env:     map[string]string{"MYSQL_DATABASE": "game", "SQL_URL": "https://paas-3os.oss-cn-shanghai.aliyuncs.com/uploads/2025/06/27/2506271630choUDT.sql"},
+			},
+			Traits: []model.Traits{
+				{
+					Storage: []model.StorageTrait{
+						{
+							Type:      "config",
+							Name:      "conf",
+							MountPath: "/mnt/conf.d",
+						},
+						{
+							Type:      "config",
+							Name:      "config-map",
+							MountPath: "/mnt/config-map",
+						},
+						{
+							Type:      "config",
+							Name:      "init-scripts",
+							MountPath: "/docker-entrypoint-initdb.d",
+						},
+					},
+				},
+			},
+		},
+	}
+	initContainers, volumes, _ := BuildAllInitContainers(mockInitTrait)
+
+	// 只输出关心字段
+	output := map[string]interface{}{
+		"initContainers": initContainers,
+		"volumes":        volumes,
+	}
+
+	yamlBytes, err := yaml.Marshal(output)
+	require.NoError(t, err)
+	fmt.Println(string(yamlBytes))
+}
