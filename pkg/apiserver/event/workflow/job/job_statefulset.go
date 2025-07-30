@@ -4,13 +4,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"context"
 	"fmt"
 	"time"
-
-	"k8s.io/apimachinery/pkg/api/resource"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -169,9 +166,11 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 	}
 
-	volumeMounts, volumes, volumeClaims := BuildStorageResources(serviceName, traits)
+	// 构建Init容器
+	initContainers, _, _ := kube.BuildAllInitContainers(traits.Init)
 
 	// 构建主容器
+	volumeMounts, mainVolumes, mainVolumeClaims := kube.BuildStorageResources(serviceName, traits)
 	mainContainer := corev1.Container{
 		Name:            serviceName,
 		Image:           component.Image,
@@ -183,13 +182,14 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 	allContainers := []corev1.Container{mainContainer}
 	// 构建并添加 sidecar 容器
 	if traits != nil && len(traits.Sidecar) > 0 {
-		sidecarContainers, sidecarVolumes, sidecarClaims, err := BuildAllSidecars(serviceName, traits.Sidecar)
+		// 构建边车
+		sidecarContainers, sidecarVolumes, sidecarClaims, err := kube.BuildAllSidecars(serviceName, traits.Sidecar)
 		if err != nil {
 			klog.Errorf("failed to build sidecars for component %s: %v", serviceName, err)
 		} else {
 			allContainers = append(allContainers, sidecarContainers...)
-			volumes = append(volumes, sidecarVolumes...)
-			volumeClaims = append(volumeClaims, sidecarClaims...)
+			mainVolumes = append(mainVolumes, sidecarVolumes...)
+			mainVolumeClaims = append(mainVolumeClaims, sidecarClaims...)
 		}
 	}
 
@@ -208,12 +208,13 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
+					InitContainers:                initContainers,
 					Containers:                    allContainers,
 					TerminationGracePeriodSeconds: kube.ParseInt64(30),
-					Volumes:                       volumes,
+					Volumes:                       mainVolumes,
 				},
 			},
-			VolumeClaimTemplates: volumeClaims,
+			VolumeClaimTemplates: mainVolumeClaims,
 		},
 	}
 	return statefulSet
@@ -228,94 +229,6 @@ func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 		labels[k] = v
 	}
 	return labels
-}
-
-// BuildStorageResources 构建存储的信息(Pvc,hostPath....)
-func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.VolumeMount, []corev1.Volume, []corev1.PersistentVolumeClaim) {
-	var volumeMounts []corev1.VolumeMount
-	var volumes []corev1.Volume
-	var volumeClaims []corev1.PersistentVolumeClaim
-
-	if traits != nil && len(traits.Storage) > 0 {
-		// 首先检查是否有 PVC 类型的存储配置
-		hasPVC := false
-		for _, vol := range traits.Storage {
-			volType := config.StorageTypeMapping[vol.Type]
-			if volType == config.VolumeTypePVC {
-				hasPVC = true
-				break
-			}
-		}
-
-		// 处理存储配置
-		for _, vol := range traits.Storage {
-			volType := config.StorageTypeMapping[vol.Type]
-
-			// 如果存在 PVC 类型，则跳过 EmptyDir 类型的配置
-			if hasPVC && volType == config.VolumeTypeEmptyDir {
-				klog.Infof("Skipping EmptyDir storage '%s' because PVC storage is configured", vol.Name)
-				continue
-			}
-
-			volName := vol.Name
-			if volName == "" {
-				volName = fmt.Sprintf("%s-%s", serviceName, utils.RandStringBytes(5))
-			}
-			mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volName))
-			switch volType {
-			case config.VolumeTypePVC:
-				qty, _ := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
-				volumeClaims = append(volumeClaims, corev1.PersistentVolumeClaim{
-					ObjectMeta: metav1.ObjectMeta{Name: volName},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources: corev1.VolumeResourceRequirements{
-							Requests: corev1.ResourceList{
-								corev1.ResourceStorage: qty,
-							},
-						},
-					},
-				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			case config.VolumeTypeEmptyDir:
-				volumes = append(volumes, corev1.Volume{
-					Name:         volName,
-					VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
-				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			case config.StorageTypeConfig:
-				volumes = append(volumes, corev1.Volume{
-					Name: volName,
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: volName},
-							DefaultMode:          kube.ParseInt32(config.DefaultStorageMode),
-						},
-					},
-				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			case config.StorageTypeSecret:
-				volumes = append(volumes, corev1.Volume{
-					Name: volName,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName:  volName,
-							DefaultMode: kube.ParseInt32(config.DefaultStorageMode),
-						},
-					},
-				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
-			}
-		}
-	}
-	return volumeMounts, volumes, volumeClaims
-}
-
-func defaultOr(value, fallback string) string {
-	if value == "" {
-		return fallback
-	}
-	return value
 }
 
 func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
@@ -339,51 +252,4 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 		ReadyReplicas: statefulSet.Status.ReadyReplicas,
 		Ready:         isOk,
 	}, nil
-}
-
-// BuildAllSidecars 构建所有 sidecar 容器及其资源
-func BuildAllSidecars(compName string, specs []model.SidecarSpec) ([]corev1.Container, []corev1.Volume, []corev1.PersistentVolumeClaim, error) {
-	var containers []corev1.Container
-	var volumes []corev1.Volume
-	var claims []corev1.PersistentVolumeClaim
-	volumeNameSet := map[string]bool{}
-
-	for _, sc := range specs {
-		if len(sc.Traits.Sidecar) > 0 {
-			return nil, nil, nil, fmt.Errorf("sidecar '%s' must not contain nested sidecars", sc.Name)
-		}
-		sidecarName := sc.Name
-		if sidecarName == "" {
-			sidecarName = fmt.Sprintf("%s-sidecar-%s", compName, utils.RandStringBytes(4))
-		}
-
-		// 构建 env
-		var containerEnvs []corev1.EnvVar
-		for k, v := range sc.Env {
-			containerEnvs = append(containerEnvs, corev1.EnvVar{Name: k, Value: v})
-		}
-
-		// 构建挂载
-		mounts, vols, pvcs := BuildStorageResources(sidecarName, &sc.Traits)
-
-		c := corev1.Container{
-			Name:         sidecarName,
-			Image:        sc.Image,
-			Command:      sc.Command,
-			Args:         sc.Args,
-			Env:          containerEnvs,
-			VolumeMounts: mounts,
-		}
-
-		containers = append(containers, c)
-		for _, v := range vols {
-			if !volumeNameSet[v.Name] {
-				volumes = append(volumes, v)
-				volumeNameSet[v.Name] = true
-			}
-		}
-		claims = append(claims, pvcs...)
-	}
-
-	return containers, volumes, claims, nil
 }

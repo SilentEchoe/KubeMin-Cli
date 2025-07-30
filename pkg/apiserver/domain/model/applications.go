@@ -120,6 +120,7 @@ type StorageTrait struct {
 	Type      string `json:"type"`
 	MountPath string `json:"mountPath"`
 	Size      string `json:"size"`
+	SubPath   string `json:"subPath"`
 	ReadOnly  bool   `json:"readOnly"`
 }
 
