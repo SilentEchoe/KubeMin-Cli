@@ -86,10 +86,11 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 }
 
 type Properties struct {
-	Image  string            `json:"image"`
-	Ports  []Ports           `json:"ports"`
-	Env    map[string]string `json:"env"`
-	Labels map[string]string `json:"labels"`
+	Image   string            `json:"image"`
+	Ports   []Ports           `json:"ports"`
+	Env     map[string]string `json:"env"`
+	Command []string          `json:"command"`
+	Labels  map[string]string `json:"labels"`
 }
 
 type Ports struct {
@@ -99,12 +100,21 @@ type Ports struct {
 
 // Traits 附加特性
 type Traits struct {
+	Init    []InitTrait     `json:"init"`
 	Storage []StorageTrait  `json:"storage,omitempty"` //存储特性
 	Config  []ConfigMapSpec `json:"config,omitempty"`  //配置文件
 	Secret  []SecretSpec    `json:"secret,omitempty"`  //密钥信息
 	Sidecar []SidecarSpec   `json:"sidecar,omitempty"` //容器边车
 }
 
+// InitTrait 初始化容器的特征
+type InitTrait struct {
+	Name   string   `json:"name"`
+	Traits []Traits `json:"traits"`
+	Properties
+}
+
+// StorageTrait 描述存储特征
 type StorageTrait struct {
 	Name      string `json:"name,omitempty"`
 	Type      string `json:"type"`
