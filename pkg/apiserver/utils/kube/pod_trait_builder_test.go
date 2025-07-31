@@ -88,6 +88,14 @@ func TestBuildStatefulSets(t *testing.T) {
 				},
 			},
 		},
+		{
+			Name: "clone-mysql",
+			Properties: model.Properties{
+				Image:   "xtrabackup:latest",
+				Command: []string{"bash", "-c", "set -ex\n[[ -d /var/lib/mysql/mysql ]] && exit 0\n[[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1\nprefix_name=${BASH_REMATCH[1]}\nordinal=${BASH_REMATCH[2]}\n[[ $ordinal == 0 ]] && exit 0\nncat --recv-only ${prefix_name}-$(($ordinal-1)).${prefix_name} 3307 | xbstream -x -C /var/lib/mysql\nxtrabackup --prepare --target-dir=/var/lib/mysql"},
+				Env:     map[string]string{"MYSQL_DATABASE": "game", "SQL_URL": "test.sql"},
+			},
+		},
 	}
 	mockStorageTrait := []model.StorageTrait{
 		{
@@ -100,7 +108,7 @@ func TestBuildStatefulSets(t *testing.T) {
 		{
 			Name:      "conf",
 			Type:      "config",
-			MountPath: "/var/lib/mysql",
+			MountPath: "/etc/mysql/conf.d",
 		},
 		{
 			Name:      "init-scripts",

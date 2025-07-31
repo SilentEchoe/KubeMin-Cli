@@ -2,6 +2,7 @@ package job
 
 import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"testing"
 )
 
@@ -61,7 +62,7 @@ func TestBuildStorageResources_PVC_EmptyDir_Mutex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, volumes, pvcs := BuildStorageResources("testsvc", tt.traits)
+			_, volumes, pvcs := kube.BuildStorageResources("testsvc", tt.traits)
 			emptyDirCount := 0
 			for _, v := range volumes {
 				if v.VolumeSource.EmptyDir != nil {

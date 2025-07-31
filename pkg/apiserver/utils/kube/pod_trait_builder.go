@@ -151,7 +151,7 @@ func BuildStorageResources(serviceName string, traits *model.Traits) ([]corev1.V
 						},
 					},
 				})
-				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
+				volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath})
 			case config.VolumeTypeEmptyDir:
 				volumes = append(volumes, corev1.Volume{
 					Name:         volName,
