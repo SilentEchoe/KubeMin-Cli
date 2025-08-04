@@ -15,7 +15,82 @@ import (
 // TraitProcessor is the interface for all trait processors.
 type TraitProcessor interface {
 	Name() string
-	Process(workload interface{}, traitData interface{}, component *model.ApplicationComponent) error
+	Process(ctx *TraitContext) error
+}
+
+// TraitContext provides a flexible context for trait processing
+type TraitContext struct {
+	Component *model.ApplicationComponent
+	Workload  interface{}
+	TraitData interface{}
+
+	// Resources that will be aggregated
+	AdditionalContainers   []corev1.Container
+	InitContainers         []corev1.Container
+	Volumes                []corev1.Volume
+	VolumeMounts           map[int][]corev1.VolumeMount // container index -> volume mounts
+	PersistentVolumeClaims []corev1.PersistentVolumeClaim
+	ConfigMaps             []corev1.ConfigMap
+	Secrets                []corev1.Secret
+}
+
+// NewTraitContext creates a new trait context
+func NewTraitContext(component *model.ApplicationComponent, workload interface{}, traitData interface{}) *TraitContext {
+	return &TraitContext{
+		Component:    component,
+		Workload:     workload,
+		TraitData:    traitData,
+		VolumeMounts: make(map[int][]corev1.VolumeMount),
+	}
+}
+
+// GetPodTemplate gets the PodTemplateSpec from the workload
+func (ctx *TraitContext) GetPodTemplate() (*corev1.PodTemplateSpec, error) {
+	switch w := ctx.Workload.(type) {
+	case *appsv1.Deployment:
+		return &w.Spec.Template, nil
+	case *appsv1.StatefulSet:
+		return &w.Spec.Template, nil
+	case *appsv1.DaemonSet:
+		return &w.Spec.Template, nil
+	default:
+		return nil, fmt.Errorf("unsupported workload type: %T", ctx.Workload)
+	}
+}
+
+// AddContainer adds a container to the additional containers list
+func (ctx *TraitContext) AddContainer(container corev1.Container) {
+	ctx.AdditionalContainers = append(ctx.AdditionalContainers, container)
+}
+
+// AddInitContainer adds an init container
+func (ctx *TraitContext) AddInitContainer(container corev1.Container) {
+	ctx.InitContainers = append(ctx.InitContainers, container)
+}
+
+// AddVolume adds a volume
+func (ctx *TraitContext) AddVolume(volume corev1.Volume) {
+	ctx.Volumes = append(ctx.Volumes, volume)
+}
+
+// AddVolumeMount adds a volume mount to a specific container
+func (ctx *TraitContext) AddVolumeMount(containerIndex int, mount corev1.VolumeMount) {
+	ctx.VolumeMounts[containerIndex] = append(ctx.VolumeMounts[containerIndex], mount)
+}
+
+// AddPVC adds a persistent volume claim
+func (ctx *TraitContext) AddPVC(pvc corev1.PersistentVolumeClaim) {
+	ctx.PersistentVolumeClaims = append(ctx.PersistentVolumeClaims, pvc)
+}
+
+// AddConfigMap adds a config map
+func (ctx *TraitContext) AddConfigMap(cm corev1.ConfigMap) {
+	ctx.ConfigMaps = append(ctx.ConfigMaps, cm)
+}
+
+// AddSecret adds a secret
+func (ctx *TraitContext) AddSecret(secret corev1.Secret) {
+	ctx.Secrets = append(ctx.Secrets, secret)
 }
 
 var (
@@ -23,7 +98,7 @@ var (
 	orderedProcessors []TraitProcessor
 )
 
-// Register registers a new trait processor, appending it to the execution list.
+// Register registers a new trait processor
 func Register(p TraitProcessor) {
 	name := p.Name()
 	for _, existing := range orderedProcessors {
@@ -35,7 +110,7 @@ func Register(p TraitProcessor) {
 	orderedProcessors = append(orderedProcessors, p)
 }
 
-// GetProcessor retrieves a registered trait processor by name.
+// GetProcessor retrieves a registered trait processor by name
 func GetProcessor(name string) (TraitProcessor, error) {
 	for _, p := range orderedProcessors {
 		if p.Name() == name {
@@ -45,51 +120,52 @@ func GetProcessor(name string) (TraitProcessor, error) {
 	return nil, fmt.Errorf("no trait processor found for: %s", name)
 }
 
-// ApplyTraits iterates through the registered traits and applies them to the workload if they are defined in the component.
+// ApplyTraits applies all registered traits to the component
 func ApplyTraits(component *model.ApplicationComponent, workload interface{}) error {
 	if component.Traits == nil {
 		klog.V(4).Infof("Component %s has no traits to apply.", component.Name)
 		return nil
 	}
 
-	// First, marshal the generic *JSONStruct back into a byte slice.
+	// Marshal and unmarshal traits
 	traitBytes, err := json.Marshal(component.Traits)
 	if err != nil {
 		return fmt.Errorf("failed to re-marshal traits for component %s: %w", component.Name, err)
 	}
 
-	// An empty traits field might be represented as "{}" or "null".
 	if string(traitBytes) == "{}" || string(traitBytes) == "null" {
 		return nil
 	}
 
-	// Second, unmarshal the byte slice into our concrete model.Traits struct.
 	var traits model.Traits
 	if err := json.Unmarshal(traitBytes, &traits); err != nil {
 		return fmt.Errorf("failed to unmarshal traits into concrete type for component %s: %w", component.Name, err)
 	}
 
-	// Use reflection to get the value of the traits struct
 	val := reflect.ValueOf(traits)
 
-	// Iterate through the processors in their registration order.
+	// Process each trait
 	for _, p := range orderedProcessors {
 		traitName := p.Name()
-		// Capitalize first letter for struct field name, e.g., "sidecar" -> "Sidecar"
 		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
 		field := val.FieldByName(fieldName)
 
 		if !field.IsValid() {
-			// This case should ideally not happen if naming conventions are followed.
 			klog.V(5).Infof("Trait '%s' is registered but not found in the component's traits struct, skipping.", traitName)
 			continue
 		}
 
-		// Check if the trait data is present (e.g., slice is not empty).
 		if field.Kind() == reflect.Slice && field.Len() > 0 {
 			klog.V(3).Infof("Applying trait '%s' for component %s.", traitName, component.Name)
-			if err := p.Process(workload, field.Interface(), component); err != nil {
+
+			ctx := NewTraitContext(component, workload, field.Interface())
+			if err := p.Process(ctx); err != nil {
 				return fmt.Errorf("failed to process trait '%s': %w", traitName, err)
+			}
+
+			// Aggregate resources from this trait
+			if err := AggregateTraitResources(ctx, workload); err != nil {
+				return fmt.Errorf("failed to aggregate resources for trait '%s': %w", traitName, err)
 			}
 		}
 	}
@@ -98,16 +174,39 @@ func ApplyTraits(component *model.ApplicationComponent, workload interface{}) er
 	return nil
 }
 
-// GetPodTemplateSpec is a helper function to get the workload's PodTemplateSpec.
-func GetPodTemplateSpec(workload interface{}) (*corev1.PodTemplateSpec, error) {
-	switch w := workload.(type) {
-	case *appsv1.Deployment:
-		return &w.Spec.Template, nil
-	case *appsv1.StatefulSet:
-		return &w.Spec.Template, nil
-	case *appsv1.DaemonSet:
-		return &w.Spec.Template, nil
-	default:
-		return nil, fmt.Errorf("unsupported workload type: %T", workload)
+// AggregateTraitResources aggregates all resources from a trait context into the workload
+func AggregateTraitResources(ctx *TraitContext, workload interface{}) error {
+	podTemplate, err := ctx.GetPodTemplate()
+	if err != nil {
+		return err
 	}
+
+	// Add init containers
+	podTemplate.Spec.InitContainers = append(podTemplate.Spec.InitContainers, ctx.InitContainers...)
+
+	// Add additional containers
+	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, ctx.AdditionalContainers...)
+
+	// Add volumes
+	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, ctx.Volumes...)
+
+	// Add volume mounts to containers
+	for containerIndex, mounts := range ctx.VolumeMounts {
+		if containerIndex < len(podTemplate.Spec.Containers) {
+			podTemplate.Spec.Containers[containerIndex].VolumeMounts = append(
+				podTemplate.Spec.Containers[containerIndex].VolumeMounts,
+				mounts...,
+			)
+		}
+	}
+
+	// Add PVCs to StatefulSet if applicable
+	if statefulSet, ok := workload.(*appsv1.StatefulSet); ok {
+		statefulSet.Spec.VolumeClaimTemplates = append(
+			statefulSet.Spec.VolumeClaimTemplates,
+			ctx.PersistentVolumeClaims...,
+		)
+	}
+
+	return nil
 }
