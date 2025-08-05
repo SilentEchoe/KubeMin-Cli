@@ -26,7 +26,7 @@ func (s *StorageProcessor) Name() string {
 
 // Process converts storage specs into volumes, volume mounts, and PVCs.
 func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	storageTraits, ok := ctx.TraitData.([]model.Storage)
+	storageTraits, ok := ctx.TraitData.([]model.StorageTrait)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for storage trait: %T", ctx.TraitData)
 	}
@@ -80,7 +80,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			pvcs = append(pvcs, pvc)
 			// PVCs are created as separate objects, but also referenced as volumes.
 			volumes = append(volumes, corev1.Volume{
-				Name: volName,
+				Name:         volName,
 				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
 			})
 			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath})
