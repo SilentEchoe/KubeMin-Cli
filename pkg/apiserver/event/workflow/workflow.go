@@ -196,7 +196,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 
 		properties := ParseProperties(componentSteps.Properties)
 
-		traits := ParseTraits(componentSteps.Traits)
+		//traits := ParseTraits(componentSteps.Traits)
 
 		switch componentSteps.ComponentType {
 		case config.ServerJob:
@@ -205,7 +205,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
 		case config.StoreJob:
 			jobTask.JobType = string(config.JobStoreDeploy)
-			jobTask.JobInfo = job.GenerateStoreService(componentSteps, &properties, &traits)
+			jobTask.JobInfo = job.GenerateStoreService(componentSteps, &properties)
 		}
 
 		// 创建Service

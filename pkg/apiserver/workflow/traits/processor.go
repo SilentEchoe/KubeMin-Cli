@@ -99,15 +99,19 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 		return nil, fmt.Errorf("failed to unmarshal traits into concrete type for component %s: %w", component.Name, err)
 	}
 
+	// model.Traits 结构体的反射对象，可以通过它来检查和获取结构体的字段
 	val := reflect.ValueOf(traits)
 	var allResults []*TraitResult
 
 	// Process each trait and collect results
 	for _, p := range orderedProcessors {
+		// 获取当前处理器的名字
 		traitName := p.Name()
+		// Trait 的名字（通常是小写开头）转换为 Go 语言结构体字段的标准命名风格（大写开头，即 "CamelCase"）
 		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
+		// 使用反射，在 val (代表 model.Traits 结构体) 中，根据我们刚刚构建的 fieldName ("Storage", "Sidecar" 等) 查找同名字段。
 		field := val.FieldByName(fieldName)
-
+		
 		if !field.IsValid() || (field.Kind() == reflect.Slice && field.IsNil()) {
 			continue
 		}

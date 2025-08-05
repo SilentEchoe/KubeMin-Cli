@@ -140,7 +140,8 @@ func (c *DeployStatefulSetJobCtl) timeout() int64 {
 	return c.job.Timeout
 }
 
-func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties, traits *model.Traits) interface{} {
+// TODO 这里还可以进一步优化，不需要properties属性作为参数传递进来，因为它本身就在 component变量中
+func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	// 如果命名空间为空，则使用默认的命名空间
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
@@ -196,7 +197,8 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		},
 	}
 
-	_, err := traitsPlu.ApplyTraits(component, statefulSet)
+	// TODO 使用插件系统
+	_, _ = traitsPlu.ApplyTraits(component, statefulSet)
 
 	return statefulSet
 }

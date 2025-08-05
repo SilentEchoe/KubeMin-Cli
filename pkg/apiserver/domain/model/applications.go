@@ -100,7 +100,7 @@ type Ports struct {
 
 // Traits 附加特性
 type Traits struct {
-	Init    []InitTrait         `json:"init"`
+	Init    []InitTrait         `json:"init,omitempty"`    //初始化容器
 	Storage []StorageTrait      `json:"storage,omitempty"` //存储特性
 	Config  []ConfigMapSpec     `json:"config,omitempty"`  //配置文件
 	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息

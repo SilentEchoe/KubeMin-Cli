@@ -29,7 +29,7 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 	var initContainers []corev1.Container
 	for _, initTrait := range initTraits {
-		if initTrait.Image == "" {
+		if initTrait.Properties.Image == "" {
 			return nil, fmt.Errorf("init container for component %s must have an image", ctx.Component.Name)
 		}
 
@@ -40,14 +40,14 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 		// Convert env map to env vars
 		var envVars []corev1.EnvVar
-		for k, v := range initTrait.Env {
+		for k, v := range initTrait.Properties.Env {
 			envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 		}
 
 		initContainer := corev1.Container{
 			Name:    initContainerName,
-			Image:   initTrait.Image,
-			Command: initTrait.Command,
+			Image:   initTrait.Properties.Image,
+			Command: initTrait.Properties.Command,
 			Env:     envVars,
 		}
 		initContainers = append(initContainers, initContainer)
