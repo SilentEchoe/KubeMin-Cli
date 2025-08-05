@@ -205,7 +205,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
 		case config.StoreJob:
 			jobTask.JobType = string(config.JobStoreDeploy)
-			jobTask.JobInfo = job.GenerateStoreService(componentSteps, &properties)
+			jobTask.JobInfo = job.GenerateStoreService(componentSteps)
 		}
 
 		// 创建Service
@@ -276,20 +276,4 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 		return model.Properties{}
 	}
 	return propertied
-}
-
-func ParseTraits(traits *model.JSONStruct) model.Traits {
-	cTraits, err := json.Marshal(traits)
-	if err != nil {
-		klog.Errorf("Component.Properties deserialization failure: %s", err)
-		return model.Traits{}
-	}
-
-	var trait model.Traits
-	err = json.Unmarshal(cTraits, &trait)
-	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
-		return model.Traits{}
-	}
-	return trait
 }

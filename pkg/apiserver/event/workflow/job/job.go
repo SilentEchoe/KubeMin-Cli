@@ -5,6 +5,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
+	"encoding/json"
 	"fmt"
 	"sync"
 	"time"
@@ -167,4 +168,20 @@ func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 		ack:         ack,
 		ctx:         ctx,
 	}
+}
+
+func ParseProperties(properties *model.JSONStruct) model.Properties {
+	cProperties, err := json.Marshal(properties)
+	if err != nil {
+		klog.Errorf("Component.Properties deserialization failure: %s", err)
+		return model.Properties{}
+	}
+
+	var propertied model.Properties
+	err = json.Unmarshal(cProperties, &propertied)
+	if err != nil {
+		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
+		return model.Properties{}
+	}
+	return propertied
 }

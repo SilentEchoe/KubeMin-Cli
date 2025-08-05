@@ -4,7 +4,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -250,14 +249,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			},
 		},
 	}
-
-	// Apply all registered traits to the deployment.
-	// If applying traits fails, we return nil to prevent deploying a misconfigured workload.
-	if err := traits.ApplyTraits(component, deployment); err != nil {
-		klog.Errorf("Failed to apply traits to component %s: %v. Aborting resource generation.", component.Name, err)
-		return nil
-	}
-
+	
 	return deployment
 }
 

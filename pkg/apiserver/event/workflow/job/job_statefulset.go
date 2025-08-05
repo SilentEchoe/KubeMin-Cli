@@ -140,15 +140,17 @@ func (c *DeployStatefulSetJobCtl) timeout() int64 {
 	return c.job.Timeout
 }
 
-// TODO 这里还可以进一步优化，不需要properties属性作为参数传递进来，因为它本身就在 component变量中
-func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+func GenerateStoreService(component *model.ApplicationComponent) interface{} {
 	// 如果命名空间为空，则使用默认的命名空间
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
 	}
 	serviceName := component.Name
+
+	properties := ParseProperties(component.Properties)
+
 	// 构建标签
-	labels := buildLabels(component, properties)
+	labels := buildLabels(component, &properties)
 	for k, v := range properties.Labels {
 		labels[k] = v
 	}
