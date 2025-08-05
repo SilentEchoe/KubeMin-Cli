@@ -3,70 +3,71 @@ package traits
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func init() {
 	Register(&StorageProcessor{})
 }
 
-// StorageProcessor handles the logic for the 'storage' trait
+// StorageProcessor handles the logic for the 'storage' trait.
 type StorageProcessor struct{}
 
-// Name returns the name of the trait
+// Name returns the name of the trait.
 func (s *StorageProcessor) Name() string {
 	return "storage"
 }
 
-// Process adds volumes and volume mounts to the workload
-func (s *StorageProcessor) Process(ctx *TraitContext) error {
-	storageTraits, ok := ctx.TraitData.([]model.StorageTrait)
+// Process converts storage specs into volumes, volume mounts, and PVCs.
+func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
+	storageTraits, ok := ctx.TraitData.([]model.Storage)
 	if !ok {
-		return fmt.Errorf("unexpected type for storage trait: %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for storage trait: %T", ctx.TraitData)
 	}
 
-	podTemplate, err := ctx.GetPodTemplate()
-	if err != nil {
-		return err
+	if len(storageTraits) == 0 {
+		return nil, nil
 	}
 
-	if len(podTemplate.Spec.Containers) == 0 {
-		return fmt.Errorf("component %s has no containers defined to mount storage into", ctx.Component.Name)
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+	var pvcs []corev1.PersistentVolumeClaim
+	var additionalObjects []client.Object
+
+	// First, check if there are any PVC-type storage configurations.
+	hasPVC := false
+	for _, vol := range storageTraits {
+		if config.StorageTypeMapping[vol.Type] == config.VolumeTypePVC {
+			hasPVC = true
+			break
+		}
 	}
 
-	for _, st := range storageTraits {
-		volName := st.Name
+	for _, vol := range storageTraits {
+		volType := config.StorageTypeMapping[vol.Type]
+
+		if hasPVC && volType == config.VolumeTypeEmptyDir {
+			klog.Infof("Skipping EmptyDir storage '%s' because PVC storage is configured", vol.Name)
+			continue
+		}
+
+		volName := vol.Name
 		if volName == "" {
-			volName = fmt.Sprintf("%s-storage-%s", ctx.Component.Name, generateRandomSuffix())
+			volName = fmt.Sprintf("%s-%s", ctx.Component.Name, utils.RandStringBytes(5))
 		}
-
-		mountPath := st.MountPath
-		if mountPath == "" {
-			mountPath = fmt.Sprintf("/mnt/%s", volName)
-		}
-
-		volType := config.StorageTypeMapping[st.Type]
+		mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volName))
 
 		switch volType {
 		case config.VolumeTypePVC:
-			// Create PVC
-			if st.Size == "" {
-				st.Size = "1Gi"
-			}
-			qty, err := resource.ParseQuantity(st.Size)
-			if err != nil {
-				return fmt.Errorf("invalid storage size %s: %w", st.Size, err)
-			}
-
+			qty, _ := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
 			pvc := corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: volName,
-				},
+				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
 					Resources: corev1.VolumeResourceRequirements{
@@ -76,91 +77,69 @@ func (s *StorageProcessor) Process(ctx *TraitContext) error {
 					},
 				},
 			}
-			ctx.AddPVC(pvc)
-
-			// Create volume mount
-			volumeMount := corev1.VolumeMount{
-				Name:      volName,
-				MountPath: mountPath,
-				SubPath:   st.SubPath,
-				ReadOnly:  st.ReadOnly,
-			}
-			ctx.AddVolumeMount(0, volumeMount) // Mount to first container
+			pvcs = append(pvcs, pvc)
+			// PVCs are created as separate objects, but also referenced as volumes.
+			volumes = append(volumes, corev1.Volume{
+				Name: volName,
+				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath})
 
 		case config.VolumeTypeEmptyDir:
-			// Create empty dir volume
-			volume := corev1.Volume{
-				Name: volName,
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
-			}
-			ctx.AddVolume(volume)
-
-			// Create volume mount
-			volumeMount := corev1.VolumeMount{
-				Name:      volName,
-				MountPath: mountPath,
-				SubPath:   st.SubPath,
-				ReadOnly:  st.ReadOnly,
-			}
-			ctx.AddVolumeMount(0, volumeMount)
+			volumes = append(volumes, corev1.Volume{
+				Name:         volName,
+				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 
 		case config.VolumeTypeConfigMap:
-			// Create config map volume
-			volume := corev1.Volume{
+			volumes = append(volumes, corev1.Volume{
 				Name: volName,
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{
-							Name: volName,
-						},
-						DefaultMode: parseInt32(config.DefaultStorageMode),
+						LocalObjectReference: corev1.LocalObjectReference{Name: vol.Source},
+						DefaultMode:          utils.ParseInt32(config.DefaultStorageMode),
 					},
 				},
-			}
-			ctx.AddVolume(volume)
-
-			// Create volume mount
-			volumeMount := corev1.VolumeMount{
-				Name:      volName,
-				MountPath: mountPath,
-				SubPath:   st.SubPath,
-				ReadOnly:  st.ReadOnly,
-			}
-			ctx.AddVolumeMount(0, volumeMount)
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 
 		case config.VolumeTypeSecret:
-			// Create secret volume
-			volume := corev1.Volume{
+			volumes = append(volumes, corev1.Volume{
 				Name: volName,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName:  volName,
-						DefaultMode: parseInt32(config.DefaultStorageMode),
+						SecretName:  vol.Source,
+						DefaultMode: utils.ParseInt32(config.DefaultStorageMode),
 					},
 				},
-			}
-			ctx.AddVolume(volume)
-
-			// Create volume mount
-			volumeMount := corev1.VolumeMount{
-				Name:      volName,
-				MountPath: mountPath,
-				SubPath:   st.SubPath,
-				ReadOnly:  st.ReadOnly,
-			}
-			ctx.AddVolumeMount(0, volumeMount)
+			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 		}
-
-		klog.V(3).Infof("Added storage volume %s to component %s", volName, ctx.Component.Name)
 	}
 
-	return nil
+	// Convert PVCs to generic client.Object for the result
+	for i := range pvcs {
+		additionalObjects = append(additionalObjects, &pvcs[i])
+	}
+
+	// All volume mounts created by this trait are for the main container.
+	// Sidecars handle their own storage traits.
+	volumeMountMap := make(map[string][]corev1.VolumeMount)
+	if len(volumeMounts) > 0 {
+		volumeMountMap[ctx.Component.Name] = volumeMounts
+	}
+
+	return &TraitResult{
+		Volumes:           volumes,
+		VolumeMounts:      volumeMountMap,
+		AdditionalObjects: additionalObjects,
+	}, nil
 }
 
-func parseInt32(s int32) *int32 {
-	// Implementation for parsing int32 - you can use your existing utils
-	var result int32 = 420
-	return &result
+func defaultOr(value, fallback string) string {
+	if value == "" {
+		return fallback
+	}
+	return value
 }
