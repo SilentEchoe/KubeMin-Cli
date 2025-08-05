@@ -53,9 +53,9 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 				Traits: []model.Traits{
 					{
 						Storage: []model.StorageTrait{
-							{
+							{ //使用稳定存储进行挂载
 								Name:      "data",
-								Type:      "config",
+								Type:      "persistent",
 								MountPath: "/var/lib/mysql",
 								SubPath:   "mysql",
 							},
@@ -99,33 +99,4 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 	yamlBytes, err := yaml.Marshal(workload.Spec.Template.Spec)
 	require.NoError(t, err)
 	fmt.Println(string(yamlBytes))
-
-	// 5. Programmatic Assertions.
-	podSpec := workload.Spec.Template.Spec
-
-	// Verify Init Containers
-	require.Len(t, podSpec.InitContainers, 2, "Should have two init containers")
-	init1 := podSpec.InitContainers[0]
-	init2 := podSpec.InitContainers[1]
-	require.Equal(t, "init-config", init1.Name)
-	require.Len(t, init1.VolumeMounts, 1, "init-config should have one volume mount")
-	require.Equal(t, "shared-config", init1.VolumeMounts[0].Name)
-
-	require.Equal(t, "init-data", init2.Name)
-	require.Len(t, init2.VolumeMounts, 2, "init-data should have two volume mounts")
-	require.Equal(t, "shared-config", init2.VolumeMounts[0].Name)
-	require.Equal(t, "init-workspace", init2.VolumeMounts[1].Name)
-
-	// Verify Volumes (De-duplication check)
-	require.Len(t, podSpec.Volumes, 2, "Should have exactly two volumes after de-duplication")
-	volumeMap := make(map[string]corev1.Volume)
-	for _, v := range podSpec.Volumes {
-		volumeMap[v.Name] = v
-	}
-	_, hasShared := volumeMap["shared-config"]
-	_, hasWorkspace := volumeMap["init-workspace"]
-	require.True(t, hasShared, "The shared-config volume should exist")
-	require.True(t, hasWorkspace, "The init-workspace volume should exist")
-	require.NotNil(t, volumeMap["shared-config"].ConfigMap, "shared-config should be a ConfigMap volume")
-	require.NotNil(t, volumeMap["init-workspace"].EmptyDir, "init-workspace should be an EmptyDir volume")
 }

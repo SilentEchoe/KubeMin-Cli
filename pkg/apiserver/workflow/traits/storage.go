@@ -3,7 +3,6 @@ package traits
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -57,9 +56,10 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			continue
 		}
 
+		// The name of the volume in the PodSpec.
 		volName := vol.Name
 		if volName == "" {
-			volName = fmt.Sprintf("%s-%s", ctx.Component.Name, utils.RandStringBytes(5))
+			return nil, fmt.Errorf("storage trait of type '%s' requires a name", vol.Type)
 		}
 		mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volName))
 
@@ -70,52 +70,53 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
 				Spec: corev1.PersistentVolumeClaimSpec{
 					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources: corev1.VolumeResourceRequirements{
-						Requests: corev1.ResourceList{
-							corev1.ResourceStorage: qty,
-						},
-					},
+					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
 				},
 			}
 			pvcs = append(pvcs, pvc)
-			// PVCs are created as separate objects, but also referenced as volumes.
 			volumes = append(volumes, corev1.Volume{
 				Name:         volName,
 				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
 			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath})
 
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{
 				Name:         volName,
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 
 		case config.VolumeTypeConfigMap:
+			sourceName := vol.SourceName
+			if sourceName == "" {
+				sourceName = volName // Fallback to using the volume name as the ConfigMap name.
+			}
 			volumes = append(volumes, corev1.Volume{
 				Name: volName,
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
-						LocalObjectReference: corev1.LocalObjectReference{Name: vol.Source},
-						DefaultMode:          utils.ParseInt32(config.DefaultStorageMode),
+						LocalObjectReference: corev1.LocalObjectReference{Name: sourceName},
+						DefaultMode:          ParseInt32(config.DefaultStorageMode),
 					},
 				},
 			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 
 		case config.VolumeTypeSecret:
+			sourceName := vol.SourceName
+			if sourceName == "" {
+				sourceName = volName // Fallback to using the volume name as the Secret name.
+			}
 			volumes = append(volumes, corev1.Volume{
 				Name: volName,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
-						SecretName:  vol.Source,
-						DefaultMode: utils.ParseInt32(config.DefaultStorageMode),
+						SecretName:  sourceName,
+						DefaultMode: ParseInt32(config.DefaultStorageMode),
 					},
 				},
 			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath})
 		}
+		// The VolumeMount always refers to the pod-level volume name.
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 	}
 
 	// Convert PVCs to generic client.Object for the result
@@ -123,8 +124,8 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		additionalObjects = append(additionalObjects, &pvcs[i])
 	}
 
-	// All volume mounts created by this trait are for the main container.
-	// Sidecars handle their own storage traits.
+	// The container name is not known here. The aggregator will place the mounts.
+	// We use the component name as a temporary key for mounts intended for the main container.
 	volumeMountMap := make(map[string][]corev1.VolumeMount)
 	if len(volumeMounts) > 0 {
 		volumeMountMap[ctx.Component.Name] = volumeMounts
@@ -142,4 +143,8 @@ func defaultOr(value, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func ParseInt32(i int32) *int32 {
+	return &i
 }

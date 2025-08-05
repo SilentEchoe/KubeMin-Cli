@@ -129,6 +129,8 @@ type StorageTrait struct {
 	Size      string `json:"size"`
 	SubPath   string `json:"subPath"`
 	ReadOnly  bool   `json:"readOnly"`
+	// 新增字段，专门用于ConfigMap 和 Secret
+	SourceName string `json:"sourceName,omitempty"`
 }
 
 type ConfigMapSpec struct {
