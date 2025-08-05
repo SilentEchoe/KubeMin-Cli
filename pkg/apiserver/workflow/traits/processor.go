@@ -47,20 +47,6 @@ func NewTraitContext(component *model.ApplicationComponent, workload runtime.Obj
 	}
 }
 
-// GetPodTemplate gets the PodTemplateSpec from the workload.
-func (ctx *TraitContext) GetPodTemplate() (*corev1.PodTemplateSpec, error) {
-	switch w := ctx.Workload.(type) {
-	case *appsv1.Deployment:
-		return &w.Spec.Template, nil
-	case *appsv1.StatefulSet:
-		return &w.Spec.Template, nil
-	case *appsv1.DaemonSet:
-		return &w.Spec.Template, nil
-	default:
-		return nil, fmt.Errorf("unsupported workload type: %T", ctx.Workload)
-	}
-}
-
 var (
 	// orderedProcessors stores the registered trait processors in the desired execution order.
 	orderedProcessors []TraitProcessor
@@ -78,7 +64,8 @@ func Register(p TraitProcessor) {
 	orderedProcessors = append(orderedProcessors, p)
 }
 
-// ApplyTraits applies all registered traits to the component and returns the resulting objects.
+// ApplyTraits is the main entry point for the trait processing system.
+// It applies all registered traits to the component and returns the resulting objects.
 func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object) ([]client.Object, error) {
 	if component.Traits == nil {
 		klog.V(4).Infof("Component %s has no traits to apply.", component.Name)
@@ -99,19 +86,43 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 		return nil, fmt.Errorf("failed to unmarshal traits into concrete type for component %s: %w", component.Name, err)
 	}
 
-	// model.Traits 结构体的反射对象，可以通过它来检查和获取结构体的字段
-	val := reflect.ValueOf(traits)
+	// Start the recursive application of traits, with no exclusions at the top level.
+	finalResult, err := applyTraitsRecursive(component, workload, &traits, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Apply the aggregated result to the final workload.
+	if err := applyTraitResultToWorkload(finalResult, workload); err != nil {
+		return nil, err
+	}
+
+	klog.V(2).Infof("Successfully applied traits for component: %s", component.Name)
+	return finalResult.AdditionalObjects, nil
+}
+
+// applyTraitsRecursive is the internal, recursive core of the trait processing system.
+// It takes a list of trait names to exclude to prevent infinite recursion.
+func applyTraitsRecursive(component *model.ApplicationComponent, workload runtime.Object, traits *model.Traits, excludeTraits []string) (*TraitResult, error) {
+	val := reflect.ValueOf(traits).Elem()
 	var allResults []*TraitResult
 
-	// Process each trait and collect results
+	// Create a map for quick lookup of excluded traits.
+	excludeMap := make(map[string]bool)
+	for _, t := range excludeTraits {
+		excludeMap[t] = true
+	}
+
+	// Process each trait and collect results.
 	for _, p := range orderedProcessors {
-		// 获取当前处理器的名字
 		traitName := p.Name()
-		// Trait 的名字（通常是小写开头）转换为 Go 语言结构体字段的标准命名风格（大写开头，即 "CamelCase"）
+		if excludeMap[traitName] {
+			continue // Skip excluded traits.
+		}
+
 		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
-		// 使用反射，在 val (代表 model.Traits 结构体) 中，根据我们刚刚构建的 fieldName ("Storage", "Sidecar" 等) 查找同名字段。
 		field := val.FieldByName(fieldName)
-		
+
 		if !field.IsValid() || (field.Kind() == reflect.Slice && field.IsNil()) {
 			continue
 		}
@@ -130,28 +141,42 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 		}
 	}
 
-	// Aggregate all results and apply them
-	finalResult := aggregateTraitResults(allResults)
-	if err := applyTraitResultToWorkload(finalResult, workload); err != nil {
-		return nil, err
-	}
-
-	klog.V(2).Infof("Successfully applied traits for component: %s", component.Name)
-	return finalResult.AdditionalObjects, nil
+	// Merge all results from this level of recursion into a single result.
+	return aggregateTraitResults(allResults), nil
 }
 
-// aggregateTraitResults merges multiple TraitResult objects into one.
+// aggregateTraitResults merges multiple TraitResult objects into one, ensuring no duplicate resources.
 func aggregateTraitResults(results []*TraitResult) *TraitResult {
 	finalResult := &TraitResult{
 		VolumeMounts: make(map[string][]corev1.VolumeMount),
 	}
+	// Use maps to track the names of added volumes and objects to prevent duplicates.
+	volumeNameSet := make(map[string]bool)
+	objectNameSet := make(map[string]bool)
 
 	for _, res := range results {
 		finalResult.InitContainers = append(finalResult.InitContainers, res.InitContainers...)
 		finalResult.Containers = append(finalResult.Containers, res.Containers...)
-		finalResult.Volumes = append(finalResult.Volumes, res.Volumes...)
-		finalResult.AdditionalObjects = append(finalResult.AdditionalObjects, res.AdditionalObjects...)
 
+		// De-duplicate Volumes
+		for _, vol := range res.Volumes {
+			if !volumeNameSet[vol.Name] {
+				finalResult.Volumes = append(finalResult.Volumes, vol)
+				volumeNameSet[vol.Name] = true
+			}
+		}
+
+		// De-duplicate AdditionalObjects
+		for _, obj := range res.AdditionalObjects {
+			// Use "Kind/Namespace/Name" as the unique identifier.
+			key := fmt.Sprintf("%s/%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+			if !objectNameSet[key] {
+				finalResult.AdditionalObjects = append(finalResult.AdditionalObjects, obj)
+				objectNameSet[key] = true
+			}
+		}
+
+		// VolumeMounts are per-container, so they are merged by container name.
 		for containerName, mounts := range res.VolumeMounts {
 			finalResult.VolumeMounts[containerName] = append(finalResult.VolumeMounts[containerName], mounts...)
 		}
@@ -159,7 +184,7 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 	return finalResult
 }
 
-// applyTraitResultToWorkload applies the aggregated result to the workload.
+// applyTraitResultToWorkload applies the final, aggregated result to the workload.
 // It handles special cases like StatefulSets intelligently.
 func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) error {
 	podTemplate, err := getPodTemplateFromWorkload(workload)
@@ -171,10 +196,13 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) er
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, result.Containers...)
 	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, result.Volumes...)
 
-	// Create a map of containers for easy lookup
+	// Create a map of all containers (main, init, sidecar) for easy lookup.
 	containerMap := make(map[string]*corev1.Container)
 	for i := range podTemplate.Spec.Containers {
 		containerMap[podTemplate.Spec.Containers[i].Name] = &podTemplate.Spec.Containers[i]
+	}
+	for i := range podTemplate.Spec.InitContainers {
+		containerMap[podTemplate.Spec.InitContainers[i].Name] = &podTemplate.Spec.InitContainers[i]
 	}
 
 	for containerName, mounts := range result.VolumeMounts {
@@ -185,19 +213,16 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) er
 		}
 	}
 
-	// Intelligent PVC handling: check if the workload is a StatefulSet
+	// Intelligent PVC handling: check if the workload is a StatefulSet.
 	if sts, ok := workload.(*appsv1.StatefulSet); ok {
 		var remainingObjects []client.Object
 		for _, obj := range result.AdditionalObjects {
 			if pvc, isPVC := obj.(*corev1.PersistentVolumeClaim); isPVC {
-				// If it's a PVC and the workload is a StatefulSet, absorb it into VolumeClaimTemplates
 				sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
 			} else {
-				// Otherwise, it's a genuine additional object
 				remainingObjects = append(remainingObjects, obj)
 			}
 		}
-		// The original list is replaced by the list of non-PVC objects
 		result.AdditionalObjects = remainingObjects
 	}
 
