@@ -31,7 +31,7 @@ func BuildAllInitContainers(specs []model.InitTrait) ([]corev1.Container, []core
 
 		// 构建Env
 		var envs []corev1.EnvVar
-		for k, v := range sc.Env {
+		for k, v := range sc.Properties.Env {
 			envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 		}
 
@@ -40,9 +40,9 @@ func BuildAllInitContainers(specs []model.InitTrait) ([]corev1.Container, []core
 
 		init := corev1.Container{
 			Name:         sc.Name,
-			Image:        sc.Image,
+			Image:        sc.Properties.Image,
 			Env:          envs,
-			Command:      sc.Command,
+			Command:      sc.Properties.Command,
 			VolumeMounts: mounts,
 		}
 		initContainers = append(initContainers, init)

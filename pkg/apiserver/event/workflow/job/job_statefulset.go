@@ -5,6 +5,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
+	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"fmt"
 	"time"
@@ -70,7 +71,7 @@ func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) {
 		c.ack()
 		return
 	}
-	//这里是部署完毕后，将状态进行同步
+	//after the deployment is completed, synchronize the status.
 	c.wait(ctx)
 }
 
@@ -93,7 +94,6 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 	}
 	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 
-	// 任务完成
 	c.job.Status = config.StatusCompleted
 	c.ack()
 	return nil
@@ -141,10 +141,10 @@ func (c *DeployStatefulSetJobCtl) timeout() int64 {
 }
 
 func GenerateStoreService(component *model.ApplicationComponent, properties *model.Properties, traits *model.Traits) interface{} {
+	// 如果命名空间为空，则使用默认的命名空间
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
 	}
-
 	serviceName := component.Name
 	// 构建标签
 	labels := buildLabels(component, properties)
@@ -166,33 +166,6 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 	}
 
-	// 构建Init容器
-	initContainers, _, _ := kube.BuildAllInitContainers(traits.Init)
-
-	// 构建主容器
-	volumeMounts, mainVolumes, mainVolumeClaims := kube.BuildStorageResources(serviceName, traits)
-	mainContainer := corev1.Container{
-		Name:            serviceName,
-		Image:           component.Image,
-		Ports:           ContainerPort,
-		Env:             envs,
-		VolumeMounts:    volumeMounts,
-		ImagePullPolicy: corev1.PullAlways,
-	}
-	allContainers := []corev1.Container{mainContainer}
-	// 构建并添加 sidecar 容器
-	if traits != nil && len(traits.Sidecar) > 0 {
-		// 构建边车
-		sidecarContainers, sidecarVolumes, sidecarClaims, err := kube.BuildAllSidecars(serviceName, traits.Sidecar)
-		if err != nil {
-			klog.Errorf("failed to build sidecars for component %s: %v", serviceName, err)
-		} else {
-			allContainers = append(allContainers, sidecarContainers...)
-			mainVolumes = append(mainVolumes, sidecarVolumes...)
-			mainVolumeClaims = append(mainVolumeClaims, sidecarClaims...)
-		}
-	}
-
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -208,15 +181,23 @@ func GenerateStoreService(component *model.ApplicationComponent, properties *mod
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					InitContainers:                initContainers,
-					Containers:                    allContainers,
+					Containers: []corev1.Container{
+						{
+							Name:            serviceName,
+							Image:           component.Image,
+							Ports:           ContainerPort,
+							Env:             envs,
+							ImagePullPolicy: corev1.PullAlways,
+						},
+					},
 					TerminationGracePeriodSeconds: kube.ParseInt64(30),
-					Volumes:                       mainVolumes,
 				},
 			},
-			VolumeClaimTemplates: mainVolumeClaims,
 		},
 	}
+
+	_, err := traitsPlu.ApplyTraits(component, statefulSet)
+
 	return statefulSet
 }
 

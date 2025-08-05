@@ -116,9 +116,9 @@ type EnvFromSourceSpec struct {
 
 // InitTrait 初始化容器的特征
 type InitTrait struct {
-	Name   string   `json:"name"`
-	Traits []Traits `json:"traits"`
-	Properties
+	Name       string     `json:"name"`
+	Traits     []Traits   `json:"traits"`
+	Properties Properties `json:"properties"`
 }
 
 // StorageTrait 描述存储特征
