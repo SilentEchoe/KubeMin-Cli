@@ -29,7 +29,8 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 	// This is the final result that will be returned, aggregating all outcomes.
 	finalResult := &TraitResult{
-		VolumeMounts: make(map[string][]corev1.VolumeMount),
+		VolumeMounts:   make(map[string][]corev1.VolumeMount),
+		EnvFromSources: make(map[string][]corev1.EnvFromSource),
 	}
 
 	for _, initTrait := range initTraits {
@@ -67,11 +68,18 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			volumeMounts = append(volumeMounts, mounts...)
 		}
 
+		// The init container also gets the EnvFrom sources from its nested traits.
+		var envFromSources []corev1.EnvFromSource
+		for _, envs := range aggregatedNestedResult.EnvFromSources {
+			envFromSources = append(envFromSources, envs...)
+		}
+
 		initContainer := corev1.Container{
 			Name:         initContainerName,
 			Image:        initTrait.Properties.Image,
 			Command:      initTrait.Properties.Command,
 			Env:          envVars,
+			EnvFrom:      envFromSources,
 			VolumeMounts: volumeMounts,
 		}
 
