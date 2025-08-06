@@ -28,6 +28,7 @@ type TraitResult struct {
 	Containers        []corev1.Container
 	Volumes           []corev1.Volume
 	VolumeMounts      map[string][]corev1.VolumeMount   // Keyed by container name
+	EnvVars           map[string][]corev1.EnvVar        // Keyed by container name
 	EnvFromSources    map[string][]corev1.EnvFromSource // Keyed by container name
 	AdditionalObjects []client.Object
 }
@@ -149,6 +150,7 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 func aggregateTraitResults(results []*TraitResult) *TraitResult {
 	finalResult := &TraitResult{
 		VolumeMounts:   make(map[string][]corev1.VolumeMount),
+		EnvVars:        make(map[string][]corev1.EnvVar),
 		EnvFromSources: make(map[string][]corev1.EnvFromSource),
 	}
 	// Use maps to track the names of added volumes and objects to prevent duplicates.
@@ -180,6 +182,11 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		// Merge VolumeMounts by container name.
 		for containerName, mounts := range res.VolumeMounts {
 			finalResult.VolumeMounts[containerName] = append(finalResult.VolumeMounts[containerName], mounts...)
+		}
+
+		// Merge EnvVars by container name.
+		for containerName, envs := range res.EnvVars {
+			finalResult.EnvVars[containerName] = append(finalResult.EnvVars[containerName], envs...)
 		}
 
 		// Merge EnvFromSources by container name.
@@ -217,6 +224,15 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) er
 			c.VolumeMounts = append(c.VolumeMounts, mounts...)
 		} else {
 			klog.Warningf("Could not find container '%s' to apply volume mounts.", containerName)
+		}
+	}
+
+	// Apply EnvVars to the correct containers.
+	for containerName, envs := range result.EnvVars {
+		if c, ok := containerMap[containerName]; ok {
+			c.Env = append(c.Env, envs...)
+		} else {
+			klog.Warningf("Could not find container '%s' to apply env vars.", containerName)
 		}
 	}
 

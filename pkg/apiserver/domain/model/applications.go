@@ -104,12 +104,38 @@ type Traits struct {
 	Storage []StorageTrait      `json:"storage,omitempty"` //存储特性
 	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息
 	Sidecar []SidecarSpec       `json:"sidecar,omitempty"` //容器边车
-	Env     []EnvFromSourceSpec `json:"env,omitempty"`     //引用外部组件作为环境变量,比如ConfigMap
+	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"` // 批量引用外部组件作为环境变量,比如ConfigMap
+	Envs    []EnvVarSpec        `json:"envs,omitempty"`    // 自定义环境变量
 }
 
+// EnvFromSourceSpec corresponds to a single corev1.EnvFromSource.
 type EnvFromSourceSpec struct {
 	Type       string `json:"type"`       // "secret" or "configMap"
-	SourceName string `json:"sourceName"` // secret 或 configMap 的名字
+	SourceName string `json:"sourceName"` // The name of the secret or configMap
+}
+
+// EnvVarSpec represents a single environment variable, mirroring corev1.EnvVar.
+type EnvVarSpec struct {
+	Name      string        `json:"name"`
+	Value     string        `json:"value,omitempty"`
+	ValueFrom *EnvVarSource `json:"valueFrom,omitempty"`
+}
+
+// EnvVarSource represents a source for the value of an EnvVar, mirroring corev1.EnvVarSource.
+type EnvVarSource struct {
+	SecretKeyRef *SecretKeySelector `json:"secretKeyRef,omitempty"`
+	FieldRef     *ObjectFieldSelector `json:"fieldRef,omitempty"`
+}
+
+// SecretKeySelector selects a key of a Secret, mirroring corev1.SecretKeySelector.
+type SecretKeySelector struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
+}
+
+// ObjectFieldSelector selects a field of the pod, mirroring corev1.ObjectFieldSelector.
+type ObjectFieldSelector struct {
+	FieldPath string `json:"fieldPath"`
 }
 
 // InitTrait 初始化容器的特征

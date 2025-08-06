@@ -9,55 +9,95 @@ import (
 )
 
 func init() {
-	Register(&EnvProcessor{})
+	Register(&EnvFromProcessor{})
+	Register(&EnvsProcessor{})
 }
 
-// EnvProcessor is a trait processor that handles environment variables
-// from ConfigMaps and Secrets. It acts as a pure resource generator.
-type EnvProcessor struct{}
+// EnvFromProcessor handles the logic for the 'envFrom' trait.
+type EnvFromProcessor struct{}
 
-// Name returns the name of the trait processor.
-func (e *EnvProcessor) Name() string { return "env" }
+// Name returns the name of the trait.
+func (p *EnvFromProcessor) Name() string {
+	return "envFrom"
+}
 
-// Process generates EnvFromSource definitions based on the trait properties
-// and returns them in a TraitResult. It does not modify the workload directly.
-func (e *EnvProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	// 1. Cast TraitData to the expected type.
-	envTraits, ok := ctx.TraitData.([]model.EnvFromSourceSpec)
+// Process handles the 'envFrom' trait.
+func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
+	envFromTraits, ok := ctx.TraitData.([]model.EnvFromSourceSpec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for env trait: %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for envFrom trait: %T", ctx.TraitData)
 	}
 
-	// 2. Build the EnvFrom sources from the trait specifications.
 	var envFromSources []corev1.EnvFromSource
-	for _, envTrait := range envTraits {
-		if envTrait.SourceName == "" {
-			return nil, fmt.Errorf("env trait requires a sourceName")
+	for _, trait := range envFromTraits {
+		if trait.SourceName == "" {
+			return nil, fmt.Errorf("envFrom trait requires a sourceName")
 		}
-		switch envTrait.Type {
+		switch trait.Type {
 		case config.StorageTypeConfig:
 			envFromSources = append(envFromSources, corev1.EnvFromSource{
 				ConfigMapRef: &corev1.ConfigMapEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: envTrait.SourceName},
+					LocalObjectReference: corev1.LocalObjectReference{Name: trait.SourceName},
 				},
 			})
 		case config.StorageTypeSecret:
 			envFromSources = append(envFromSources, corev1.EnvFromSource{
 				SecretRef: &corev1.SecretEnvSource{
-					LocalObjectReference: corev1.LocalObjectReference{Name: envTrait.SourceName},
+					LocalObjectReference: corev1.LocalObjectReference{Name: trait.SourceName},
 				},
 			})
 		default:
-			return nil, fmt.Errorf("unsupported env type: %s", envTrait.Type)
+			return nil, fmt.Errorf("unsupported envFrom type: %s", trait.Type)
 		}
 	}
 
-	// 3. Return the generated resources in a TraitResult.
-	// The key for the map is the component name, which acts as the default
-	// target container name for top-level trait processing.
 	return &TraitResult{
 		EnvFromSources: map[string][]corev1.EnvFromSource{
 			ctx.Component.Name: envFromSources,
+		},
+	}, nil
+}
+
+// EnvsProcessor handles the logic for the 'envs' trait.
+type EnvsProcessor struct{}
+
+// Name returns the name of the trait.
+func (p *EnvsProcessor) Name() string {
+	return "envs"
+}
+
+// Process handles the 'envs' trait.
+func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
+	envsTraits, ok := ctx.TraitData.([]model.EnvVarSpec)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for envs trait: %T", ctx.TraitData)
+	}
+
+	var envVars []corev1.EnvVar
+	for _, trait := range envsTraits {
+		envVar := corev1.EnvVar{Name: trait.Name}
+		if trait.Value != "" {
+			envVar.Value = trait.Value
+		} else if trait.ValueFrom != nil {
+			envVar.ValueFrom = &corev1.EnvVarSource{}
+			if trait.ValueFrom.SecretKeyRef != nil {
+				envVar.ValueFrom.SecretKeyRef = &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: trait.ValueFrom.SecretKeyRef.Name},
+					Key:                  trait.ValueFrom.SecretKeyRef.Key,
+				}
+			} else if trait.ValueFrom.FieldRef != nil {
+				envVar.ValueFrom.FieldRef = &corev1.ObjectFieldSelector{
+					APIVersion: "v1",
+					FieldPath:  trait.ValueFrom.FieldRef.FieldPath,
+				}
+			}
+		}
+		envVars = append(envVars, envVar)
+	}
+
+	return &TraitResult{
+		EnvVars: map[string][]corev1.EnvVar{
+			ctx.Component.Name: envVars,
 		},
 	}, nil
 }

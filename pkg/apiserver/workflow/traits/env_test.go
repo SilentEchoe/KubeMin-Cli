@@ -20,7 +20,7 @@ func TestEnvProcessor(t *testing.T) {
 	// In a real test setup, this might be done in a TestMain or setup function.
 	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
 	Register(&InitProcessor{})
-	Register(&EnvProcessor{})
+	Register(&EnvFromProcessor{})
 	Register(&StorageProcessor{}) // Storage is often used alongside other traits
 
 	// --- Test Data Setup ---
@@ -31,7 +31,7 @@ func TestEnvProcessor(t *testing.T) {
 		Image: "main-app:v1",
 		Traits: toJSONStruct(model.Traits{
 			// Top-level env trait for the main container
-			Env: []model.EnvFromSourceSpec{
+			EnvFrom: []model.EnvFromSourceSpec{
 				{Type: "config", SourceName: "main-app-config"},
 				{Type: "secret", SourceName: "main-app-secret"},
 			},
@@ -44,7 +44,7 @@ func TestEnvProcessor(t *testing.T) {
 					},
 					Traits: []model.Traits{
 						{
-							Env: []model.EnvFromSourceSpec{
+							EnvFrom: []model.EnvFromSourceSpec{
 								{Type: "config", SourceName: "init-container-config"},
 							},
 						},
