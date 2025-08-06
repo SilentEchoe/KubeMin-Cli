@@ -25,6 +25,7 @@ func (s Status) ToLower() Status {
 }
 
 const (
+	DefaultStorageMode = 420
 	DefaultTaskRevoker = "system"
 	DefaultNamespace   = "default"
 	DeployTimeout      = 60 * 10 // 10 minutes
@@ -104,5 +105,3 @@ var StorageTypeMapping = map[string]string{
 	StorageTypeConfig:      VolumeTypeConfigMap,
 	StorageTypeSecret:      VolumeTypeSecret,
 }
-
-const DefaultStorageMode = 420

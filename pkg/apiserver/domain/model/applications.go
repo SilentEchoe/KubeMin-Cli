@@ -102,16 +102,14 @@ type Ports struct {
 type Traits struct {
 	Init    []InitTrait         `json:"init,omitempty"`    //初始化容器
 	Storage []StorageTrait      `json:"storage,omitempty"` //存储特性
-	Config  []ConfigMapSpec     `json:"config,omitempty"`  //配置文件
 	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息
 	Sidecar []SidecarSpec       `json:"sidecar,omitempty"` //容器边车
-	Env     []EnvFromSourceSpec `json:"env,omitempty"`     //引用环境变量
+	Env     []EnvFromSourceSpec `json:"env,omitempty"`     //引用外部组件作为环境变量,比如ConfigMap
 }
 
 type EnvFromSourceSpec struct {
-	Type string `json:"type"` // "secret" or "configMap"
-	Name string `json:"name"` // secret 或 configMap 的名字
-	Key  string `json:"key"`  // 对应键名
+	Type       string `json:"type"`       // "secret" or "configMap"
+	SourceName string `json:"sourceName"` // secret 或 configMap 的名字
 }
 
 // InitTrait 初始化容器的特征
