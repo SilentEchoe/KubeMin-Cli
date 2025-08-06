@@ -105,7 +105,7 @@ type Traits struct {
 	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息
 	Sidecar []SidecarSpec       `json:"sidecar,omitempty"` //容器边车
 	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"` // 批量引用外部组件作为环境变量,比如ConfigMap
-	Envs    []EnvVarSpec        `json:"envs,omitempty"`    // 自定义环境变量
+	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`    // 定义单个环境变量 (最终版)
 }
 
 // EnvFromSourceSpec corresponds to a single corev1.EnvFromSource.
@@ -114,28 +114,31 @@ type EnvFromSourceSpec struct {
 	SourceName string `json:"sourceName"` // The name of the secret or configMap
 }
 
-// EnvVarSpec represents a single environment variable, mirroring corev1.EnvVar.
-type EnvVarSpec struct {
-	Name      string        `json:"name"`
-	Value     string        `json:"value,omitempty"`
-	ValueFrom *EnvVarSource `json:"valueFrom,omitempty"`
+// SimplifiedEnvSpec is the user-friendly, simplified way to define environment variables.
+type SimplifiedEnvSpec struct {
+	Name      string      `json:"name"`
+	ValueFrom ValueSource `json:"valueFrom"`
 }
 
-// EnvVarSource represents a source for the value of an EnvVar, mirroring corev1.EnvVarSource.
-type EnvVarSource struct {
-	SecretKeyRef *SecretKeySelector `json:"secretKeyRef,omitempty"`
-	FieldRef     *ObjectFieldSelector `json:"fieldRef,omitempty"`
+// ValueSource defines the source for an environment variable's value.
+// Only one of its fields may be set.
+type ValueSource struct {
+	Static *string                `json:"static,omitempty"`
+	Secret *SecretSelectorSpec    `json:"secret,omitempty"`
+	Config *ConfigMapSelectorSpec `json:"config,omitempty"`
+	Field  *string                `json:"field,omitempty"`
 }
 
-// SecretKeySelector selects a key of a Secret, mirroring corev1.SecretKeySelector.
-type SecretKeySelector struct {
+// SecretSelectorSpec selects a key from a Secret.
+type SecretSelectorSpec struct {
 	Name string `json:"name"`
 	Key  string `json:"key"`
 }
 
-// ObjectFieldSelector selects a field of the pod, mirroring corev1.ObjectFieldSelector.
-type ObjectFieldSelector struct {
-	FieldPath string `json:"fieldPath"`
+// ConfigMapSelectorSpec selects a key from a ConfigMap.
+type ConfigMapSelectorSpec struct {
+	Name string `json:"name"`
+	Key  string `json:"key"`
 }
 
 // InitTrait 初始化容器的特征
