@@ -2,9 +2,9 @@
 
 # KubeMin-Cli
 
-**A Unified Application Platform for Kubernetes, from Edge to AI.**
+**A Developer-Friendly Application Platform for Kubernetes.**
 
-KubeMin-Cli is a next-generation cloud-native application management platform designed to dramatically simplify the deployment and orchestration of services on Kubernetes. It provides a high-level, developer-centric abstraction layer that bridges the gap between simple application needs and the underlying complexity of Kubernetes, empowering developers to deploy everything from lightweight microservices on edge devices to complex AI/ML pipelines in the data center.
+KubeMin-Cli is a cloud-native application management platform designed to dramatically simplify the deployment and orchestration of services on Kubernetes. It provides a high-level, developer-centric abstraction layer that bridges the gap between simple application needs and the underlying complexity of Kubernetes.
 
 ---
 
@@ -18,39 +18,27 @@ KubeMin-Cli is built on a set of powerful, yet intuitive, concepts:
 
 *   **Component Model:** Inspired by the [Open Application Model (OAM)](https://oam.dev/), your application is composed of one or more **Components**. A component is a runnable unit of your application, like a web API, a worker process, or a database.
 *   **Traits:** Components are augmented with **Traits**, which attach operational features. Need persistent storage, a sidecar container, or specific environment variables? Simply apply a Trait. This keeps your core application definition clean and focused.
-*   **Workflow:** A **Workflow** defines the relationship between your components and the process of deploying them. It describes dependencies (e.g., "deploy the database before the API") and orchestration logic, from simple rollouts to complex, multi-stage pipelines.
+*   **Workflow:** A **Workflow** defines the relationship between your components and the process of deploying them. It describes dependencies (e.g., "deploy the database before the API") and orchestration logic.
 
-## Architecture: The Hybrid Workflow Engine
+## Architecture: A Lightweight Workflow Engine
 
-The heart of KubeMin-Cli is its unique **Hybrid Workflow Engine**. This architecture provides the ultimate flexibility by decoupling the user-facing workflow definition from the underlying execution engine, allowing the platform to choose the right tool for the right job.
+The heart of KubeMin-Cli is its native, lightweight workflow engine. This engine is implemented as a custom Kubernetes controller that directly interprets the `KubeMinWorkflow` definition and translates it into fundamental Kubernetes resources like Deployments, Jobs, and Services.
 
-### 1. Native Engine (Lightweight & Edge-Optimized)
-
-*   **How it works:** A custom, lightweight Kubernetes controller that directly interprets the `KubeMinWorkflow` and orchestrates basic Kubernetes resources (Deployments, Jobs, Services).
-*   **Best for:**
-    *   Standard microservice and web application deployments.
-    *   Resource-constrained environments like **edge computing** (K3s, MicroK8s).
-    *   Scenarios where minimal overhead and zero extra dependencies are critical.
-*   **Advantages:** Extremely low resource footprint, simple to monitor, and no third-party dependencies.
-
-### 2. Argo-based Engine (Powerful & AI-Ready)
-
-*   **How it works:** KubeMin-Cli acts as a control plane that translates the `KubeMinWorkflow` into a native **Argo Workflows** CRD. It then delegates the execution to a full-featured Argo Workflows engine.
-*   **Best for:**
-    *   Complex, multi-stage **AI/ML pipelines** (e.g., data prep -> training -> evaluation -> serving).
-    *   Workflows requiring advanced features like Directed Acyclic Graph (DAG) logic, artifact passing (e.g., sharing a trained model between steps), and event-driven triggers.
-    *   Integrating with the broader MLOps ecosystem (KubeFlow, KServe).
-*   **Advantages:** Leverages a battle-tested, industry-standard engine to handle maximum complexity without reinventing the wheel.
-
-This hybrid approach ensures that KubeMin-Cli is both simple enough for a single container deployment and powerful enough for a distributed model training job.
+This approach is optimized for simplicity, efficiency, and low resource consumption, making it ideal for the most common application deployment scenarios and resource-constrained environments like edge computing.
 
 ## Features
 
 *   **Unified Application Definition:** Define your entire application, its operational characteristics, and its deployment process in one simple, declarative model.
 *   **Extensible Trait System:** Easily add capabilities like storage, configuration, networking, and more to any component.
-*   **Hybrid Execution:** Automatically leverage the best workflow engine for your needs, from lightweight to powerful.
-*   **Developer-Friendly:** Abstract away Kubernetes YAML complexity with a clean, intuitive interface.
-*   **AI/ML Ready:** Built from the ground up to support the entire lifecycle of modern AI applications.
+*   **Lightweight & Efficient:** Runs with minimal overhead, making it suitable for any Kubernetes cluster from a local developer machine to the edge.
+
+
+## Roadmap
+
+Our vision extends to the most demanding cloud-native workloads. Future versions plan to introduce:
+
+*   **A Hybrid Workflow Engine:** To provide first-class support for complex AI/ML pipelines, we plan to introduce an optional, pluggable execution engine based on industry-standard tools like **Argo Workflows**. This will enable advanced features like complex DAGs, artifact passing, and event-driven execution.
+*   **Advanced AI/ML Workload Support:** Simplify the entire lifecycle of AI/ML applications, from training to serving, by integrating with frameworks like KubeFlow and KServe.
 
 ## Getting Started
 
