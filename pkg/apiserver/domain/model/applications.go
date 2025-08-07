@@ -10,8 +10,8 @@ func init() {
 
 type Applications struct {
 	ID          string            `json:"id" gorm:"primaryKey"`
-	Name        string            `json:"name"` //应用名称
-	Namespace   string            //命名空间，但是不对外暴露
+	Name        string            `json:"name"`        //应用名称
+	Namespace   string            `json:"-"`           //命名空间，但是不对外暴露
 	Version     string            `json:"version"`     //版本，如果为空则默认为1.0.0
 	Alias       string            `json:"alias"`       //别名
 	Project     string            `json:"project"`     //项目
@@ -25,11 +25,11 @@ func (a *Applications) PrimaryKey() string {
 	return a.Name
 }
 
-func (a Applications) TableName() string {
+func (a *Applications) TableName() string {
 	return tableNamePrefix + "applications"
 }
 
-func (a Applications) ShortTableName() string {
+func (a *Applications) ShortTableName() string {
 	return "app"
 }
 
@@ -122,6 +122,7 @@ type SimplifiedEnvSpec struct {
 
 // ValueSource defines the source for an environment variable's value.
 // Only one of its fields may be set.
+// Static 可能根本不需要实现，因为Env就直接实现这种方式
 type ValueSource struct {
 	Static *string                `json:"static,omitempty"`
 	Secret *SecretSelectorSpec    `json:"secret,omitempty"`
