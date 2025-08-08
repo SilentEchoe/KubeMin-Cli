@@ -7,7 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -39,22 +38,8 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	var pvcs []corev1.PersistentVolumeClaim
 	var additionalObjects []client.Object
 
-	// First, check if there are any PVC-type storage configurations.
-	hasPVC := false
-	for _, vol := range storageTraits {
-		if config.StorageTypeMapping[vol.Type] == config.VolumeTypePVC {
-			hasPVC = true
-			break
-		}
-	}
-
 	for _, vol := range storageTraits {
 		volType := config.StorageTypeMapping[vol.Type]
-
-		if hasPVC && volType == config.VolumeTypeEmptyDir {
-			klog.Infof("Skipping EmptyDir storage '%s' because PVC storage is configured", vol.Name)
-			continue
-		}
 
 		// The name of the volume in the PodSpec.
 		volName := vol.Name
@@ -78,12 +63,14 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				Name:         volName,
 				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
 			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{
 				Name:         volName,
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
+			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 
 		case config.VolumeTypeConfigMap:
 			sourceName := vol.SourceName

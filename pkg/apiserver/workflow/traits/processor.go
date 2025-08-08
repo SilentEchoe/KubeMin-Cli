@@ -156,6 +156,7 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 	// Use maps to track the names of added volumes and objects to prevent duplicates.
 	volumeNameSet := make(map[string]bool)
 	objectNameSet := make(map[string]bool)
+	volumeMountSet := make(map[string]map[string]bool) // containerName -> mountPath -> exists
 
 	for _, res := range results {
 		finalResult.InitContainers = append(finalResult.InitContainers, res.InitContainers...)
@@ -179,9 +180,17 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 			}
 		}
 
-		// Merge VolumeMounts by container name.
+		// Merge and de-duplicate VolumeMounts by container name and mount path.
 		for containerName, mounts := range res.VolumeMounts {
-			finalResult.VolumeMounts[containerName] = append(finalResult.VolumeMounts[containerName], mounts...)
+			if _, ok := volumeMountSet[containerName]; !ok {
+				volumeMountSet[containerName] = make(map[string]bool)
+			}
+			for _, mount := range mounts {
+				if !volumeMountSet[containerName][mount.MountPath] {
+					finalResult.VolumeMounts[containerName] = append(finalResult.VolumeMounts[containerName], mount)
+					volumeMountSet[containerName][mount.MountPath] = true
+				}
+			}
 		}
 
 		// Merge EnvVars by container name.
