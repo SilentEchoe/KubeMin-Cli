@@ -105,7 +105,7 @@ type Traits struct {
 	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息
 	Sidecar []SidecarSpec       `json:"sidecar,omitempty"` //容器边车
 	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"` // 批量引用外部组件作为环境变量,比如ConfigMap
-	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`    // 定义单个环境变量 (最终版)
+	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`    // 定义单个环境变量
 }
 
 // EnvFromSourceSpec corresponds to a single corev1.EnvFromSource.
@@ -175,5 +175,5 @@ type SidecarSpec struct {
 	Command []string          `json:"command,omitempty"`
 	Args    []string          `json:"args,omitempty"`
 	Env     map[string]string `json:"env,omitempty"`
-	Traits  Traits            `json:"mounts,omitempty"` //可以附加各种特征，但是边车容器内不能附加边车容器，这点需要进行校验
+	Traits  Traits            `json:"traits,omitempty"` //可以附加各种特征，但是边车容器内不能附加边车容器，这点需要进行校验
 }

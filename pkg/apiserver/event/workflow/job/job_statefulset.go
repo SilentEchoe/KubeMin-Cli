@@ -8,6 +8,7 @@ import (
 	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"fmt"
+	"sigs.k8s.io/yaml"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -200,7 +201,16 @@ func GenerateStoreService(component *model.ApplicationComponent) interface{} {
 	}
 
 	// TODO 使用插件系统
-	_, _ = traitsPlu.ApplyTraits(component, statefulSet)
+	_, err := traitsPlu.ApplyTraits(component, statefulSet)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	yamlBytes, err := yaml.Marshal(statefulSet)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(yamlBytes))
 
 	return statefulSet
 }
