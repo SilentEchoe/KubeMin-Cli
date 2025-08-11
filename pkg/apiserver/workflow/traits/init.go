@@ -1,9 +1,10 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
@@ -22,7 +23,7 @@ func (i *InitProcessor) Name() string {
 
 // Process adds init containers to the workload, recursively applying any nested traits.
 func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	initTraits, ok := ctx.TraitData.([]model.InitTrait)
+	initTraits, ok := ctx.TraitData.([]spec.InitTrait)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for init trait: %T", ctx.TraitData)
 	}

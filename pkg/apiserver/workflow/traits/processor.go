@@ -2,6 +2,7 @@ package traits
 
 import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -82,7 +83,7 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 		return nil, nil
 	}
 
-	var traits model.Traits
+	var traits spec.Traits
 	if err := json.Unmarshal(traitBytes, &traits); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal traits into concrete type for component %s: %w", component.Name, err)
 	}
@@ -104,7 +105,7 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 
 // applyTraitsRecursive is the internal, recursive core of the trait processing system.
 // It takes a list of trait names to exclude to prevent infinite recursion.
-func applyTraitsRecursive(component *model.ApplicationComponent, workload runtime.Object, traits *model.Traits, excludeTraits []string) (*TraitResult, error) {
+func applyTraitsRecursive(component *model.ApplicationComponent, workload runtime.Object, traits *spec.Traits, excludeTraits []string) (*TraitResult, error) {
 	val := reflect.ValueOf(traits).Elem()
 	var allResults []*TraitResult
 

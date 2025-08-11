@@ -1,10 +1,10 @@
-
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 )
@@ -23,7 +23,7 @@ func (s *SidecarProcessor) Name() string {
 
 // Process adds sidecar containers to the workload, recursively applying any nested traits.
 func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	sidecarTraits, ok := ctx.TraitData.([]model.SidecarSpec)
+	sidecarTraits, ok := ctx.TraitData.([]spec.SidecarSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for sidecar trait: %T", ctx.TraitData)
 	}

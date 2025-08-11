@@ -2,6 +2,7 @@ package v1
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"time"
 )
 
@@ -85,90 +86,9 @@ type CreateWorkflowRequest struct {
 	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
 }
 
-type Properties struct {
-	Image   string            `json:"image"`
-	Ports   []Ports           `json:"ports"`
-	Env     map[string]string `json:"env"`
-	Command []string          `json:"command"`
-	Labels  map[string]string `json:"labels"`
-}
+type Properties = spec.Properties
 
-type Ports struct {
-	Port   int64 `json:"port"`
-	Expose bool  `json:"expose"`
-}
-
-type Traits struct {
-	Init    []InitTrait          `json:"init,omitempty"`    //初始化容器
-	Storage []StorageTrait       `json:"storage,omitempty"` //存储特性
-	Secret  []SecretTrait        `json:"secret,omitempty"`  //密钥信息
-	Sidecar []SidecarTrait       `json:"sidecar,omitempty"` //容器边车
-	EnvFrom []EnvFromSourceTrait `json:"envFrom,omitempty"` // 批量引用外部组件作为环境变量,比如ConfigMap
-	Envs    []SimplifiedEnvTrait `json:"envs,omitempty"`    // 定义单个环境变量
-}
-
-type InitTrait struct {
-	Name       string     `json:"name"`
-	Traits     []Traits   `json:"traits"`
-	Properties Properties `json:"properties"`
-}
-
-type StorageTrait struct {
-	Name      string `json:"name,omitempty"`
-	Type      string `json:"type"`
-	MountPath string `json:"mountPath"`
-	Size      string `json:"size"`
-	SubPath   string `json:"subPath"`
-	ReadOnly  bool   `json:"readOnly"`
-	// 新增字段，专门用于ConfigMap 和 Secret
-	SourceName string `json:"sourceName,omitempty"`
-}
-
-type ConfigMapSpec struct {
-	Data map[string]string `json:"data"`
-}
-
-type SecretTrait struct {
-	Data map[string]string `json:"data"`
-}
-
-type SidecarTrait struct {
-	Name    string            `json:"name"`  //如果用户不填写，可以根据组件的名称来自定义
-	Image   string            `json:"image"` //必填镜像
-	Command []string          `json:"command,omitempty"`
-	Args    []string          `json:"args,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Traits  Traits            `json:"traits,omitempty"` //可以附加各种特征，但是边车容器内不能附加边车容器，这点需要进行校验
-}
-
-type EnvFromSourceTrait struct {
-	Type       string `json:"type"`       // "secret" or "configMap"
-	SourceName string `json:"sourceName"` // The name of the secret or configMap
-}
-
-type SimplifiedEnvTrait struct {
-	Name      string      `json:"name"`
-	ValueFrom ValueSource `json:"valueFrom"`
-}
-
-type ValueSource struct {
-	Static *string                `json:"static,omitempty"`
-	Secret *SecretSelectorSpec    `json:"secret,omitempty"`
-	Config *ConfigMapSelectorSpec `json:"config,omitempty"`
-	Field  *string                `json:"field,omitempty"`
-}
-
-// SecretSelectorSpec selects a key from a Secret.
-type SecretSelectorSpec struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
-}
-
-// ConfigMapSelectorSpec selects a key from a ConfigMap.
-type ConfigMapSelectorSpec struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
-}
+type Traits = spec.Traits
 
 type WorkflowProperties struct {
 	Policies []string `json:"policies"`

@@ -2,8 +2,9 @@ package traits
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -24,7 +25,7 @@ func (s *StorageProcessor) Name() string {
 
 // Process converts storage specs into volumes, volume mounts, and PVCs.
 func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	storageTraits, ok := ctx.TraitData.([]model.StorageTrait)
+	storageTraits, ok := ctx.TraitData.([]spec.StorageTrait)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for storage trait: %T", ctx.TraitData)
 	}

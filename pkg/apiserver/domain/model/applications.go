@@ -2,6 +2,7 @@ package model
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 )
 
 func init() {
@@ -99,81 +100,33 @@ type Ports struct {
 }
 
 // Traits 附加特性
-type Traits struct {
-	Init    []InitTrait         `json:"init,omitempty"`    //初始化容器
-	Storage []StorageTrait      `json:"storage,omitempty"` //存储特性
-	Secret  []SecretSpec        `json:"secret,omitempty"`  //密钥信息
-	Sidecar []SidecarSpec       `json:"sidecar,omitempty"` //容器边车
-	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"` // 批量引用外部组件作为环境变量,比如ConfigMap
-	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`    // 定义单个环境变量
-}
+type Traits = spec.Traits
 
 // EnvFromSourceSpec corresponds to a single corev1.EnvFromSource.
-type EnvFromSourceSpec struct {
-	Type       string `json:"type"`       // "secret" or "configMap"
-	SourceName string `json:"sourceName"` // The name of the secret or configMap
-}
+type EnvFromSourceSpec = spec.EnvFromSourceSpec
 
 // SimplifiedEnvSpec is the user-friendly, simplified way to define environment variables.
-type SimplifiedEnvSpec struct {
-	Name      string      `json:"name"`
-	ValueFrom ValueSource `json:"valueFrom"`
-}
+type SimplifiedEnvSpec = spec.SimplifiedEnvSpec
 
 // ValueSource defines the source for an environment variable's value.
 // Only one of its fields may be set.
 // Static 可能根本不需要实现，因为Env就直接实现这种方式
-type ValueSource struct {
-	Static *string                `json:"static,omitempty"`
-	Secret *SecretSelectorSpec    `json:"secret,omitempty"`
-	Config *ConfigMapSelectorSpec `json:"config,omitempty"`
-	Field  *string                `json:"field,omitempty"`
-}
+type ValueSource = spec.ValueSource
 
 // SecretSelectorSpec selects a key from a Secret.
-type SecretSelectorSpec struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
-}
+type SecretSelectorSpec = spec.SecretSelectorSpec
 
 // ConfigMapSelectorSpec selects a key from a ConfigMap.
-type ConfigMapSelectorSpec struct {
-	Name string `json:"name"`
-	Key  string `json:"key"`
-}
+type ConfigMapSelectorSpec = spec.ConfigMapSelectorSpec
 
 // InitTrait 初始化容器的特征
-type InitTrait struct {
-	Name       string     `json:"name"`
-	Traits     []Traits   `json:"traits"`
-	Properties Properties `json:"properties"`
-}
+type InitTrait = spec.InitTrait
 
 // StorageTrait 描述存储特征
-type StorageTrait struct {
-	Name      string `json:"name,omitempty"`
-	Type      string `json:"type"`
-	MountPath string `json:"mountPath"`
-	Size      string `json:"size"`
-	SubPath   string `json:"subPath"`
-	ReadOnly  bool   `json:"readOnly"`
-	// 新增字段，专门用于ConfigMap 和 Secret
-	SourceName string `json:"sourceName,omitempty"`
-}
+type StorageTrait = spec.StorageTrait
 
-type ConfigMapSpec struct {
-	Data map[string]string `json:"data"`
-}
+type ConfigMapSpec = spec.ConfigMapSpec
 
-type SecretSpec struct {
-	Data map[string]string `json:"data"`
-}
+type SecretSpec = spec.SecretSpec
 
-type SidecarSpec struct {
-	Name    string            `json:"name"`  //如果用户不填写，可以根据组件的名称来自定义
-	Image   string            `json:"image"` //必填镜像
-	Command []string          `json:"command,omitempty"`
-	Args    []string          `json:"args,omitempty"`
-	Env     map[string]string `json:"env,omitempty"`
-	Traits  Traits            `json:"traits,omitempty"` //可以附加各种特征，但是边车容器内不能附加边车容器，这点需要进行校验
-}
+type SidecarSpec = spec.SidecarSpec

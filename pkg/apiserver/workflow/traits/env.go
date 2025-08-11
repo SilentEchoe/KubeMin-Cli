@@ -2,7 +2,7 @@ package traits
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -24,7 +24,7 @@ func (p *EnvsProcessor) Name() string {
 
 // Process translates the []model.SimplifiedEnvSpec into []corev1.EnvVar.
 func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	simplifiedEnvs, ok := ctx.TraitData.([]model.SimplifiedEnvSpec)
+	simplifiedEnvs, ok := ctx.TraitData.([]spec.SimplifiedEnvSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for envs trait: expected []model.SimplifiedEnvSpec, got %T", ctx.TraitData)
 	}
@@ -55,7 +55,7 @@ func (p *EnvFromProcessor) Name() string {
 
 // Process converts []model.EnvFromSourceSpec into []corev1.EnvFromSource.
 func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	envFromTraits, ok := ctx.TraitData.([]model.EnvFromSourceSpec)
+	envFromTraits, ok := ctx.TraitData.([]spec.EnvFromSourceSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for envFrom trait: %T", ctx.TraitData)
 	}
@@ -91,7 +91,7 @@ func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 }
 
 // translateToNativeEnvVar is the core translation logic for the simplified structure.
-func translateToNativeEnvVar(spec model.SimplifiedEnvSpec) (*corev1.EnvVar, error) {
+func translateToNativeEnvVar(spec spec.SimplifiedEnvSpec) (*corev1.EnvVar, error) {
 	envVar := &corev1.EnvVar{Name: spec.Name}
 
 	src := spec.ValueFrom
