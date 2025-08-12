@@ -40,7 +40,6 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	for _, vol := range storageTraits {
 		volType := config.StorageTypeMapping[vol.Type]
 
-		// The name of the volume in the PodSpec.
 		volName := vol.Name
 		if volName == "" {
 			return nil, fmt.Errorf("storage trait of type '%s' requires a name", vol.Type)
@@ -49,32 +48,46 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 		switch volType {
 		case config.VolumeTypePVC:
-			qty, _ := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
-			pvc := corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
-				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
-				},
+			if vol.Create {
+				// Dynamically create a new PVC in volumeClaimTemplates
+				qty, err := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
+				if err != nil {
+					return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volName, err)
+				}
+				pvc := corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
+					Spec: corev1.PersistentVolumeClaimSpec{
+						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+						Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
+					},
+				}
+				pvcs = append(pvcs, pvc)
+				volumes = append(volumes, corev1.Volume{
+					Name:         volName,
+					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
+				})
+			} else {
+				// Reference an existing PVC
+				claimName := vol.ClaimName
+				if claimName == "" {
+					claimName = volName // Default to volume name if claimName is not provided
+				}
+				volumes = append(volumes, corev1.Volume{
+					Name:         volName,
+					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName}},
+				})
 			}
-			pvcs = append(pvcs, pvc)
-			volumes = append(volumes, corev1.Volume{
-				Name:         volName,
-				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
-			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{
 				Name:         volName,
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
-			volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 
 		case config.VolumeTypeConfigMap:
 			sourceName := vol.SourceName
 			if sourceName == "" {
-				sourceName = volName // Fallback to using the volume name as the ConfigMap name.
+				sourceName = volName
 			}
 			volumes = append(volumes, corev1.Volume{
 				Name: volName,
@@ -89,7 +102,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		case config.VolumeTypeSecret:
 			sourceName := vol.SourceName
 			if sourceName == "" {
-				sourceName = volName // Fallback to using the volume name as the Secret name.
+				sourceName = volName
 			}
 			volumes = append(volumes, corev1.Volume{
 				Name: volName,
@@ -101,7 +114,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				},
 			})
 		}
-		// The VolumeMount always refers to the pod-level volume name.
+		// The VolumeMount is always created, regardless of the volume type.
 		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 	}
 

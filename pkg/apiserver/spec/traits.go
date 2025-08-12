@@ -22,14 +22,17 @@ type InitTrait struct {
 
 // StorageTrait describes storage characteristics for mounting into containers.
 type StorageTrait struct {
-	Name      string `json:"name,omitempty"`
-	Type      string `json:"type"`
-	MountPath string `json:"mountPath"`
-	Size      string `json:"size"`
-	SubPath   string `json:"subPath"`
-	ReadOnly  bool   `json:"readOnly"`
-	// For ConfigMap/Secret volume sources
-	SourceName string `json:"sourceName,omitempty"`
+	Name       string `json:"name,omitempty"`
+	Type       string `json:"type"`
+	MountPath  string `json:"mountPath"`
+	SubPath    string `json:"subPath,omitempty"`
+	ReadOnly   bool   `json:"readOnly,omitempty"`
+	SourceName string `json:"sourceName,omitempty"` // For ConfigMap/Secret volume sources
+
+	// For "persistent" type
+	Create    bool   `json:"create,omitempty"`    // If true, create PVC. Defaults to false (referencing existing).
+	Size      string `json:"size,omitempty"`      // Used when Create is true.
+	ClaimName string `json:"claimName,omitempty"` // Name of existing PVC to use. If empty, defaults to Name.
 }
 
 type ConfigMapSpec struct {
