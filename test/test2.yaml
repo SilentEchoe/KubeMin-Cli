@@ -1,0 +1,315 @@
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  annotations: {}
+  labels:
+    layer: db
+    name: m2507151323j3fnrk-mysql
+  name: m2507151323j3fnrk-mysql
+  namespace: 2505131620u7b9hq
+  resourceVersion: '51691075'
+spec:
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: Delete
+    whenScaled: Retain
+  podManagementPolicy: OrderedReady
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      name: m2507151323j3fnrk-mysql
+  serviceName: m2507151323j3fnrk-mysql
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        name: m2507151323j3fnrk-mysql
+    spec:
+      containers:
+        - env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: m2507151323j3fnrk-mysql
+            - name: MYSQL_DATABASE
+              value: game
+            - name: TZ
+              value: Asia/Bangkok
+          image: 'docker.yu3.co/3os/mysql:5.7.44-mha-tz'
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - '-c'
+                - 'mysqladmin ping -h127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}"'
+            failureThreshold: 3
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: mysql
+          ports:
+            - containerPort: 3306
+              name: mysql
+              protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - '-c'
+                - 'mysqladmin ping -h127.0.0.1 -uroot -p"${MYSQL_ROOT_PASSWORD}"'
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 2
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: data
+              subPath: mysql
+            - mountPath: /etc/mysql/conf.d
+              name: conf
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init-scripts
+        - command:
+            - bash
+            - '-c'
+            - >-
+              set -ex
+
+              [[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1
+
+              prefix_name=${BASH_REMATCH[1]}
+
+
+              cd /var/lib/mysql
+
+
+              if [[ -f xtrabackup_slave_info ]]; then
+                  mv xtrabackup_slave_info change_gtid.sql.in
+                  rm -f xtrabackup_binlog_info
+              elif [[ -f xtrabackup_binlog_info ]]; then
+                  [[ $(cat xtrabackup_binlog_info) =~ ^(.*?)[[:space:]]+(.*?)[[:space:]]+(.*)$ ]] || exit 1
+                  rm -f xtrabackup_binlog_info
+                  echo "SET GLOBAL gtid_purged='${BASH_REMATCH[3]}';" > change_gtid.sql.in
+              fi
+
+
+              if [[ -f change_gtid.sql.in ]]; then 
+
+              echo "Waiting for mysqld to be ready (accepting connections)"
+
+              until mysql -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} -e
+              "SELECT 1"; do sleep 1; done
+
+
+              echo "Initializing replication with GTID"
+
+              mv change_gtid.sql.in change_gtid.sql.orig
+
+              set_gtid_purged=$(grep "gtid_purged=" change_gtid.sql.orig)
+
+              mysql -h 127.0.0.1 -uroot -p${MYSQL_ROOT_PASSWORD} <<EOF
+
+              STOP SLAVE;
+
+              RESET SLAVE ALL;
+
+              RESET MASTER;
+
+              ${set_gtid_purged};
+
+              CHANGE MASTER TO
+                MASTER_HOST='${prefix_name}-0.${prefix_name}',
+                MASTER_PORT=3306,
+                MASTER_USER='root',
+                MASTER_PASSWORD='${MYSQL_ROOT_PASSWORD}',
+                MASTER_AUTO_POSITION=1;
+              START SLAVE;
+
+              EOF
+
+              fi
+
+              exec ncat --listen --keep-open --send-only --max-conns=1 3307 -c \
+                "xtrabackup --backup --slave-info --galera-info --safe-slave-backup --stream=xbstream --host=127.0.0.1 --user=root --password=${MYSQL_ROOT_PASSWORD}"
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: m2507151323j3fnrk-mysql
+          image: 'docker.yu3.co/3os/xtrabackup:latest'
+          imagePullPolicy: Always
+          name: xtrabackup
+          ports:
+            - containerPort: 3307
+              name: xtrabackup
+              protocol: TCP
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: data
+              subPath: mysql
+            - mountPath: /etc/mysql/conf.d
+              name: conf
+      dnsPolicy: ClusterFirst
+      initContainers:
+        - command:
+            - bash
+            - '-c'
+            - "set -ex\n[[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1\nprefix_name=${BASH_REMATCH[1]}\nordinal=${BASH_REMATCH[2]}\necho [mysqld] > /mnt/conf.d/server-id.cnf\necho server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf\nif [[ ${ordinal} -eq 0 ]]; then\n  cp /mnt/config-map/master.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$MASTER_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nelse\n  cp /mnt/config-map/slave.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$SLAVE_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nfi\n\n[[ -d /var/lib/mysql/mysql ]] && exit 0\noutput_dir=/docker-entrypoint-initdb.d\necho \"use $MYSQL_DATABASE\" > $output_dir/00-init.sql\nfor i in $(seq 1 5); do\n\techo \"尝试下载初始化脚本...第 $i 次\"\n\tcurl -f --connect-timeout 10 --max-time 60 -o \"$output_dir/01-init.sql\" --retry 3 --retry-delay 5 \"$SQL_URL\" && break || sleep 5\ndone\n[ -f \"$output_dir/01-init.sql\" ] || { echo \"下载失败\"; exit 1; }"
+          env:
+            - name: MYSQL_DATABASE
+              value: game
+            - name: SQL_URL
+              value: >-
+                https://paas-3os.oss-cn-shanghai.aliyuncs.com/uploads/2025/06/27/2506271630choUDT.sql
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: m2507151323j3fnrk-mysql
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: metadata.namespace
+            - name: MASTER_ROLE_NAME
+              value: m2507151323j3fnrk-mysql-master
+            - name: SLAVE_ROLE_NAME
+              value: m2507151323j3fnrk-mysql-slave
+          image: 'docker.yu3.co/3os/kubectl:1.28.5'
+          imagePullPolicy: IfNotPresent
+          name: init-mysql
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /mnt/conf.d
+              name: conf
+            - mountPath: /mnt/config-map
+              name: config-map
+            - mountPath: /docker-entrypoint-initdb.d
+              name: init-scripts
+        - command:
+            - bash
+            - '-c'
+            - >-
+              set -ex
+
+              [[ -d /var/lib/mysql/mysql ]] && exit 0
+
+              [[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1
+
+              prefix_name=${BASH_REMATCH[1]}
+
+              ordinal=${BASH_REMATCH[2]}
+
+              [[ $ordinal == 0 ]] && exit 0
+
+              ncat --recv-only ${prefix_name}-$(($ordinal-1)).${prefix_name}
+              3307 | xbstream -x -C /var/lib/mysql
+
+              xtrabackup --prepare --target-dir=/var/lib/mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: MYSQL_ROOT_PASSWORD
+                  name: m2507151323j3fnrk-mysql
+          image: 'docker.yu3.co/3os/xtrabackup:latest'
+          imagePullPolicy: Always
+          name: clone-mysql
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: data
+              subPath: mysql
+            - mountPath: /etc/mysql/conf.d
+              name: conf
+      nodeSelector:
+        node.kubernetes.io/yu3prod: 'on'
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      serviceAccount: pod-labeler-sa
+      serviceAccountName: pod-labeler-sa
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - emptyDir: {}
+          name: conf
+        - configMap:
+            defaultMode: 420
+            name: m2507151323j3fnrk-mysql
+          name: config-map
+        - emptyDir: {}
+          name: init-scripts
+  updateStrategy:
+    rollingUpdate:
+      partition: 0
+    type: RollingUpdate
+  volumeClaimTemplates:
+    - apiVersion: v1
+      kind: PersistentVolumeClaim
+      metadata:
+        creationTimestamp: null
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 30Gi
+        storageClassName: pubilc-nas
+        volumeMode: Filesystem
+      status:
+        phase: Pending
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations: {}
+  labels:
+    layer: db
+    name: m2507151323j3fnrk-mysql
+  name: m2507151323j3fnrk-mysql
+  namespace: 2505131620u7b9hq
+  resourceVersion: '51690850'
+spec:
+  clusterIP: None
+  clusterIPs:
+    - None
+  internalTrafficPolicy: Cluster
+  ipFamilies:
+    - IPv4
+  ipFamilyPolicy: SingleStack
+  ports:
+    - name: mysql
+      port: 3306
+      protocol: TCP
+      targetPort: 3306
+  selector:
+    name: m2507151323j3fnrk-mysql
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+

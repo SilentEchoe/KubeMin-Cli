@@ -75,11 +75,16 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			envFromSources = append(envFromSources, envs...)
 		}
 
+		// The init container also gets the Env vars from its nested traits.
+		for _, envs := range aggregatedNestedResult.EnvVars {
+			envVars = append(envVars, envs...)
+		}
+
 		initContainer := corev1.Container{
 			Name:         initContainerName,
 			Image:        initTrait.Properties.Image,
 			Command:      initTrait.Properties.Command,
-			Env:          envVars,
+			Env:          envVars, // Now contains envs from both properties and traits
 			EnvFrom:      envFromSources,
 			VolumeMounts: volumeMounts,
 		}
