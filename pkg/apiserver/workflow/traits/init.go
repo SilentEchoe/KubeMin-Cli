@@ -9,9 +9,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func init() {
-	Register(&InitProcessor{})
-}
+
 
 // InitProcessor handles the logic for the 'init' trait
 type InitProcessor struct{}

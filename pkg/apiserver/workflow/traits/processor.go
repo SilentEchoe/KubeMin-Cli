@@ -66,6 +66,19 @@ func Register(p TraitProcessor) {
 	orderedProcessors = append(orderedProcessors, p)
 }
 
+// RegisterAllProcessors defines the execution order for all trait processors.
+func RegisterAllProcessors() {
+	// 1. Register traits that define core resources first.
+	Register(&StorageProcessor{})
+	Register(&EnvFromProcessor{})
+	Register(&EnvsProcessor{})
+
+	// 2. Register traits that add containers or recursively process other traits.
+	Register(&InitProcessor{})
+	Register(&SidecarProcessor{})
+	// Register other processors here as they are added.
+}
+
 // ApplyTraits is the main entry point for the trait processing system.
 // It applies all registered traits to the component and returns the resulting objects.
 func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object) ([]client.Object, error) {

@@ -9,9 +9,7 @@ import (
 	"k8s.io/klog/v2"
 )
 
-func init() {
-	Register(&SidecarProcessor{})
-}
+
 
 // SidecarProcessor handles the logic for the 'sidecar' trait.
 type SidecarProcessor struct{}
