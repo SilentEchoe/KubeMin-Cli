@@ -11,6 +11,7 @@ type Traits struct {
 	Sidecar []SidecarSpec       `json:"sidecar,omitempty"`
 	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"`
 	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`
+	Probes  []ProbeSpec         `json:"probes,omitempty"`
 }
 
 // InitTrait describes an init container with its own nested traits.
@@ -98,4 +99,36 @@ type Properties struct {
 type Ports struct {
 	Port   int32 `json:"port"`
 	Expose bool  `json:"expose"`
+}
+
+// ProbeSpec defines a health check probe for a container.
+type ProbeSpec struct {
+	Type                string         `json:"type"` // "liveness", "readiness", or "startup"
+	InitialDelaySeconds int32          `json:"initialDelaySeconds,omitempty"`
+	PeriodSeconds       int32          `json:"periodSeconds,omitempty"`
+	TimeoutSeconds      int32          `json:"timeoutSeconds,omitempty"`
+	FailureThreshold    int32          `json:"failureThreshold,omitempty"`
+	SuccessThreshold    int32          `json:"successThreshold,omitempty"`
+	Exec                *ExecProbe     `json:"exec,omitempty"`
+	HTTPGet             *HTTPGetProbe  `json:"httpGet,omitempty"`
+	TCPSocket           *TCPSocketProbe `json:"tcpSocket,omitempty"`
+}
+
+// ExecProbe describes a command-line probe.
+type ExecProbe struct {
+	Command []string `json:"command"`
+}
+
+// HTTPGetProbe describes an HTTP probe.
+type HTTPGetProbe struct {
+	Path   string `json:"path"`
+	Port   int    `json:"port"`
+	Host   string `json:"host,omitempty"`
+	Scheme string `json:"scheme,omitempty"`
+}
+
+// TCPSocketProbe describes a TCP socket probe.
+type TCPSocketProbe struct {
+	Port int    `json:"port"`
+	Host string `json:"host,omitempty"`
 }

@@ -32,6 +32,11 @@ type TraitResult struct {
 	EnvVars           map[string][]corev1.EnvVar        // Keyed by container name
 	EnvFromSources    map[string][]corev1.EnvFromSource // Keyed by container name
 	AdditionalObjects []client.Object
+
+	// Container-level modifications
+	LivenessProbe  *corev1.Probe
+	ReadinessProbe *corev1.Probe
+	StartupProbe   *corev1.Probe
 }
 
 // TraitProcessor is the interface for all trait processors.
@@ -72,10 +77,12 @@ func RegisterAllProcessors() {
 	Register(&StorageProcessor{})
 	Register(&EnvFromProcessor{})
 	Register(&EnvsProcessor{})
+	Register(&ProbeProcessor{}) // Added ProbeProcessor
 
 	// 2. Register traits that add containers or recursively process other traits.
 	Register(&InitProcessor{})
 	Register(&SidecarProcessor{})
+
 	// Register other processors here as they are added.
 }
 
@@ -108,7 +115,7 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 	}
 
 	// Apply the aggregated result to the final workload.
-	if err := applyTraitResultToWorkload(finalResult, workload); err != nil {
+	if err := applyTraitResultToWorkload(finalResult, workload, component.Name); err != nil {
 		return nil, err
 	}
 
@@ -216,13 +223,24 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		for containerName, envs := range res.EnvFromSources {
 			finalResult.EnvFromSources[containerName] = append(finalResult.EnvFromSources[containerName], envs...)
 		}
+
+		// Merge Probes (last one wins)
+		if res.LivenessProbe != nil {
+			finalResult.LivenessProbe = res.LivenessProbe
+		}
+		if res.ReadinessProbe != nil {
+			finalResult.ReadinessProbe = res.ReadinessProbe
+		}
+		if res.StartupProbe != nil {
+			finalResult.StartupProbe = res.StartupProbe
+		}
 	}
 	return finalResult
 }
 
 // applyTraitResultToWorkload applies the final, aggregated result to the workload.
 // It handles special cases like StatefulSets intelligently.
-func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) error {
+func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, mainContainerName string) error {
 	podTemplate, err := getPodTemplateFromWorkload(workload)
 	if err != nil {
 		return err
@@ -239,6 +257,21 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object) er
 	}
 	for i := range podTemplate.Spec.InitContainers {
 		containerMap[podTemplate.Spec.InitContainers[i].Name] = &podTemplate.Spec.InitContainers[i]
+	}
+
+	// Apply Probes to the main container
+	mainContainer, ok := containerMap[mainContainerName]
+	if !ok {
+		return fmt.Errorf("main container %s not found in workload", mainContainerName)
+	}
+	if result.LivenessProbe != nil {
+		mainContainer.LivenessProbe = result.LivenessProbe
+	}
+	if result.ReadinessProbe != nil {
+		mainContainer.ReadinessProbe = result.ReadinessProbe
+	}
+	if result.StartupProbe != nil {
+		mainContainer.StartupProbe = result.StartupProbe
 	}
 
 	// Apply VolumeMounts to the correct containers.
