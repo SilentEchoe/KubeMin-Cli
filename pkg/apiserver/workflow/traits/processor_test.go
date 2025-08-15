@@ -22,8 +22,7 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 					Command: []string{"bash", "-c", ""},
 					Env:     map[string]string{"MYSQL_DATABASE": "test"},
 				},
-				Traits: []model.Traits{
-					{
+				Traits: model.Traits{
 						Storage: []model.StorageTrait{
 							{
 								Name:      "conf",
@@ -41,7 +40,6 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 								MountPath: "/docker-entrypoint-initdb.d",
 							},
 						},
-					},
 				},
 			},
 			{
@@ -50,8 +48,7 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 					Image:   "xtrabackup:latest",
 					Command: []string{"bash", "-c"},
 				},
-				Traits: []model.Traits{
-					{
+				Traits: model.Traits{
 						Storage: []model.StorageTrait{
 							{ //使用稳定存储进行挂载
 								Name:      "data",
@@ -65,7 +62,6 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 								MountPath: "/etc/mysql/conf.d",
 							},
 						},
-					},
 				},
 			},
 		},

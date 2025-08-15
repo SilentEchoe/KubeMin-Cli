@@ -42,12 +42,10 @@ func TestEnvProcessor(t *testing.T) {
 					Properties: model.Properties{
 						Image: "init:v1",
 					},
-					Traits: []model.Traits{
-						{
+					Traits: model.Traits{
 							EnvFrom: []model.EnvFromSourceSpec{
 								{Type: "config", SourceName: "init-container-config"},
 							},
-						},
 					},
 				},
 			},

@@ -21,8 +21,7 @@ func TestBuildAllInitContainers_SingleTrait(t *testing.T) {
 				Command: []string{"bash", "-c", "set -ex\n[[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1\nprefix_name=${BASH_REMATCH[1]}\nordinal=${BASH_REMATCH[2]}\necho [mysqld] > /mnt/conf.d/server-id.cnf\necho server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf\nif [[ ${ordinal} -eq 0 ]]; then\n  cp /mnt/config-map/master.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$MASTER_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nelse\n  cp /mnt/config-map/slave.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$SLAVE_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nfi\n\n[[ -d /var/lib/mysql/mysql ]] && exit 0\noutput_dir=/docker-entrypoint-initdb.d\necho \"use $MYSQL_DATABASE\" > $output_dir/00-init.sql\nfor i in $(seq 1 5); do\n\techo \"尝试下载初始化脚本...第 $i 次\"\n\tcurl -f --connect-timeout 10 --max-time 60 -o \"$output_dir/01-init.sql\" --retry 3 --retry-delay 5 \"$SQL_URL\" && break || sleep 5\ndone\n[ -f \"$output_dir/01-init.sql\" ] || { echo \"下载失败\"; exit 1; }"},
 				Env:     map[string]string{"MYSQL_DATABASE": "game", "SQL_URL": "test.sql"},
 			},
-			Traits: []model.Traits{
-				{
+			Traits: model.Traits{
 					Storage: []model.StorageTrait{
 						{
 							Type:      "config",
@@ -40,7 +39,6 @@ func TestBuildAllInitContainers_SingleTrait(t *testing.T) {
 							MountPath: "/docker-entrypoint-initdb.d",
 						},
 					},
-				},
 			},
 		},
 	}
@@ -66,8 +64,7 @@ func TestBuildStatefulSets(t *testing.T) {
 				Command: []string{"bash", "-c", "set -ex\n[[ $HOSTNAME =~ ^(.*?)-([0-9]+)$ ]] || exit 1\nprefix_name=${BASH_REMATCH[1]}\nordinal=${BASH_REMATCH[2]}\necho [mysqld] > /mnt/conf.d/server-id.cnf\necho server-id=$((100 + $ordinal)) >> /mnt/conf.d/server-id.cnf\nif [[ ${ordinal} -eq 0 ]]; then\n  cp /mnt/config-map/master.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$MASTER_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nelse\n  cp /mnt/config-map/slave.cnf /mnt/conf.d\n  kubectl label pod $HOSTNAME mysql-pod-role=$SLAVE_ROLE_NAME --namespace $POD_NAMESPACE --overwrite\nfi\n\n[[ -d /var/lib/mysql/mysql ]] && exit 0\noutput_dir=/docker-entrypoint-initdb.d\necho \"use $MYSQL_DATABASE\" > $output_dir/00-init.sql\nfor i in $(seq 1 5); do\n\techo \"尝试下载初始化脚本...第 $i 次\"\n\tcurl -f --connect-timeout 10 --max-time 60 -o \"$output_dir/01-init.sql\" --retry 3 --retry-delay 5 \"$SQL_URL\" && break || sleep 5\ndone\n[ -f \"$output_dir/01-init.sql\" ] || { echo \"下载失败\"; exit 1; }"},
 				Env:     map[string]string{"MYSQL_DATABASE": "game", "SQL_URL": "test.sql"},
 			},
-			Traits: []model.Traits{
-				{
+			Traits: model.Traits{
 					Storage: []model.StorageTrait{
 						{
 							Type:      "config",
@@ -85,7 +82,6 @@ func TestBuildStatefulSets(t *testing.T) {
 							MountPath: "/docker-entrypoint-initdb.d",
 						},
 					},
-				},
 			},
 		},
 		{

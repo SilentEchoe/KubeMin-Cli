@@ -86,18 +86,9 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 	return index
 }
 
-type Properties struct {
-	Image   string            `json:"image"`
-	Ports   []Ports           `json:"ports"`
-	Env     map[string]string `json:"env"`
-	Command []string          `json:"command"`
-	Labels  map[string]string `json:"labels"`
-}
+type Properties = spec.Properties
 
-type Ports struct {
-	Port   int32 `json:"port"`
-	Expose bool  `json:"expose"`
-}
+type Ports = spec.Ports
 
 // Traits 附加特性
 type Traits = spec.Traits

@@ -23,7 +23,7 @@ func BuildAllInitContainers(specs []model.InitTrait) ([]corev1.Container, []core
 	volumeNameSet := map[string]bool{}
 
 	//获取特征中所有初始化信息,屏蔽掉初始化容器中附带的初始化容器，防止无限递归。
-	for k, sc := range specs {
+	for _, sc := range specs {
 		initContainerName := sc.Name
 		if initContainerName == "" {
 			initContainerName = fmt.Sprintf("%s-init", utils.RandStringBytes(6))
@@ -36,7 +36,7 @@ func BuildAllInitContainers(specs []model.InitTrait) ([]corev1.Container, []core
 		}
 
 		// 构建挂载
-		mounts, vols, pvcs := BuildStorageResources(initContainerName, &sc.Traits[k])
+		mounts, vols, pvcs := BuildStorageResources(initContainerName, &sc.Traits)
 
 		init := corev1.Container{
 			Name:         sc.Name,

@@ -49,17 +49,13 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		// Recursively apply nested traits, excluding the 'init' trait itself to prevent infinite loops.
-		var allNestedResults []*TraitResult
-		for _, nestedTrait := range initTrait.Traits {
-			nestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &nestedTrait, []string{"init"})
-			if err != nil {
-				return nil, fmt.Errorf("failed to process nested traits for init container %s: %w", initContainerName, err)
-			}
-			if nestedResult != nil {
-				allNestedResults = append(allNestedResults, nestedResult)
-			}
+		aggregatedNestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &initTrait.Traits, []string{"init"})
+		if err != nil {
+			return nil, fmt.Errorf("failed to process nested traits for init container %s: %w", initContainerName, err)
 		}
-		aggregatedNestedResult := aggregateTraitResults(allNestedResults)
+		if aggregatedNestedResult == nil {
+			aggregatedNestedResult = &TraitResult{}
+		}
 
 		// The init container itself gets the volume mounts from its nested traits.
 		var volumeMounts []corev1.VolumeMount

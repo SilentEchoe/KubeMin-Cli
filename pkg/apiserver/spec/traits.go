@@ -17,7 +17,7 @@ type Traits struct {
 // InitTrait describes an init container with its own nested traits.
 type InitTrait struct {
 	Name       string     `json:"name"`
-	Traits     []Traits   `json:"traits"`
+	Traits     Traits     `json:"traits,omitempty"`
 	Properties Properties `json:"properties"`
 }
 
