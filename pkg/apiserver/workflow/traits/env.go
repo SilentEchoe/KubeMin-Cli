@@ -8,8 +8,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// EnvsProcessor handles the user-friendly `envs` trait.
-// Its primary job is to translate the simplified spec into native Kubernetes EnvVars.
+// EnvsProcessor implements the user-friendly `envs` trait. It translates a
+// simplified, source-based schema into native Kubernetes EnvVar entries.
 type EnvsProcessor struct{}
 
 // Name returns the name of the trait.
@@ -21,14 +21,14 @@ func (p *EnvsProcessor) Name() string {
 func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	simplifiedEnvs, ok := ctx.TraitData.([]spec.SimplifiedEnvSpec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for envs trait: expected []spec.SimplifiedEnvSpec, got %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for envs trait: expected []envSpec.SimplifiedEnvSpec, got %T", ctx.TraitData)
 	}
 
 	var nativeEnvs []corev1.EnvVar
-	for _, spec := range simplifiedEnvs {
-		nativeEnv, err := translateToNativeEnvVar(spec)
+	for _, envSpec := range simplifiedEnvs {
+		nativeEnv, err := translateToNativeEnvVar(envSpec)
 		if err != nil {
-			return nil, fmt.Errorf("failed to translate env spec for '%s': %w", spec.Name, err)
+			return nil, fmt.Errorf("failed to translate env envSpec for '%s': %w", envSpec.Name, err)
 		}
 		nativeEnvs = append(nativeEnvs, *nativeEnv)
 	}
@@ -40,7 +40,8 @@ func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	}, nil
 }
 
-// EnvFromProcessor handles the `envFrom` trait for batch importing environment variables.
+// EnvFromProcessor implements the `envFrom` trait for bulk importing env vars
+// from ConfigMaps or Secrets.
 type EnvFromProcessor struct{}
 
 // Name returns the name of the trait.
@@ -48,7 +49,7 @@ func (p *EnvFromProcessor) Name() string {
 	return "envFrom"
 }
 
-// Process converts []model.EnvFromSourceSpec into []corev1.EnvFromSource.
+// Process converts []spec.EnvFromSourceSpec into []corev1.EnvFromSource.
 func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	envFromTraits, ok := ctx.TraitData.([]spec.EnvFromSourceSpec)
 	if !ok {
@@ -85,7 +86,8 @@ func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	}, nil
 }
 
-// translateToNativeEnvVar is the core translation logic for the simplified structure.
+// translateToNativeEnvVar converts one SimplifiedEnvSpec into a single EnvVar
+// supporting exactly one source (static/field/secret/config) per variable.
 func translateToNativeEnvVar(envSpec spec.SimplifiedEnvSpec) (*corev1.EnvVar, error) {
 	envVar := &corev1.EnvVar{Name: envSpec.Name}
 

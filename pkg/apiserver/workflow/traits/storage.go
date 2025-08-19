@@ -11,9 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-
-
-// StorageProcessor handles the logic for the 'storage' trait.
+// StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
+// PVC (existing or dynamic), EmptyDir, ConfigMap, and Secret volume sources.
 type StorageProcessor struct{}
 
 // Name returns the name of the trait.
@@ -21,7 +20,8 @@ func (s *StorageProcessor) Name() string {
 	return "storage"
 }
 
-// Process converts storage specs into volumes, volume mounts, and PVCs.
+// Process converts []spec.StorageTrait into Volumes/VolumeMounts and optionally
+// PersistentVolumeClaims (returned as additional objects for non-StatefulSets).
 func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	storageTraits, ok := ctx.TraitData.([]spec.StorageTrait)
 	if !ok {

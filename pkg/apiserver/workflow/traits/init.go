@@ -9,7 +9,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// InitProcessor handles the logic for the 'init' trait
+// InitProcessor creates init containers (pre-main) and applies nested traits
+// to them (e.g., storage/env/probes/resources), excluding further init recursion.
 type InitProcessor struct{}
 
 // Name returns the name of the trait

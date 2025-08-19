@@ -8,7 +8,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 )
 
-// ResourcesProcessor handles the logic for the 'resources' trait.
+// ResourcesProcessor applies compute resources (cpu/memory/gpu) to a container.
 type ResourcesProcessor struct{}
 
 // Name returns the name of the trait.
@@ -16,7 +16,8 @@ func (r *ResourcesProcessor) Name() string {
 	return "resources"
 }
 
-// Process converts resource specs into Kubernetes ResourceRequirements.
+// Process converts a single ResourceSpec into Kubernetes ResourceRequirements.
+// By design, all values are applied as Limits (no Requests) for simplicity.
 func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	resourceSpec, ok := ctx.TraitData.(*spec.ResourceSpec)
 	if !ok {

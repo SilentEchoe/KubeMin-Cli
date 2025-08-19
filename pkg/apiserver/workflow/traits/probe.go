@@ -14,7 +14,7 @@ const (
 	probeTypeStartup   = "startup"
 )
 
-// ProbeProcessor handles the logic for the 'probes' trait.
+// ProbeProcessor attaches container health checks (liveness/readiness/startup).
 type ProbeProcessor struct{}
 
 // Name returns the name of the trait.
@@ -22,7 +22,8 @@ func (p *ProbeProcessor) Name() string {
 	return "probes"
 }
 
-// Process converts probe specs into Kubernetes Probe objects.
+// Process converts []spec.ProbeSpec into Kubernetes Probe objects. Only one
+// probe per type is allowed; duplicates result in an error.
 func (p *ProbeProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	probeTraits, ok := ctx.TraitData.([]spec.ProbeSpec)
 	if !ok {
@@ -62,7 +63,7 @@ func (p *ProbeProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	return result, nil
 }
 
-// convertSpecToKubeProbe handles the conversion from a simplified spec to a k8s probe object.
+// convertSpecToKubeProbe converts a simplified spec into a Kubernetes Probe object.
 func (p *ProbeProcessor) convertSpecToKubeProbe(spec spec.ProbeSpec) (*corev1.Probe, error) {
 	probe := &corev1.Probe{
 		InitialDelaySeconds: spec.InitialDelaySeconds,

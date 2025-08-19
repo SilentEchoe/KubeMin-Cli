@@ -9,7 +9,8 @@ import (
 	"k8s.io/klog/v2"
 )
 
-// SidecarProcessor handles the logic for the 'sidecar' trait.
+// SidecarProcessor materializes additional containers attached to the Pod.
+// It also supports nested traits (except nested sidecars) applied to the sidecar itself.
 type SidecarProcessor struct{}
 
 // Name returns the name of the trait.
