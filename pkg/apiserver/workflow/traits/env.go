@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-
-
 // EnvsProcessor handles the user-friendly `envs` trait.
 // Its primary job is to translate the simplified spec into native Kubernetes EnvVars.
 type EnvsProcessor struct{}

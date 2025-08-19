@@ -5,13 +5,14 @@ package spec
 
 // Traits is the aggregate of all attachable traits for a component.
 type Traits struct {
-	Init    []InitTrait         `json:"init,omitempty"`
-	Storage []StorageTrait      `json:"storage,omitempty"`
-	Secret  []SecretSpec        `json:"secret,omitempty"`
-	Sidecar []SidecarSpec       `json:"sidecar,omitempty"`
-	EnvFrom []EnvFromSourceSpec `json:"envFrom,omitempty"`
-	Envs    []SimplifiedEnvSpec `json:"envs,omitempty"`
-	Probes  []ProbeSpec         `json:"probes,omitempty"`
+	Init      []InitTrait         `json:"init,omitempty"`
+	Storage   []StorageTrait      `json:"storage,omitempty"`
+	Secret    []SecretSpec        `json:"secret,omitempty"`
+	Sidecar   []SidecarSpec       `json:"sidecar,omitempty"`
+	EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
+	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
+	Probes    []ProbeSpec         `json:"probes,omitempty"`
+	Resources *ResourceSpec       `json:"resources,omitempty"`
 }
 
 // InitTrait describes an init container with its own nested traits.
@@ -103,14 +104,14 @@ type Ports struct {
 
 // ProbeSpec defines a health check probe for a container.
 type ProbeSpec struct {
-	Type                string         `json:"type"` // "liveness", "readiness", or "startup"
-	InitialDelaySeconds int32          `json:"initialDelaySeconds,omitempty"`
-	PeriodSeconds       int32          `json:"periodSeconds,omitempty"`
-	TimeoutSeconds      int32          `json:"timeoutSeconds,omitempty"`
-	FailureThreshold    int32          `json:"failureThreshold,omitempty"`
-	SuccessThreshold    int32          `json:"successThreshold,omitempty"`
-	Exec                *ExecProbe     `json:"exec,omitempty"`
-	HTTPGet             *HTTPGetProbe  `json:"httpGet,omitempty"`
+	Type                string          `json:"type"` // "liveness", "readiness", or "startup"
+	InitialDelaySeconds int32           `json:"initialDelaySeconds,omitempty"`
+	PeriodSeconds       int32           `json:"periodSeconds,omitempty"`
+	TimeoutSeconds      int32           `json:"timeoutSeconds,omitempty"`
+	FailureThreshold    int32           `json:"failureThreshold,omitempty"`
+	SuccessThreshold    int32           `json:"successThreshold,omitempty"`
+	Exec                *ExecProbe      `json:"exec,omitempty"`
+	HTTPGet             *HTTPGetProbe   `json:"httpGet,omitempty"`
 	TCPSocket           *TCPSocketProbe `json:"tcpSocket,omitempty"`
 }
 
@@ -131,4 +132,13 @@ type HTTPGetProbe struct {
 type TCPSocketProbe struct {
 	Port int    `json:"port"`
 	Host string `json:"host,omitempty"`
+}
+
+// ResourceSpec defines CPU/Memory/GPU resources for a container.
+// It is modeled as a trait so it can be attached to main, init, or sidecar containers (via nested traits).
+// Values should be valid Kubernetes quantities, e.g., "500m" for CPU and "256Mi" for memory.
+type ResourceSpec struct {
+	CPU    string `json:"cpu,omitempty"`
+	Memory string `json:"memory,omitempty"`
+	GPU    string `json:"gpu,omitempty"`
 }

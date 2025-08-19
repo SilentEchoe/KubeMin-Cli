@@ -43,9 +43,9 @@ func TestEnvProcessor(t *testing.T) {
 						Image: "init:v1",
 					},
 					Traits: model.Traits{
-							EnvFrom: []model.EnvFromSourceSpec{
-								{Type: "config", SourceName: "init-container-config"},
-							},
+						EnvFrom: []model.EnvFromSourceSpec{
+							{Type: "config", SourceName: "init-container-config"},
+						},
 					},
 				},
 			},
@@ -155,6 +155,11 @@ func findContainer(containers []corev1.Container, name string) *corev1.Container
 }
 
 func TestApplyTraits_FinalSimplifiedEnvs(t *testing.T) {
+	// Register processors needed for the test
+	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
+	Register(&EnvsProcessor{})
+	Register(&EnvFromProcessor{})
+
 	// 1. Define the input component with the final, structured envs spec.
 	staticValue := "some_static_value"
 	fieldPath := "metadata.namespace"

@@ -62,6 +62,10 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 	// 创建App组件
 	for _, component := range req.Component {
+		// Unify image source: prefer Properties.Image; fallback to top-level Image.
+		if component.Properties.Image == "" && component.Image != "" {
+			component.Properties.Image = component.Image
+		}
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
@@ -129,7 +133,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 
 	err = repository.CreateWorkflow(ctx, c.Store, workflow)
 	if err != nil {
-		klog.Errorln("Create workflow err: %v", err)
+		klog.Errorf("Create workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
 	base := assembler.ConvertAppModelToBase(&application, workflow.ID)

@@ -34,9 +34,10 @@ type TraitResult struct {
 	AdditionalObjects []client.Object
 
 	// Container-level modifications
-	LivenessProbe  *corev1.Probe
-	ReadinessProbe *corev1.Probe
-	StartupProbe   *corev1.Probe
+	LivenessProbe        *corev1.Probe
+	ReadinessProbe       *corev1.Probe
+	StartupProbe         *corev1.Probe
+	ResourceRequirements *corev1.ResourceRequirements
 }
 
 // TraitProcessor is the interface for all trait processors.
@@ -77,6 +78,7 @@ func RegisterAllProcessors() {
 	Register(&StorageProcessor{})
 	Register(&EnvFromProcessor{})
 	Register(&EnvsProcessor{})
+	Register(&ResourcesProcessor{})
 	Register(&ProbeProcessor{}) // Added ProbeProcessor
 
 	// 2. Register traits that add containers or recursively process other traits.
@@ -145,14 +147,37 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
 		field := val.FieldByName(fieldName)
 
-		if !field.IsValid() || (field.Kind() == reflect.Slice && field.IsNil()) {
+		if !field.IsValid() {
 			continue
 		}
 
-		if field.Kind() == reflect.Slice && field.Len() > 0 {
+		// Handle both slice and pointer types
+		var shouldProcess bool
+		var traitData interface{}
+
+		switch field.Kind() {
+		case reflect.Slice:
+			if field.IsNil() {
+				continue
+			}
+			if field.Len() > 0 {
+				shouldProcess = true
+				traitData = field.Interface()
+			}
+		case reflect.Ptr:
+			if field.IsNil() {
+				continue
+			}
+			shouldProcess = true
+			traitData = field.Interface()
+		default:
+			continue
+		}
+
+		if shouldProcess {
 			klog.V(3).Infof("Applying trait '%s' for component %s.", traitName, component.Name)
 
-			ctx := NewTraitContext(component, workload, field.Interface())
+			ctx := NewTraitContext(component, workload, traitData)
 			result, err := p.Process(ctx)
 			if err != nil {
 				return nil, fmt.Errorf("failed to process trait '%s': %w", traitName, err)
@@ -234,6 +259,11 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		if res.StartupProbe != nil {
 			finalResult.StartupProbe = res.StartupProbe
 		}
+
+		// Merge ResourceRequirements (last one wins)
+		if res.ResourceRequirements != nil {
+			finalResult.ResourceRequirements = res.ResourceRequirements
+		}
 	}
 	return finalResult
 }
@@ -263,6 +293,10 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 	mainContainer, ok := containerMap[mainContainerName]
 	if !ok {
 		return fmt.Errorf("main container %s not found in workload", mainContainerName)
+	}
+	// Apply Resources to the main container
+	if result.ResourceRequirements != nil {
+		mainContainer.Resources = *result.ResourceRequirements
 	}
 	if result.LivenessProbe != nil {
 		mainContainer.LivenessProbe = result.LivenessProbe

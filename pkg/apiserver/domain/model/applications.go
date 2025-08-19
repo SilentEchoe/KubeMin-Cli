@@ -121,3 +121,6 @@ type ConfigMapSpec = spec.ConfigMapSpec
 type SecretSpec = spec.SecretSpec
 
 type SidecarSpec = spec.SidecarSpec
+
+// ResourceSpec defines CPU/Memory/GPU resources for containers
+type ResourceSpec = spec.ResourceSpec

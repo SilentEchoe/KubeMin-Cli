@@ -9,8 +9,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-
-
 // InitProcessor handles the logic for the 'init' trait
 type InitProcessor struct{}
 
@@ -81,6 +79,11 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			Env:          envVars, // Now contains envs from both properties and traits
 			EnvFrom:      envFromSources,
 			VolumeMounts: volumeMounts,
+		}
+
+		// Apply nested resource requirements to the init container if present
+		if aggregatedNestedResult.ResourceRequirements != nil {
+			initContainer.Resources = *aggregatedNestedResult.ResourceRequirements
 		}
 
 		// Add the created container to the final result.

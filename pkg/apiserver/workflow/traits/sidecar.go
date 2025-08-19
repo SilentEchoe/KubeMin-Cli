@@ -9,8 +9,6 @@ import (
 	"k8s.io/klog/v2"
 )
 
-
-
 // SidecarProcessor handles the logic for the 'sidecar' trait.
 type SidecarProcessor struct{}
 
@@ -89,6 +87,11 @@ func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			LivenessProbe:  nestedResult.LivenessProbe,
 			ReadinessProbe: nestedResult.ReadinessProbe,
 			StartupProbe:   nestedResult.StartupProbe,
+		}
+
+		// Apply nested resource requirements to the sidecar if present
+		if nestedResult != nil && nestedResult.ResourceRequirements != nil {
+			sidecarContainer.Resources = *nestedResult.ResourceRequirements
 		}
 
 		// Add the created container to the final result.

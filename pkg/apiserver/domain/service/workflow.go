@@ -101,11 +101,20 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 	if req.Replicas <= 0 {
 		req.Replicas = 1
 	}
+	// Prefer Properties.Image if set; otherwise fallback to top-level Image.
+	// Also ensure Properties.Image is populated to keep a single source of truth downstream.
+	resolvedImage := req.Properties.Image
+	if resolvedImage == "" {
+		resolvedImage = req.Image
+	}
+	if req.Properties.Image == "" && resolvedImage != "" {
+		req.Properties.Image = resolvedImage
+	}
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppId:         appID,
 		Namespace:     "",
-		Image:         req.Image,
+		Image:         resolvedImage,
 		Replicas:      req.Replicas,
 		ComponentType: req.ComponentType,
 	}
@@ -160,7 +169,7 @@ func (w *workflowServiceImpl) WaitingTasks(ctx context.Context) ([]*model.Workfl
 func (w *workflowServiceImpl) UpdateTask(ctx context.Context, task *model.WorkflowQueue) bool {
 	err := repository.UpdateTask(ctx, w.Store, task)
 	if err != nil {
-		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
+		klog.Errorf("%s:%s update t status error", task.WorkflowName, task.TaskID)
 		return false
 	}
 	return true
