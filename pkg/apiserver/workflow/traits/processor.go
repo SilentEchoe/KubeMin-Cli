@@ -129,7 +129,7 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 // applyTraitsRecursive is the internal, recursive core of the trait processing system.
 // It takes a list of trait names to exclude to prevent infinite recursion.
 func applyTraitsRecursive(component *model.ApplicationComponent, workload runtime.Object, traits *spec.Traits, excludeTraits []string) (*TraitResult, error) {
-	val := reflect.ValueOf(traits).Elem()
+	traitsVal := reflect.ValueOf(traits).Elem()
 	var allResults []*TraitResult
 
 	// Create a map for quick lookup of excluded traits.
@@ -146,7 +146,7 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 		}
 
 		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
-		field := val.FieldByName(fieldName)
+		field := traitsVal.FieldByName(fieldName)
 
 		if !field.IsValid() {
 			continue
@@ -311,8 +311,8 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 
 	// Apply VolumeMounts to the correct containers.
 	for containerName, mounts := range result.VolumeMounts {
-		if c, ok := containerMap[containerName]; ok {
-			c.VolumeMounts = append(c.VolumeMounts, mounts...)
+		if container, ok := containerMap[containerName]; ok {
+			container.VolumeMounts = append(container.VolumeMounts, mounts...)
 		} else {
 			klog.Warningf("Could not find container '%s' to apply volume mounts.", containerName)
 		}
@@ -320,8 +320,8 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 
 	// Apply EnvVars to the correct containers.
 	for containerName, envs := range result.EnvVars {
-		if c, ok := containerMap[containerName]; ok {
-			c.Env = append(c.Env, envs...)
+		if container, ok := containerMap[containerName]; ok {
+			container.Env = append(container.Env, envs...)
 		} else {
 			klog.Warningf("Could not find container '%s' to apply env vars.", containerName)
 		}
@@ -329,8 +329,8 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 
 	// Apply EnvFromSources to the correct containers.
 	for containerName, envs := range result.EnvFromSources {
-		if c, ok := containerMap[containerName]; ok {
-			c.EnvFrom = append(c.EnvFrom, envs...)
+		if container, ok := containerMap[containerName]; ok {
+			container.EnvFrom = append(container.EnvFrom, envs...)
 		} else {
 			klog.Warningf("Could not find container '%s' to apply env from sources.", containerName)
 		}

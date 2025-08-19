@@ -17,11 +17,11 @@ func (p *EnvsProcessor) Name() string {
 	return "envs"
 }
 
-// Process translates the []model.SimplifiedEnvSpec into []corev1.EnvVar.
+// Process translates the []spec.SimplifiedEnvSpec into []corev1.EnvVar.
 func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	simplifiedEnvs, ok := ctx.TraitData.([]spec.SimplifiedEnvSpec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for envs trait: expected []model.SimplifiedEnvSpec, got %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for envs trait: expected []spec.SimplifiedEnvSpec, got %T", ctx.TraitData)
 	}
 
 	var nativeEnvs []corev1.EnvVar

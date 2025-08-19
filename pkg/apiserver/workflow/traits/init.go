@@ -47,28 +47,28 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		// Recursively apply nested traits, excluding the 'init' trait itself to prevent infinite loops.
-		aggregatedNestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &initTrait.Traits, []string{"init"})
+		nestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &initTrait.Traits, []string{"init"})
 		if err != nil {
 			return nil, fmt.Errorf("failed to process nested traits for init container %s: %w", initContainerName, err)
 		}
-		if aggregatedNestedResult == nil {
-			aggregatedNestedResult = &TraitResult{}
+		if nestedResult == nil {
+			nestedResult = &TraitResult{}
 		}
 
 		// The init container itself gets the volume mounts from its nested traits.
 		var volumeMounts []corev1.VolumeMount
-		for _, mounts := range aggregatedNestedResult.VolumeMounts {
+		for _, mounts := range nestedResult.VolumeMounts {
 			volumeMounts = append(volumeMounts, mounts...)
 		}
 
 		// The init container also gets the EnvFrom sources from its nested traits.
 		var envFromSources []corev1.EnvFromSource
-		for _, envs := range aggregatedNestedResult.EnvFromSources {
-			envFromSources = append(envFromSources, envs...)
+		for _, envFromBatch := range nestedResult.EnvFromSources {
+			envFromSources = append(envFromSources, envFromBatch...)
 		}
 
 		// The init container also gets the Env vars from its nested traits.
-		for _, envVarsBatch := range aggregatedNestedResult.EnvVars {
+		for _, envVarsBatch := range nestedResult.EnvVars {
 			envVars = append(envVars, envVarsBatch...)
 		}
 
@@ -82,16 +82,16 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		// Apply nested resource requirements to the init container if present
-		if aggregatedNestedResult.ResourceRequirements != nil {
-			initContainer.Resources = *aggregatedNestedResult.ResourceRequirements
+		if nestedResult.ResourceRequirements != nil {
+			initContainer.Resources = *nestedResult.ResourceRequirements
 		}
 
 		// Add the created container to the final result.
 		finalResult.InitContainers = append(finalResult.InitContainers, initContainer)
 
 		// Merge volumes and additional objects from the nested traits into the final result.
-		finalResult.Volumes = append(finalResult.Volumes, aggregatedNestedResult.Volumes...)
-		finalResult.AdditionalObjects = append(finalResult.AdditionalObjects, aggregatedNestedResult.AdditionalObjects...)
+		finalResult.Volumes = append(finalResult.Volumes, nestedResult.Volumes...)
+		finalResult.AdditionalObjects = append(finalResult.AdditionalObjects, nestedResult.AdditionalObjects...)
 
 		klog.V(3).Infof("Constructed init container %s for component %s", initContainerName, ctx.Component.Name)
 	}

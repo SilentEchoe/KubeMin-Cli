@@ -68,25 +68,35 @@ func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		// The sidecar container also gets the EnvFrom and EnvVars from its nested traits.
 		var envFromSources []corev1.EnvFromSource
 		if nestedResult != nil {
-			if envs, ok := nestedResult.EnvFromSources[ctx.Component.Name]; ok {
-				envFromSources = envs
+			if envFrom, ok := nestedResult.EnvFromSources[ctx.Component.Name]; ok {
+				envFromSources = envFrom
 			}
-			if envs, ok := nestedResult.EnvVars[ctx.Component.Name]; ok {
-				envVars = append(envVars, envs...)
+			if nestedEnvVars, ok := nestedResult.EnvVars[ctx.Component.Name]; ok {
+				envVars = append(envVars, nestedEnvVars...)
 			}
 		}
 
 		sidecarContainer := corev1.Container{
-			Name:           sidecarName,
-			Image:          sidecarSpec.Image,
-			Command:        sidecarSpec.Command,
-			Args:           sidecarSpec.Args,
-			Env:            envVars,
-			EnvFrom:        envFromSources,
-			VolumeMounts:   volumeMounts,
-			LivenessProbe:  nestedResult.LivenessProbe,
-			ReadinessProbe: nestedResult.ReadinessProbe,
-			StartupProbe:   nestedResult.StartupProbe,
+			Name:         sidecarName,
+			Image:        sidecarSpec.Image,
+			Command:      sidecarSpec.Command,
+			Args:         sidecarSpec.Args,
+			Env:          envVars,
+			EnvFrom:      envFromSources,
+			VolumeMounts: volumeMounts,
+		}
+
+		// Apply probes if present
+		if nestedResult != nil {
+			if nestedResult.LivenessProbe != nil {
+				sidecarContainer.LivenessProbe = nestedResult.LivenessProbe
+			}
+			if nestedResult.ReadinessProbe != nil {
+				sidecarContainer.ReadinessProbe = nestedResult.ReadinessProbe
+			}
+			if nestedResult.StartupProbe != nil {
+				sidecarContainer.StartupProbe = nestedResult.StartupProbe
+			}
 		}
 
 		// Apply nested resource requirements to the sidecar if present
