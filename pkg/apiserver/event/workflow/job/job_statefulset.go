@@ -1,14 +1,10 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils/kube"
-	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
-	"sigs.k8s.io/yaml"
+	"github.com/fatih/color"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -17,6 +13,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 )
 
 type DeployStatefulSetJobCtl struct {
@@ -194,24 +195,17 @@ func GenerateStoreService(component *model.ApplicationComponent) interface{} {
 							ImagePullPolicy: corev1.PullAlways,
 						},
 					},
-					TerminationGracePeriodSeconds: kube.ParseInt64(30),
+					TerminationGracePeriodSeconds: utils.ParseInt64(30),
 				},
 			},
 		},
 	}
 
-	// TODO 使用插件系统
 	_, err := traitsPlu.ApplyTraits(component, statefulSet)
 	if err != nil {
-		fmt.Println(err)
+		klog.Errorf("StatefulSet Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
+		return nil
 	}
-
-	yamlBytes, err := yaml.Marshal(statefulSet)
-	if err != nil {
-		fmt.Println(err)
-	}
-	fmt.Println(string(yamlBytes))
-
 	return statefulSet
 }
 

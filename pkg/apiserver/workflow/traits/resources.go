@@ -30,16 +30,12 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 	var resourceReq corev1.ResourceRequirements
 
-	// Set all resources as limits by default
-	if resourceReq.Limits == nil {
-		resourceReq.Limits = corev1.ResourceList{}
-	}
-
 	if resourceSpec.CPU != "" {
 		qty, err := resource.ParseQuantity(resourceSpec.CPU)
 		if err != nil {
 			return nil, fmt.Errorf("invalid cpu resource %q: %w", resourceSpec.CPU, err)
 		}
+		resourceReq.Requests[corev1.ResourceCPU] = qty
 		resourceReq.Limits[corev1.ResourceCPU] = qty
 	}
 
@@ -48,6 +44,7 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid memory resource %q: %w", resourceSpec.Memory, err)
 		}
+		resourceReq.Requests[corev1.ResourceCPU] = qty
 		resourceReq.Limits[corev1.ResourceMemory] = qty
 	}
 
@@ -57,6 +54,7 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			return nil, fmt.Errorf("invalid gpu resource %q: %w", resourceSpec.GPU, err)
 		}
 		// TODO It doesn't necessarily have to be "nvidia.com/gpu" as the prefix.
+		resourceReq.Requests[corev1.ResourceName("nvidia.com/gpu")] = qty
 		resourceReq.Limits[corev1.ResourceName("nvidia.com/gpu")] = qty
 	}
 
