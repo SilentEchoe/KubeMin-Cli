@@ -204,12 +204,12 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 	objectNameSet := make(map[string]bool)
 	volumeMountSet := make(map[string]map[string]bool) // containerName -> mountPath -> exists
 
-	for _, res := range results {
-		finalResult.InitContainers = append(finalResult.InitContainers, res.InitContainers...)
-		finalResult.Containers = append(finalResult.Containers, res.Containers...)
+	for _, traitResult := range results {
+		finalResult.InitContainers = append(finalResult.InitContainers, traitResult.InitContainers...)
+		finalResult.Containers = append(finalResult.Containers, traitResult.Containers...)
 
 		// De-duplicate Volumes
-		for _, vol := range res.Volumes {
+		for _, vol := range traitResult.Volumes {
 			if !volumeNameSet[vol.Name] {
 				finalResult.Volumes = append(finalResult.Volumes, vol)
 				volumeNameSet[vol.Name] = true
@@ -217,7 +217,7 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		}
 
 		// De-duplicate AdditionalObjects
-		for _, obj := range res.AdditionalObjects {
+		for _, obj := range traitResult.AdditionalObjects {
 			// Use "Kind/Namespace/Name" as the unique identifier.
 			key := fmt.Sprintf("%s/%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
 			if !objectNameSet[key] {
@@ -227,7 +227,7 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		}
 
 		// Merge and de-duplicate VolumeMounts by container name and mount path.
-		for containerName, mounts := range res.VolumeMounts {
+		for containerName, mounts := range traitResult.VolumeMounts {
 			if _, ok := volumeMountSet[containerName]; !ok {
 				volumeMountSet[containerName] = make(map[string]bool)
 			}
@@ -240,29 +240,29 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		}
 
 		// Merge EnvVars by container name.
-		for containerName, envs := range res.EnvVars {
+		for containerName, envs := range traitResult.EnvVars {
 			finalResult.EnvVars[containerName] = append(finalResult.EnvVars[containerName], envs...)
 		}
 
 		// Merge EnvFromSources by container name.
-		for containerName, envs := range res.EnvFromSources {
+		for containerName, envs := range traitResult.EnvFromSources {
 			finalResult.EnvFromSources[containerName] = append(finalResult.EnvFromSources[containerName], envs...)
 		}
 
 		// Merge Probes (last one wins)
-		if res.LivenessProbe != nil {
-			finalResult.LivenessProbe = res.LivenessProbe
+		if traitResult.LivenessProbe != nil {
+			finalResult.LivenessProbe = traitResult.LivenessProbe
 		}
-		if res.ReadinessProbe != nil {
-			finalResult.ReadinessProbe = res.ReadinessProbe
+		if traitResult.ReadinessProbe != nil {
+			finalResult.ReadinessProbe = traitResult.ReadinessProbe
 		}
-		if res.StartupProbe != nil {
-			finalResult.StartupProbe = res.StartupProbe
+		if traitResult.StartupProbe != nil {
+			finalResult.StartupProbe = traitResult.StartupProbe
 		}
 
 		// Merge ResourceRequirements (last one wins)
-		if res.ResourceRequirements != nil {
-			finalResult.ResourceRequirements = res.ResourceRequirements
+		if traitResult.ResourceRequirements != nil {
+			finalResult.ResourceRequirements = traitResult.ResourceRequirements
 		}
 	}
 	return finalResult
