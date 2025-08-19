@@ -68,8 +68,8 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		// The init container also gets the Env vars from its nested traits.
-		for _, envs := range aggregatedNestedResult.EnvVars {
-			envVars = append(envVars, envs...)
+		for _, envVarsBatch := range aggregatedNestedResult.EnvVars {
+			envVars = append(envVars, envVarsBatch...)
 		}
 
 		initContainer := corev1.Container{
