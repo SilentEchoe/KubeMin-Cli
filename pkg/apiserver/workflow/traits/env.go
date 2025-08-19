@@ -86,10 +86,10 @@ func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 }
 
 // translateToNativeEnvVar is the core translation logic for the simplified structure.
-func translateToNativeEnvVar(spec spec.SimplifiedEnvSpec) (*corev1.EnvVar, error) {
-	envVar := &corev1.EnvVar{Name: spec.Name}
+func translateToNativeEnvVar(envSpec spec.SimplifiedEnvSpec) (*corev1.EnvVar, error) {
+	envVar := &corev1.EnvVar{Name: envSpec.Name}
 
-	src := spec.ValueFrom
+	src := envSpec.ValueFrom
 
 	switch {
 	case src.Static != nil:
@@ -116,7 +116,7 @@ func translateToNativeEnvVar(spec spec.SimplifiedEnvSpec) (*corev1.EnvVar, error
 			},
 		}
 	default:
-		return nil, fmt.Errorf("invalid valueFrom spec for env var '%s': exactly one source must be specified", spec.Name)
+		return nil, fmt.Errorf("invalid valueFrom envSpec for env var '%s': exactly one source must be specified", envSpec.Name)
 	}
 
 	return envVar, nil
