@@ -1,8 +1,6 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,6 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/spec"
 )
 
 // TraitContext provides a read-only context for trait processing.
