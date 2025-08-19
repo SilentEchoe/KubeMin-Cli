@@ -18,7 +18,7 @@ import (
 func TestEnvProcessor(t *testing.T) {
 	// Register processors needed for the tests.
 	// In a real test setup, this might be done in a TestMain or setup function.
-	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
+	registeredTraitProcessors = []TraitProcessor{} // Clear existing processors for a clean test
 	Register(&InitProcessor{})
 	Register(&EnvFromProcessor{})
 	Register(&StorageProcessor{}) // Storage is often used alongside other traits
@@ -156,7 +156,7 @@ func findContainer(containers []corev1.Container, name string) *corev1.Container
 
 func TestApplyTraits_FinalSimplifiedEnvs(t *testing.T) {
 	// Register processors needed for the test
-	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
+	registeredTraitProcessors = []TraitProcessor{} // Clear existing processors for a clean test
 	Register(&EnvsProcessor{})
 	Register(&EnvFromProcessor{})
 

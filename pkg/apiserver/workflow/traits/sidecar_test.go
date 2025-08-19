@@ -1,4 +1,3 @@
-
 package traits
 
 import (
@@ -56,7 +55,7 @@ func TestApplyTraits_SidecarTrait_WithNestedTraits(t *testing.T) {
 
 	// 3. Apply the traits.
 	// Reset processors for a clean test to avoid double registration panics.
-	orderedProcessors = []TraitProcessor{}
+	registeredTraitProcessors = []TraitProcessor{}
 	Register(&SidecarProcessor{})
 	Register(&StorageProcessor{}) // Register dependency trait
 

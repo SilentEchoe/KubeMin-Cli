@@ -14,7 +14,7 @@ import (
 
 func TestResourcesProcessor(t *testing.T) {
 	// Register processors needed for the test
-	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
+	registeredTraitProcessors = []TraitProcessor{} // Clear existing processors for a clean test
 	Register(&ResourcesProcessor{})
 
 	// Test component with resources trait
@@ -68,7 +68,7 @@ func TestResourcesProcessor(t *testing.T) {
 
 func TestResourcesProcessor_WithSidecar(t *testing.T) {
 	// Register processors needed for the test
-	orderedProcessors = []TraitProcessor{} // Clear existing processors for a clean test
+	registeredTraitProcessors = []TraitProcessor{} // Clear existing processors for a clean test
 	Register(&ResourcesProcessor{})
 	Register(&SidecarProcessor{})
 

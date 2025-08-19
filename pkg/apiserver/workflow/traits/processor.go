@@ -57,20 +57,20 @@ func NewTraitContext(component *model.ApplicationComponent, workload runtime.Obj
 }
 
 var (
-	// orderedProcessors stores the registered trait processors in the desired execution order.
-	orderedProcessors []TraitProcessor
+	// registeredTraitProcessors stores the registered trait processors in the desired execution order.
+	registeredTraitProcessors []TraitProcessor
 )
 
 // Register registers a new trait processor.
 func Register(p TraitProcessor) {
 	name := p.Name()
-	for _, existing := range orderedProcessors {
+	for _, existing := range registeredTraitProcessors {
 		if existing.Name() == name {
 			klog.Fatalf("Trait processor already registered: %s", name)
 		}
 	}
 	klog.V(4).Infof("Registering trait processor: %s", name)
-	orderedProcessors = append(orderedProcessors, p)
+	registeredTraitProcessors = append(registeredTraitProcessors, p)
 }
 
 // RegisterAllProcessors defines the execution order for all trait processors.
@@ -139,7 +139,7 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 	}
 
 	// Process each trait and collect results.
-	for _, p := range orderedProcessors {
+	for _, p := range registeredTraitProcessors {
 		traitName := p.Name()
 		if excludeMap[traitName] {
 			continue // Skip excluded traits.
