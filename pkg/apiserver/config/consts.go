@@ -40,7 +40,8 @@ const (
 
 	JobDeploy        JobType = "deploy"
 	JobDeployService JobType = "deploy_service"
-	JobStoreDeploy   JobType = "store_deploy"
+	JobDeployStore   JobType = "store_deploy"
+	JobDeployPVC     JobType = "store_deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"

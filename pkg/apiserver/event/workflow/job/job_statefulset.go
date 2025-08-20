@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/fatih/color"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -26,6 +27,11 @@ type DeployStatefulSetJobCtl struct {
 	client    *kubernetes.Clientset
 	store     datastore.DataStore
 	ack       func()
+}
+
+type StoreServiceResult struct {
+	StatefulSet       *appsv1.StatefulSet
+	AdditionalObjects []client.Object
 }
 
 func NewDeployStatefulSetJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployStatefulSetJobCtl {
@@ -145,7 +151,7 @@ func (c *DeployStatefulSetJobCtl) timeout() int64 {
 	return c.job.Timeout
 }
 
-func GenerateStoreService(component *model.ApplicationComponent) interface{} {
+func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceResult {
 	// 如果命名空间为空，则使用默认的命名空间
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
@@ -204,12 +210,15 @@ func GenerateStoreService(component *model.ApplicationComponent) interface{} {
 		},
 	}
 
-	_, err := traitsPlu.ApplyTraits(component, statefulSet)
+	additionalObjects, err := traitsPlu.ApplyTraits(component, statefulSet)
 	if err != nil {
 		klog.Errorf("StatefulSet Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
 		return nil
 	}
-	return statefulSet
+	return &StoreServiceResult{
+		StatefulSet:       statefulSet,
+		AdditionalObjects: additionalObjects,
+	}
 }
 
 func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {

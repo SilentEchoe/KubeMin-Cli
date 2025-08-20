@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sync"
 	"time"
 
@@ -204,8 +206,14 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			// webservice 默认为无状态服务，使用Deployment 构建
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
 		case config.StoreJob:
-			jobTask.JobType = string(config.JobStoreDeploy)
-			jobTask.JobInfo = job.GenerateStoreService(componentSteps)
+			jobTask.JobType = string(config.JobDeployStore)
+			storeJobs := job.GenerateStoreService(componentSteps)
+			if storeJobs != nil {
+				jobTask.JobInfo = storeJobs.StatefulSet
+				if err := CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, &jobs); err != nil {
+					klog.Errorf("failed to create PVC jobs for component %s: %v", componentSteps.Name, err)
+				}
+			}
 		}
 
 		// 创建Service
@@ -276,4 +284,31 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 		return model.Properties{}
 	}
 	return propertied
+}
+
+func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs *[]*model.JobTask) error {
+	if len(additionalObjects) == 0 {
+		return nil
+	}
+
+	for _, obj := range additionalObjects {
+		if pvc, ok := obj.(*corev1.PersistentVolumeClaim); ok {
+			// 创建PVC Job
+			pvcJob := NewJobTask(
+				fmt.Sprintf("%s-pvc-%s", component.Name, pvc.Name),
+				component.Namespace,
+				task.WorkflowId,
+				task.ProjectId,
+				task.AppID,
+			)
+			pvcJob.JobType = string(config.JobDeployPVC)
+			pvcJob.JobInfo = pvc
+			pvcJob.Timeout = 60 * 5 // 5分钟超时
+
+			*jobs = append(*jobs, pvcJob)
+			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
+		}
+	}
+
+	return nil
 }
