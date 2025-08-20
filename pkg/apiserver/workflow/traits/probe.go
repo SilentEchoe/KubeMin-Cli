@@ -22,10 +22,10 @@ func (p *ProbeProcessor) Name() string {
 	return "probes"
 }
 
-// Process converts []spec.ProbeSpec into Kubernetes Probe objects. Only one
+// Process converts []spec.ProbeTraitsSpec into Kubernetes Probe objects. Only one
 // probe per type is allowed; duplicates result in an error.
 func (p *ProbeProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	probeTraits, ok := ctx.TraitData.([]spec.ProbeSpec)
+	probeTraits, ok := ctx.TraitData.([]spec.ProbeTraitsSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for probes trait: %T", ctx.TraitData)
 	}
@@ -64,7 +64,7 @@ func (p *ProbeProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 }
 
 // convertSpecToKubeProbe converts a simplified spec into a Kubernetes Probe object.
-func (p *ProbeProcessor) convertSpecToKubeProbe(spec spec.ProbeSpec) (*corev1.Probe, error) {
+func (p *ProbeProcessor) convertSpecToKubeProbe(spec spec.ProbeTraitsSpec) (*corev1.Probe, error) {
 	probe := &corev1.Probe{
 		InitialDelaySeconds: spec.InitialDelaySeconds,
 		PeriodSeconds:       spec.PeriodSeconds,

@@ -20,10 +20,10 @@ func (s *StorageProcessor) Name() string {
 	return "storage"
 }
 
-// Process converts []spec.StorageTrait into Volumes/VolumeMounts and optionally
+// Process converts []spec.StorageTraitSpec into Volumes/VolumeMounts and optionally
 // PersistentVolumeClaims (returned as additional objects for non-StatefulSets).
 func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	storageTraits, ok := ctx.TraitData.([]spec.StorageTrait)
+	storageTraits, ok := ctx.TraitData.([]spec.StorageTraitSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for storage trait: %T", ctx.TraitData)
 	}

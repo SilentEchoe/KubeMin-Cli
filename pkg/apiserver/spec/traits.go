@@ -5,25 +5,25 @@ package spec
 
 // Traits is the aggregate of all attachable traits for a component.
 type Traits struct {
-	Init      []InitTrait         `json:"init,omitempty"`
-	Storage   []StorageTrait      `json:"storage,omitempty"`
-	Secret    []SecretSpec        `json:"secret,omitempty"`
-	Sidecar   []SidecarSpec       `json:"sidecar,omitempty"`
+	Init      []InitTraitSpec     `json:"init,omitempty"`
+	Storage   []StorageTraitSpec  `json:"storage,omitempty"`
+	Secret    []SecretTraitsSpec  `json:"secret,omitempty"`
+	Sidecar   []SidecarTraitsSpec `json:"sidecar,omitempty"`
 	EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
-	Probes    []ProbeSpec         `json:"probes,omitempty"`
-	Resources *ResourceSpec       `json:"resources,omitempty"`
+	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
+	Resources *ResourceTraitsSpec `json:"resources,omitempty"`
 }
 
-// InitTrait describes an init container with its own nested traits.
-type InitTrait struct {
+// InitTraitSpec describes an init container with its own nested traits.
+type InitTraitSpec struct {
 	Name       string     `json:"name"`
 	Traits     Traits     `json:"traits,omitempty"`
 	Properties Properties `json:"properties"`
 }
 
-// StorageTrait describes storage characteristics for mounting into containers.
-type StorageTrait struct {
+// StorageTraitSpec describes storage characteristics for mounting into containers.
+type StorageTraitSpec struct {
 	Name       string `json:"name,omitempty"`
 	Type       string `json:"type"`
 	MountPath  string `json:"mountPath"`
@@ -41,12 +41,12 @@ type ConfigMapSpec struct {
 	Data map[string]string `json:"data"`
 }
 
-type SecretSpec struct {
+type SecretTraitsSpec struct {
 	Data map[string]string `json:"data"`
 }
 
-// SidecarSpec describes a sidecar container that may attach additional traits.
-type SidecarSpec struct {
+// SidecarTraitsSpec describes a sidecar container that may attach additional traits.
+type SidecarTraitsSpec struct {
 	Name    string            `json:"name"`
 	Image   string            `json:"image"`
 	Command []string          `json:"command,omitempty"`
@@ -102,8 +102,8 @@ type Ports struct {
 	Expose bool  `json:"expose"`
 }
 
-// ProbeSpec defines a health check probe for a container.
-type ProbeSpec struct {
+// ProbeTraitsSpec defines a health check probe for a container.
+type ProbeTraitsSpec struct {
 	Type                string          `json:"type"` // "liveness", "readiness", or "startup"
 	InitialDelaySeconds int32           `json:"initialDelaySeconds,omitempty"`
 	PeriodSeconds       int32           `json:"periodSeconds,omitempty"`
@@ -134,10 +134,10 @@ type TCPSocketProbe struct {
 	Host string `json:"host,omitempty"`
 }
 
-// ResourceSpec defines CPU/Memory/GPU resources for a container.
+// ResourceTraitsSpec defines CPU/Memory/GPU resources for a container.
 // It is modeled as a trait so it can be attached to main, init, or sidecar containers (via nested traits).
 // Values should be valid Kubernetes quantities, e.g., "500m" for CPU and "256Mi" for memory.
-type ResourceSpec struct {
+type ResourceTraitsSpec struct {
 	CPU    string `json:"cpu,omitempty"`
 	Memory string `json:"memory,omitempty"`
 	GPU    string `json:"gpu,omitempty"`

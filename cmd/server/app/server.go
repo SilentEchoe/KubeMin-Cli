@@ -96,6 +96,6 @@ func Run(s *options.ServerRunOptions) error {
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
 	klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
-	server := server.New(*s.GenericServerRunOptions)
-	return server.Run(ctx, errChan)
+	apiServer := server.New(*s.GenericServerRunOptions)
+	return apiServer.Run(ctx, errChan)
 }

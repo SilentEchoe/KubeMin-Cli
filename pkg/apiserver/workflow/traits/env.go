@@ -21,7 +21,7 @@ func (p *EnvsProcessor) Name() string {
 func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	simplifiedEnvs, ok := ctx.TraitData.([]spec.SimplifiedEnvSpec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for envs trait: expected []envSpec.SimplifiedEnvSpec, got %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for env spec: expected []spec.SimplifiedEnvSpec, got %T", ctx.TraitData)
 	}
 
 	var nativeEnvs []corev1.EnvVar

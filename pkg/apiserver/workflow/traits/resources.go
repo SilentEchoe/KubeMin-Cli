@@ -16,10 +16,10 @@ func (r *ResourcesProcessor) Name() string {
 	return "resources"
 }
 
-// Process converts a single ResourceSpec into Kubernetes ResourceRequirements.
+// Process converts a single ResourceTraitsSpec into Kubernetes ResourceRequirements.
 // By design, all values are applied as Limits (no Requests) for simplicity.
 func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	resourceSpec, ok := ctx.TraitData.(*spec.ResourceSpec)
+	resourceSpec, ok := ctx.TraitData.(*spec.ResourceTraitsSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for resources trait: %T", ctx.TraitData)
 	}

@@ -20,7 +20,7 @@ func (i *InitProcessor) Name() string {
 
 // Process adds init containers to the workload, recursively applying any nested traits.
 func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	initTraits, ok := ctx.TraitData.([]spec.InitTrait)
+	initTraits, ok := ctx.TraitData.([]spec.InitTraitSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for init trait: %T", ctx.TraitData)
 	}

@@ -111,16 +111,16 @@ type SecretSelectorSpec = spec.SecretSelectorSpec
 type ConfigMapSelectorSpec = spec.ConfigMapSelectorSpec
 
 // InitTrait 初始化容器的特征
-type InitTrait = spec.InitTrait
+type InitTrait = spec.InitTraitSpec
 
 // StorageTrait 描述存储特征
-type StorageTrait = spec.StorageTrait
+type StorageTrait = spec.StorageTraitSpec
 
 type ConfigMapSpec = spec.ConfigMapSpec
 
-type SecretSpec = spec.SecretSpec
+type SecretSpec = spec.SecretTraitsSpec
 
-type SidecarSpec = spec.SidecarSpec
+type SidecarSpec = spec.SidecarTraitsSpec
 
 // ResourceSpec defines CPU/Memory/GPU resources for containers
-type ResourceSpec = spec.ResourceSpec
+type ResourceSpec = spec.ResourceTraitsSpec

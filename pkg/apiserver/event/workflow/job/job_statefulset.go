@@ -82,6 +82,9 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	//During execution, it is possible to determine which resources need to be created,
+	//but these resources are limited to those closely related to the components, such as PVC.
+
 	var statefulSet *appsv1.StatefulSet
 	if d, ok := c.job.JobInfo.(*appsv1.StatefulSet); ok {
 		statefulSet = d

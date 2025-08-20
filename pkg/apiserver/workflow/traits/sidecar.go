@@ -20,7 +20,7 @@ func (s *SidecarProcessor) Name() string {
 
 // Process adds sidecar containers to the workload, recursively applying any nested traits.
 func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
-	sidecarTraits, ok := ctx.TraitData.([]spec.SidecarSpec)
+	sidecarTraits, ok := ctx.TraitData.([]spec.SidecarTraitsSpec)
 	if !ok {
 		return nil, fmt.Errorf("unexpected type for sidecar trait: %T", ctx.TraitData)
 	}
