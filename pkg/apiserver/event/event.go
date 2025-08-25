@@ -1,7 +1,7 @@
 package event
 
 import (
-	workflow "KubeMin-Cli/pkg/apiserver/event/workflow"
+	"KubeMin-Cli/pkg/apiserver/event/workflow"
 	"context"
 )
 
