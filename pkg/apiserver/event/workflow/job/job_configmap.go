@@ -6,8 +6,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
-	"strings"
-
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,7 +23,7 @@ type DeployConfigMapJobCtl struct {
 
 func NewDeployConfigMapJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployConfigMapJobCtl {
 	if job == nil {
-		klog.Errorf("DeployStatefulSetJobCtl: job is nil")
+		klog.Errorf("DeployConfigMapJobCtl: job is nil")
 		return nil
 	}
 	return &DeployConfigMapJobCtl{
@@ -86,10 +84,9 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		}
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        conf.Name,
-				Namespace:   conf.Namespace,
-				Labels:      conf.Labels,
-				Annotations: conf.Annotations,
+				Name:      conf.Name,
+				Namespace: conf.Namespace,
+				Labels:    conf.Labels,
 			},
 			Data: conf.Data,
 		}
@@ -103,10 +100,9 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		}
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        conf.Name,
-				Namespace:   conf.Namespace,
-				Labels:      conf.Labels,
-				Annotations: conf.Annotations,
+				Name:      conf.Name,
+				Namespace: conf.Namespace,
+				Labels:    conf.Labels,
 			},
 			Data: conf.Data,
 		}
@@ -164,7 +160,7 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 func (c *DeployConfigMapJobCtl) wait(ctx context.Context) {}
 
 // GenerateConfigMap 依据组件与属性生成一个简化的 ConfigMap 输入
-// 优先从 labels["config.url"] 读取外部文件 URL；否则将 env 组装为一个文本文件
+// 优先从 Conf["config.url"] 读取外部文件 URL；否则直接将Conf中的内容作为ConfigMap的内容
 func GenerateConfigMap(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	name := component.Name
 	namespace := component.Namespace
@@ -173,10 +169,10 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 	}
 
 	// 优先 URL
-	if properties != nil && properties.Labels != nil {
-		if url, ok := properties.Labels["config.url"]; ok && url != "" {
+	if properties != nil && properties.Conf != nil {
+		if url, ok := properties.Conf["config.url"]; ok && url != "" {
 			fileName := "config"
-			if fn, ok := properties.Labels["config.fileName"]; ok && fn != "" {
+			if fn, ok := properties.Conf["config.fileName"]; ok && fn != "" {
 				fileName = fn
 			}
 			return &model.ConfigMapInput{
@@ -189,27 +185,17 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 		}
 	}
 
-	// 回退：将 Env 拼成一份文本
-	data := map[string]string{}
-	if properties != nil && len(properties.Env) > 0 {
-		var b strings.Builder
-		for k, v := range properties.Env {
-			b.WriteString(k)
-			b.WriteString("=")
-			b.WriteString(v)
-			b.WriteString("\n")
-		}
-		data["env"] = b.String()
+	data := make(map[string]string)
+	if properties == nil || properties.Conf == nil {
+		data = nil
 	} else {
-		// 最简占位
-		data["config"] = ""
+		data = properties.Conf
 	}
 
 	return &model.ConfigMapInput{
-		Name:        name,
-		Namespace:   namespace,
-		Labels:      nil,
-		Annotations: nil,
-		Data:        data,
+		Name:      name,
+		Namespace: namespace,
+		Labels:    nil,
+		Data:      data,
 	}
 }

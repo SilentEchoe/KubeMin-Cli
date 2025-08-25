@@ -212,6 +212,9 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		case config.ConfJob:
 			jobTask.JobType = string(config.JobDeployConfigMap)
 			jobTask.JobInfo = job.GenerateConfigMap(componentSteps, &properties)
+		case config.SecretJob:
+			//jobTask.JobType = string(config.JobDeploySecret)
+			//jobTask.JobInfo = job.GenerateSecret(componentSteps, &properties)
 		}
 
 		// 创建Service

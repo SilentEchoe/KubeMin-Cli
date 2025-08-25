@@ -93,6 +93,8 @@ type Properties struct {
 	Image   string            `json:"image"`
 	Ports   []Ports           `json:"ports"`
 	Env     map[string]string `json:"env"`
+	Conf    map[string]string `json:"conf"`
+	Secret  map[string]string `json:"secret"`
 	Command []string          `json:"command"`
 	Labels  map[string]string `json:"labels"`
 }

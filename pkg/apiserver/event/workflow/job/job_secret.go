@@ -75,8 +75,41 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
-	secret, ok := c.job.JobInfo.(*corev1.Secret)
-	if !ok || secret == nil {
+	var secret *corev1.Secret
+	switch v := c.job.JobInfo.(type) {
+	case *corev1.Secret:
+		secret = v
+	case *model.SecretInput:
+		st := corev1.SecretTypeOpaque
+		if v.Type != "" {
+			st = corev1.SecretType(v.Type)
+		}
+		stringData := map[string]string{}
+		if v.URL != "" {
+			body, err := model.ReadFileFromURLForSecret(v.URL)
+			if err != nil {
+				return fmt.Errorf("fetch secret url failed: %w", err)
+			}
+			fileName := v.FileName
+			if fileName == "" {
+				fileName = model.ExtractFileNameFromURLForSecret(v.URL)
+			}
+			stringData[fileName] = string(body)
+		}
+		for k, val := range v.Data {
+			stringData[k] = val
+		}
+		secret = &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        v.Name,
+				Namespace:   v.Namespace,
+				Labels:      v.Labels,
+				Annotations: v.Annotations,
+			},
+			Type:       st,
+			StringData: stringData,
+		}
+	default:
 		return fmt.Errorf("job info is not *corev1.Secret")
 	}
 
