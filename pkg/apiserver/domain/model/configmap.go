@@ -1,15 +1,9 @@
 package model
 
 import (
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
-)
-
-const (
-	// ConfigMapMaxSize 1MB in bytes
-	ConfigMapMaxSize = 1024 * 1024
 )
 
 // ConfigMapData 定义ConfigMap的数据结构
@@ -32,24 +26,6 @@ type SecretInput struct {
 	Data        map[string]string `json:"data,omitempty"` // 将映射到 StringData
 	URL         string            `json:"url,omitempty"`
 	FileName    string            `json:"fileName,omitempty"`
-}
-
-// Helpers for Secret URL handling (reusing existing logic style)
-func ReadFileFromURLForSecret(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP request failed with status: %d", resp.StatusCode)
-	}
-	rd := io.LimitReader(resp.Body, ConfigMapMaxSize+1024)
-	data, err := io.ReadAll(rd)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }
 
 func ExtractFileNameFromURLForSecret(url string) string {
@@ -99,8 +75,8 @@ func (s *ConfigMapInput) GenerateConf() (*ConfigMapData, error) {
 			}
 			totalSize += len(k) + len(v)
 		}
-		if totalSize > ConfigMapMaxSize {
-			return nil, fmt.Errorf("total ConfigMap data size %d bytes exceeds maximum size %d bytes", totalSize, ConfigMapMaxSize)
+		if totalSize > utils.ConfigMapMaxSize {
+			return nil, fmt.Errorf("total ConfigMap data size %d bytes exceeds maximum size %d bytes", totalSize, utils.ConfigMapMaxSize)
 		}
 		return &ConfigMapData{
 			Name:      s.Name,
@@ -114,12 +90,12 @@ func (s *ConfigMapInput) GenerateConf() (*ConfigMapData, error) {
 	if !strings.HasPrefix(s.URL, "http://") && !strings.HasPrefix(s.URL, "https://") {
 		return nil, fmt.Errorf("invalid URL format: must start with http:// or https://")
 	}
-	body, err := readFileFromURLSimple(s.URL)
+	body, err := utils.ReadFileFromURLSimple(s.URL)
 	if err != nil {
 		return nil, err
 	}
-	if len(body) > ConfigMapMaxSize {
-		return nil, fmt.Errorf("file size %d bytes exceeds ConfigMap maximum size %d bytes", len(body), ConfigMapMaxSize)
+	if len(body) > utils.ConfigMapMaxSize {
+		return nil, fmt.Errorf("file size %d bytes exceeds ConfigMap maximum size %d bytes", len(body), utils.ConfigMapMaxSize)
 	}
 	fileName := s.FileName
 	if fileName == "" {
@@ -131,43 +107,6 @@ func (s *ConfigMapInput) GenerateConf() (*ConfigMapData, error) {
 		Labels:    s.Labels,
 		Data:      map[string]string{fileName: string(body)},
 	}, nil
-}
-
-// ConfigMapFromMap 从Map创建ConfigMap的配置
-type ConfigMapFromMap struct {
-	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-	Data        map[string]string `json:"data" validate:"required"`
-}
-
-// ConfigMapFromURL 从URL文件创建ConfigMap的配置
-type ConfigMapFromURL struct {
-	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-	URL         string            `json:"url" validate:"required,url"`
-	FileName    string            `json:"fileName,omitempty"` // 可选的文件名，如果不提供则从URL中提取
-}
-
-// 工具：简化版给 ConfigMapSpec 复用
-func readFileFromURLSimple(url string) ([]byte, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP request failed with status: %d", resp.StatusCode)
-	}
-	rd := io.LimitReader(resp.Body, ConfigMapMaxSize+1024)
-	data, err := io.ReadAll(rd)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
 }
 
 func extractFileNameFromURLSimple(url string) string {

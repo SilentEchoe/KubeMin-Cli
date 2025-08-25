@@ -4,6 +4,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 
@@ -86,7 +87,7 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 		}
 		stringData := map[string]string{}
 		if v.URL != "" {
-			body, err := model.ReadFileFromURLForSecret(v.URL)
+			body, err := utils.ReadFileFromURLSimple(v.URL)
 			if err != nil {
 				return fmt.Errorf("fetch secret url failed: %w", err)
 			}

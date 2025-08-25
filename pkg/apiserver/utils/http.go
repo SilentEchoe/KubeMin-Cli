@@ -2,10 +2,17 @@ package utils
 
 import (
 	"bytes"
+	"fmt"
+	"io"
 	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	// ConfigMapMaxSize 1MB in bytes
+	ConfigMapMaxSize = 1024 * 1024
 )
 
 // ClientIP get client ip
@@ -90,4 +97,22 @@ func CleanRelativePath(path string) (string, error) {
 	}
 
 	return rel, nil
+}
+
+// 工具：简化版给 ConfigMapSpec 复用
+func ReadFileFromURLSimple(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP request failed with status: %d", resp.StatusCode)
+	}
+	rd := io.LimitReader(resp.Body, ConfigMapMaxSize+1024)
+	data, err := io.ReadAll(rd)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
