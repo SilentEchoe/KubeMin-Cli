@@ -65,7 +65,6 @@ func (c *DeployConfigMapJobCtl) Run(ctx context.Context) {
 		c.ack()
 		return
 	}
-	//after the deployment is completed, synchronize the status.
 	c.wait(ctx)
 }
 
@@ -74,7 +73,7 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
-	// 兼容三种入参：ConfigMapInput(简化)、ConfigMapJobInfo(旧版)、corev1.ConfigMap(向后兼容)
+	// Compatible with two types of input parameters：ConfigMapInput、corev1.ConfigMap
 	var cm *corev1.ConfigMap
 	switch v := c.job.JobInfo.(type) {
 	case *model.ConfigMapInput:
@@ -90,53 +89,30 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 			},
 			Data: conf.Data,
 		}
-	case *model.ConfigMapJobInfo:
-		if err := v.Validate(); err != nil {
-			return fmt.Errorf("invalid ConfigMap configuration: %w", err)
-		}
-		conf, err := v.CreateConfigMap()
-		if err != nil {
-			return fmt.Errorf("failed to create ConfigMap data: %w", err)
-		}
-		cm = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      conf.Name,
-				Namespace: conf.Namespace,
-				Labels:    conf.Labels,
-			},
-			Data: conf.Data,
-		}
 	case *corev1.ConfigMap:
 		return c.deployExistingConfigMap(ctx, v)
 	default:
 		return fmt.Errorf("unsupported configmap jobInfo type: %T", c.job.JobInfo)
 	}
 
-	// 如果未设置命名空间，使用 job 的命名空间
 	if cm.Namespace == "" {
 		cm.Namespace = c.job.Namespace
 	}
-
 	return c.deployConfigMap(ctx, cm)
 }
 
-// deployExistingConfigMap 部署已存在的ConfigMap对象（兼容旧版本）
 func (c *DeployConfigMapJobCtl) deployExistingConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
-	// 如果未设置命名空间，使用 job 的命名空间
 	if cm.Namespace == "" {
 		cm.Namespace = c.job.Namespace
 	}
-
 	return c.deployConfigMap(ctx, cm)
 }
 
-// deployConfigMap 部署ConfigMap到Kubernetes
 func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
-
-	// 存在则更新，不存在则创建
+	// Update if exists, create if not.
 	if existing, err := cli.Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {
-		// 更新时需要携带 ResourceVersion
+		// When updating, the ResourceVersion needs to be carried.
 		cm.ResourceVersion = existing.ResourceVersion
 		if _, err := cli.Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("update configmap %q failed: %w", cm.Name, err)
@@ -156,11 +132,10 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 	return nil
 }
 
-// ConfigMap 无需就绪等待，这里留空以对齐 JobCtl 接口
 func (c *DeployConfigMapJobCtl) wait(ctx context.Context) {}
 
-// GenerateConfigMap 依据组件与属性生成一个简化的 ConfigMap 输入
-// 优先从 Conf["config.url"] 读取外部文件 URL；否则直接将Conf中的内容作为ConfigMap的内容
+// GenerateConfigMap Generate a simplified ConfigMap input based on components and attributes.
+// First, read the external file URL from Conf["config.url"]; otherwise, directly use the content in Conf as the content of ConfigMap.
 func GenerateConfigMap(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	name := component.Name
 	namespace := component.Namespace
