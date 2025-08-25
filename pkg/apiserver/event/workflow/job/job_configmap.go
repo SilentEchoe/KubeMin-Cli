@@ -6,6 +6,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"fmt"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -75,10 +76,44 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
-	// 从 JobInfo 中获取 ConfigMap 对象
-	cm, ok := c.job.JobInfo.(*corev1.ConfigMap)
-	if !ok || cm == nil {
-		return fmt.Errorf("job info is not *corev1.ConfigMap")
+	// 兼容三种入参：ConfigMapInput(简化)、ConfigMapJobInfo(旧版)、corev1.ConfigMap(向后兼容)
+	var cm *corev1.ConfigMap
+	switch v := c.job.JobInfo.(type) {
+	case *model.ConfigMapInput:
+		conf, err := v.GenerateConf()
+		if err != nil {
+			return fmt.Errorf("invalid ConfigMap spec: %w", err)
+		}
+		cm = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        conf.Name,
+				Namespace:   conf.Namespace,
+				Labels:      conf.Labels,
+				Annotations: conf.Annotations,
+			},
+			Data: conf.Data,
+		}
+	case *model.ConfigMapJobInfo:
+		if err := v.Validate(); err != nil {
+			return fmt.Errorf("invalid ConfigMap configuration: %w", err)
+		}
+		conf, err := v.CreateConfigMap()
+		if err != nil {
+			return fmt.Errorf("failed to create ConfigMap data: %w", err)
+		}
+		cm = &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        conf.Name,
+				Namespace:   conf.Namespace,
+				Labels:      conf.Labels,
+				Annotations: conf.Annotations,
+			},
+			Data: conf.Data,
+		}
+	case *corev1.ConfigMap:
+		return c.deployExistingConfigMap(ctx, v)
+	default:
+		return fmt.Errorf("unsupported configmap jobInfo type: %T", c.job.JobInfo)
 	}
 
 	// 如果未设置命名空间，使用 job 的命名空间
@@ -86,6 +121,21 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		cm.Namespace = c.job.Namespace
 	}
 
+	return c.deployConfigMap(ctx, cm)
+}
+
+// deployExistingConfigMap 部署已存在的ConfigMap对象（兼容旧版本）
+func (c *DeployConfigMapJobCtl) deployExistingConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
+	// 如果未设置命名空间，使用 job 的命名空间
+	if cm.Namespace == "" {
+		cm.Namespace = c.job.Namespace
+	}
+
+	return c.deployConfigMap(ctx, cm)
+}
+
+// deployConfigMap 部署ConfigMap到Kubernetes
+func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
 
 	// 存在则更新，不存在则创建
@@ -112,3 +162,54 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 
 // ConfigMap 无需就绪等待，这里留空以对齐 JobCtl 接口
 func (c *DeployConfigMapJobCtl) wait(ctx context.Context) {}
+
+// GenerateConfigMap 依据组件与属性生成一个简化的 ConfigMap 输入
+// 优先从 labels["config.url"] 读取外部文件 URL；否则将 env 组装为一个文本文件
+func GenerateConfigMap(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+	name := component.Name
+	namespace := component.Namespace
+	if namespace == "" {
+		namespace = config.DefaultNamespace
+	}
+
+	// 优先 URL
+	if properties != nil && properties.Labels != nil {
+		if url, ok := properties.Labels["config.url"]; ok && url != "" {
+			fileName := "config"
+			if fn, ok := properties.Labels["config.fileName"]; ok && fn != "" {
+				fileName = fn
+			}
+			return &model.ConfigMapInput{
+				Name:      name,
+				Namespace: namespace,
+				URL:       url,
+				FileName:  fileName,
+				Labels:    properties.Labels,
+			}
+		}
+	}
+
+	// 回退：将 Env 拼成一份文本
+	data := map[string]string{}
+	if properties != nil && len(properties.Env) > 0 {
+		var b strings.Builder
+		for k, v := range properties.Env {
+			b.WriteString(k)
+			b.WriteString("=")
+			b.WriteString(v)
+			b.WriteString("\n")
+		}
+		data["env"] = b.String()
+	} else {
+		// 最简占位
+		data["config"] = ""
+	}
+
+	return &model.ConfigMapInput{
+		Name:        name,
+		Namespace:   namespace,
+		Labels:      nil,
+		Annotations: nil,
+		Data:        data,
+	}
+}

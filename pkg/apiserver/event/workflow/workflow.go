@@ -193,10 +193,7 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			continue
 		}
 		jobTask := NewJobTask(componentSteps.Name, componentSteps.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
-
 		properties := ParseProperties(componentSteps.Properties)
-
-		//traits := ParseTraits(componentSteps.Traits)
 
 		switch componentSteps.ComponentType {
 		case config.ServerJob:
@@ -212,6 +209,9 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 					klog.Errorf("failed to create PVC jobs for component %s: %v", componentSteps.Name, err)
 				}
 			}
+		case config.ConfJob:
+			jobTask.JobType = string(config.JobDeployConfigMap)
+			jobTask.JobInfo = job.GenerateConfigMap(componentSteps, &properties)
 		}
 
 		// 创建Service

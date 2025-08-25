@@ -37,11 +37,13 @@ const (
 	ServerJob JobType = "webservice"
 	StoreJob  JobType = "store"
 	Service   JobType = "service"
+	ConfJob   JobType = "config"
 
-	JobDeploy        JobType = "deploy"
-	JobDeployService JobType = "deploy_service"
-	JobDeployStore   JobType = "store_deploy"
-	JobDeployPVC     JobType = "store_deploy"
+	JobDeploy          JobType = "deploy"
+	JobDeployService   JobType = "deploy_service"
+	JobDeployStore     JobType = "store_deploy"
+	JobDeployPVC       JobType = "store_pvc_deploy"
+	JobDeployConfigMap JobType = "configmap_deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"

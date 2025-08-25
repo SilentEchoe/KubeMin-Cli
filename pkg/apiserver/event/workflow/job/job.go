@@ -42,6 +42,8 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 		jobCtl = NewDeployServiceJobCtl(job, client, store, ack)
 	case string(config.JobDeployStore):
 		jobCtl = NewDeployStatefulSetJobCtl(job, client, store, ack)
+	case string(config.JobDeployConfigMap):
+		jobCtl = NewDeployConfigMapJobCtl(job, client, store, ack)
 	default:
 		klog.Errorf("unknown job type: %s", job.JobType)
 		return nil

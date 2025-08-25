@@ -1,0 +1,68 @@
+# ConfigMap 创建示例
+# 支持两种方式：从Map创建和从URL文件创建
+
+---
+# 方式1: 从Map创建ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: default
+  labels:
+    app: myapp
+    version: v1.0
+  annotations:
+    description: "Application configuration from map"
+data:
+  # 配置文件
+  config.yaml: |
+    apiVersion: v1
+    kind: Config
+    database:
+      host: mysql-service
+      port: 3306
+      name: myapp
+    redis:
+      host: redis-service
+      port: 6379
+    logging:
+      level: info
+      format: json
+  
+  # 环境变量
+  env.txt: |
+    NODE_ENV=production
+    DEBUG=false
+    LOG_LEVEL=info
+  
+  # 其他配置
+  features.json: |
+    {
+      "feature1": true,
+      "feature2": false,
+      "feature3": {
+        "enabled": true,
+        "timeout": 30
+      }
+    }
+
+---
+# 方式2: 从URL文件创建ConfigMap (通过Job)
+# 这种方式需要在Job中配置 ConfigMapJobInfo
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: external-config
+  namespace: default
+  labels:
+    app: myapp
+    source: external
+  annotations:
+    description: "Configuration loaded from external URL"
+data:
+  # 这个文件的内容将从指定的URL下载
+  # 文件名会自动从URL中提取，或者可以手动指定
+  # 注意：文件大小不能超过1MB (ConfigMap限制)
+  external-config.yaml: |
+    # 这个文件的内容将从URL下载
+    # 例如：https://example.com/configs/app-config.yaml
