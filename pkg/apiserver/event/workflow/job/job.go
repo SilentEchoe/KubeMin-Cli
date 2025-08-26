@@ -196,8 +196,10 @@ func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 		config.LabelComponentId: fmt.Sprintf("%d", c.ID),
 		config.LabelAppId:       c.AppId,
 	}
-	for k, v := range p.Labels {
-		labels[k] = v
+	if p != nil {
+		for k, v := range p.Labels {
+			labels[k] = v
+		}
 	}
 	return labels
 }
