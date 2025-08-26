@@ -167,11 +167,6 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 	}
 
 	labels := BuildLabels(component, properties)
-	if properties != nil && properties.Labels != nil {
-		for k, v := range properties.Labels {
-			labels[k] = v
-		}
-	}
 
 	return &model.ConfigMapInput{
 		Name:      name,
