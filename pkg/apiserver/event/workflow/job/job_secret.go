@@ -181,3 +181,48 @@ func equalSecretPayload(a, b *corev1.Secret) bool {
 	}
 	return true
 }
+
+func GenerateSecret(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+	name := component.Name
+	namespace := component.Namespace
+	if namespace == "" {
+		namespace = config.DefaultNamespace
+	}
+
+	if properties != nil && properties.Secret != nil {
+		if url, ok := properties.Conf["config.url"]; ok && url != "" {
+			fileName := "config"
+			if fn, ok := properties.Conf["config.fileName"]; ok && fn != "" {
+				fileName = fn
+			}
+			return &model.SecretInput{
+				Name:      name,
+				Namespace: namespace,
+				URL:       url,
+				FileName:  fileName,
+				Labels:    properties.Labels,
+			}
+		}
+	}
+
+	data := make(map[string]string)
+	if properties == nil || properties.Secret == nil {
+		data = nil
+	} else {
+		data = properties.Secret
+	}
+
+	labels := BuildLabels(component, properties)
+	if properties != nil && properties.Labels != nil {
+		for k, v := range properties.Labels {
+			labels[k] = v
+		}
+	}
+
+	return &model.SecretInput{
+		Name:      name,
+		Namespace: namespace,
+		Labels:    labels,
+		Data:      data,
+	}
+}

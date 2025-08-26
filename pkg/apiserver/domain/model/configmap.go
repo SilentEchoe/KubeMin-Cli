@@ -21,8 +21,8 @@ type SecretInput struct {
 	Name      string            `json:"name"`
 	Namespace string            `json:"namespace"`
 	Labels    map[string]string `json:"labels,omitempty"`
-	Type      string            `json:"type,omitempty"` // 默认为 Opaque
-	Data      map[string]string `json:"data,omitempty"` // 将映射到 StringData
+	Type      string            `json:"type,omitempty"`
+	Data      map[string]string `json:"data,omitempty"`
 	URL       string            `json:"url,omitempty"`
 	FileName  string            `json:"fileName,omitempty"`
 }
