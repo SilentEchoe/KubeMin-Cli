@@ -161,7 +161,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceRe
 	properties := ParseProperties(component.Properties)
 
 	// 构建标签
-	labels := buildLabels(component, &properties)
+	labels := BuildLabels(component, &properties)
 	for k, v := range properties.Labels {
 		labels[k] = v
 	}
@@ -219,17 +219,6 @@ func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceRe
 		StatefulSet:       statefulSet,
 		AdditionalObjects: additionalObjects,
 	}
-}
-
-func buildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
-	labels := map[string]string{
-		config.LabelCli:   fmt.Sprintf("%s-%s", c.AppId, c.Name),
-		config.LabelAppId: c.AppId,
-	}
-	for k, v := range p.Labels {
-		labels[k] = v
-	}
-	return labels
 }
 
 func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {

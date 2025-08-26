@@ -10,8 +10,9 @@ const (
 )
 
 const (
-	LabelCli   = "kube-min-cli"
-	LabelAppId = "kube-min-cli-appId"
+	LabelCli         = "kube-min-cli"
+	LabelAppId       = "kube-min-cli-appId"
+	LabelComponentId = "kube-min-cli-componentId"
 )
 
 type JobRunPolicy string

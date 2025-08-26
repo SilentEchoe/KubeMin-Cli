@@ -18,14 +18,13 @@ type ConfigMapData struct {
 // SecretInput : 与 ConfigMapInput 类似，支持 Data 或 URL（URL 下载后作为单文件注入）。
 // 注意：Secret 的值需为字节；通过 StringData 便捷传入。
 type SecretInput struct {
-	Name        string            `json:"name"`
-	Namespace   string            `json:"namespace"`
-	Labels      map[string]string `json:"labels,omitempty"`
-	Annotations map[string]string `json:"annotations,omitempty"`
-	Type        string            `json:"type,omitempty"` // 默认为 Opaque
-	Data        map[string]string `json:"data,omitempty"` // 将映射到 StringData
-	URL         string            `json:"url,omitempty"`
-	FileName    string            `json:"fileName,omitempty"`
+	Name      string            `json:"name"`
+	Namespace string            `json:"namespace"`
+	Labels    map[string]string `json:"labels,omitempty"`
+	Type      string            `json:"type,omitempty"` // 默认为 Opaque
+	Data      map[string]string `json:"data,omitempty"` // 将映射到 StringData
+	URL       string            `json:"url,omitempty"`
+	FileName  string            `json:"fileName,omitempty"`
 }
 
 func ExtractFileNameFromURLForSecret(url string) string {

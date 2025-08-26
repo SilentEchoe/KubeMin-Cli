@@ -189,3 +189,15 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 	}
 	return propertied
 }
+
+func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
+	labels := map[string]string{
+		config.LabelCli:         fmt.Sprintf("%s-%s", c.AppId, c.Name),
+		config.LabelComponentId: fmt.Sprintf("%d", c.ID),
+		config.LabelAppId:       c.AppId,
+	}
+	for k, v := range p.Labels {
+		labels[k] = v
+	}
+	return labels
+}

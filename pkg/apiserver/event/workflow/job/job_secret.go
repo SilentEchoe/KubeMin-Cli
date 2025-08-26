@@ -102,10 +102,9 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:        v.Name,
-				Namespace:   v.Namespace,
-				Labels:      v.Labels,
-				Annotations: v.Annotations,
+				Name:      v.Name,
+				Namespace: v.Namespace,
+				Labels:    v.Labels,
 			},
 			Type:       st,
 			StringData: stringData,

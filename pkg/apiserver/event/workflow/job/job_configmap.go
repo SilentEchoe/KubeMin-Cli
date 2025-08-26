@@ -143,7 +143,6 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 		namespace = config.DefaultNamespace
 	}
 
-	// 优先 URL
 	if properties != nil && properties.Conf != nil {
 		if url, ok := properties.Conf["config.url"]; ok && url != "" {
 			fileName := "config"
@@ -167,10 +166,17 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 		data = properties.Conf
 	}
 
+	labels := BuildLabels(component, properties)
+	if properties != nil && properties.Labels != nil {
+		for k, v := range properties.Labels {
+			labels[k] = v
+		}
+	}
+
 	return &model.ConfigMapInput{
 		Name:      name,
 		Namespace: namespace,
-		Labels:    nil,
+		Labels:    labels,
 		Data:      data,
 	}
 }
