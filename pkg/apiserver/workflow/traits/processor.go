@@ -344,17 +344,29 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 		}
 	}
 
-	// Intelligent PVC handling: check if the workload is a StatefulSet.
-	if sts, ok := workload.(*appsv1.StatefulSet); ok {
-		var remainingObjects []client.Object
+	//// Intelligent PVC handling: check if the workload is a StatefulSet.
+	//if sts, ok := workload.(*appsv1.StatefulSet); ok {
+	//	var remainingObjects []client.Object
+	//	for _, obj := range result.AdditionalObjects {
+	//		if pvc, isPVC := obj.(*corev1.PersistentVolumeClaim); isPVC {
+	//			sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
+	//		}
+	//		remainingObjects = append(remainingObjects, obj)
+	//	}
+	//	result.AdditionalObjects = remainingObjects
+	//}
+
+	if len(result.AdditionalObjects) > 0 {
+		objectNameSet := make(map[string]bool)
+		var dedupedObjects []client.Object
 		for _, obj := range result.AdditionalObjects {
-			if pvc, isPVC := obj.(*corev1.PersistentVolumeClaim); isPVC {
-				sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
-			} else {
-				remainingObjects = append(remainingObjects, obj)
+			key := fmt.Sprintf("%s/%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
+			if !objectNameSet[key] {
+				dedupedObjects = append(dedupedObjects, obj)
+				objectNameSet[key] = true
 			}
 		}
-		result.AdditionalObjects = remainingObjects
+		result.AdditionalObjects = dedupedObjects
 	}
 
 	return nil

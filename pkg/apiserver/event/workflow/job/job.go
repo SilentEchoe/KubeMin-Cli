@@ -42,6 +42,8 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 		jobCtl = NewDeployServiceJobCtl(job, client, store, ack)
 	case string(config.JobDeployStore):
 		jobCtl = NewDeployStatefulSetJobCtl(job, client, store, ack)
+	case string(config.JobDeployPVC):
+		jobCtl = NewDeployPVCJobCtl(job, client, store, ack)
 	case string(config.JobDeployConfigMap):
 		jobCtl = NewDeployConfigMapJobCtl(job, client, store, ack)
 	case string(config.JobDeploySecret):
@@ -63,7 +65,10 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 		for _, job := range jobs {
 			klog.Info("Job started: ", job.Name, job.JobType)
 			runJob(ctx, job, client, store, ack)
+			// DEBUG: Log job completion status before checking for failure.
+			klog.Infof("DEBUG: Job finished running: %s, Status is: %s", job.Name, job.Status)
 			if jobStatusFailed(job.Status) {
+				klog.Errorf("Job %s failed with status %s, stopping workflow execution.", job.Name, job.Status)
 				return
 			}
 		}
