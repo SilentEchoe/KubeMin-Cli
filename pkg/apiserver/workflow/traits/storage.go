@@ -4,10 +4,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -37,7 +37,13 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	var pvcs []corev1.PersistentVolumeClaim
 	var additionalObjects []client.Object
 
+	processedVolumes := make(map[string]bool)
+
 	for _, vol := range storageTraits {
+		if processedVolumes[vol.Name] {
+			continue
+		}
+		processedVolumes[vol.Name] = true
 		volType := config.StorageTypeMapping[vol.Type]
 
 		volName := vol.Name
@@ -48,35 +54,27 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 
 		switch volType {
 		case config.VolumeTypePVC:
-			// Per user request, the logic is inverted.
-			// Default behavior (create: false) is to create a standalone PVC.
-			// `create: true` is for StatefulSet templates and does not create a standalone object.
-			if !vol.Create {
-				// This is a standalone PVC. Create it and add it to additional objects.
-				qty, err := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
-				if err != nil {
-					return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volName, err)
-				}
-				pvc := corev1.PersistentVolumeClaim{
-					ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
-					Spec: corev1.PersistentVolumeClaimSpec{
-						AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-						Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
-					},
-				}
-				pvcs = append(pvcs, pvc)
+			qty, err := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
+			if err != nil {
+				return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volName, err)
+			}
+			pvc := corev1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
+				Spec: corev1.PersistentVolumeClaimSpec{
+					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
+				},
+			}
+
+			if vol.Create {
+				pvc.Annotations = map[string]string{config.LabelStorageRole: "template"}
+			} else {
 				volumes = append(volumes, corev1.Volume{
 					Name:         volName,
 					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
 				})
-			} else { // vol.Create == true
-				// This is a volumeClaimTemplate. Just reference it, do not add to additionalObjects.
-				claimName := vol.Name // For templates, the claim name is the volume name.
-				volumes = append(volumes, corev1.Volume{
-					Name:         volName,
-					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName}},
-				})
 			}
+			pvcs = append(pvcs, pvc)
 
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{

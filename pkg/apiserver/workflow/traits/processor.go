@@ -1,6 +1,7 @@
 package traits
 
 import (
+	"KubeMin-Cli/pkg/apiserver/config"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -344,30 +345,38 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 		}
 	}
 
-	//// Intelligent PVC handling: check if the workload is a StatefulSet.
-	//if sts, ok := workload.(*appsv1.StatefulSet); ok {
-	//	var remainingObjects []client.Object
-	//	for _, obj := range result.AdditionalObjects {
-	//		if pvc, isPVC := obj.(*corev1.PersistentVolumeClaim); isPVC {
-	//			sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
-	//		}
-	//		remainingObjects = append(remainingObjects, obj)
-	//	}
-	//	result.AdditionalObjects = remainingObjects
-	//}
-
-	if len(result.AdditionalObjects) > 0 {
-		objectNameSet := make(map[string]bool)
-		var dedupedObjects []client.Object
-		for _, obj := range result.AdditionalObjects {
-			key := fmt.Sprintf("%s/%s/%s", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetNamespace(), obj.GetName())
-			if !objectNameSet[key] {
-				dedupedObjects = append(dedupedObjects, obj)
-				objectNameSet[key] = true
-			}
+	// Handle AdditionalObjects, with special logic for PVCs.
+	var remainingObjects []client.Object
+	for _, obj := range result.AdditionalObjects {
+		// Check if the object is a PVC.
+		pvc, isPvc := obj.(*corev1.PersistentVolumeClaim)
+		if !isPvc {
+			// Not a PVC, so we keep it.
+			remainingObjects = append(remainingObjects, obj)
+			continue
 		}
-		result.AdditionalObjects = dedupedObjects
+
+		// Check if the PVC has the template annotation.
+		anno := pvc.GetAnnotations()
+		if anno != nil && anno[config.LabelStorageRole] == "template" {
+			// This is a PVC template. It should be applied to a StatefulSet.
+			if sts, isSts := workload.(*appsv1.StatefulSet); isSts {
+				// It's a template for our StatefulSet. Add it to the templates list.
+				// The namespace MUST be removed from the template's metadata.
+				pvc.Namespace = ""
+				sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
+				// The template is now part of the StatefulSet, so we don't keep it as a standalone object.
+			} else {
+				// This is an error case: a template was requested for a non-StatefulSet workload.
+				klog.Warningf("Component %s requested a PVC template for a workload of type %T, which is not supported. The PVC will be ignored.", mainContainerName, workload)
+			}
+		} else {
+			// This is a regular, standalone PVC. We keep it.
+			remainingObjects = append(remainingObjects, obj)
+		}
 	}
+	// The list of additional objects now only contains the standalone objects.
+	result.AdditionalObjects = remainingObjects
 
 	return nil
 }

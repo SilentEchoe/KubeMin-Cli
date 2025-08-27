@@ -205,7 +205,9 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			storeJobs := job.GenerateStoreService(componentSteps)
 			if storeJobs != nil {
 				jobTask.JobInfo = storeJobs.StatefulSet
-				if err := CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, jobs); err != nil {
+				var err error
+				jobs, err = CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, jobs)
+				if err != nil {
 					klog.Errorf("failed to create PVC jobs for component %s: %v", componentSteps.Name, err)
 				}
 			}
@@ -287,9 +289,9 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 	return propertied
 }
 
-func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask) error {
+func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask) ([]*model.JobTask, error) {
 	if len(additionalObjects) == 0 {
-		return nil
+		return jobs, nil
 	}
 
 	for _, obj := range additionalObjects {
@@ -310,6 +312,5 @@ func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model
 			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
 		}
 	}
-
-	return nil
+	return jobs, nil
 }

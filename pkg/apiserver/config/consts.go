@@ -13,6 +13,7 @@ const (
 	LabelCli         = "kube-min-cli"
 	LabelAppId       = "kube-min-cli-appId"
 	LabelComponentId = "kube-min-cli-componentId"
+	LabelStorageRole = "storage.kubemin.cli/pvc-role"
 )
 
 type JobRunPolicy string
