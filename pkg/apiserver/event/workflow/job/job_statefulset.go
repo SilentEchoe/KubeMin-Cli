@@ -201,7 +201,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceRe
 							Image:           component.Image,
 							Ports:           ContainerPort,
 							Env:             envs,
-							ImagePullPolicy: corev1.PullAlways,
+							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
 					TerminationGracePeriodSeconds: utils.ParseInt64(30),

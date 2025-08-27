@@ -78,13 +78,14 @@ func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		sidecarContainer := corev1.Container{
-			Name:         sidecarName,
-			Image:        sidecarSpec.Image,
-			Command:      sidecarSpec.Command,
-			Args:         sidecarSpec.Args,
-			Env:          envVars,
-			EnvFrom:      envFromSources,
-			VolumeMounts: volumeMounts,
+			Name:            sidecarName,
+			Image:           sidecarSpec.Image,
+			Command:         sidecarSpec.Command,
+			Args:            sidecarSpec.Args,
+			Env:             envVars,
+			EnvFrom:         envFromSources,
+			VolumeMounts:    volumeMounts,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 		}
 
 		// Apply probes if present

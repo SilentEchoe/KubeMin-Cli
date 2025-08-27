@@ -74,12 +74,13 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		initContainer := corev1.Container{
-			Name:         initContainerName,
-			Image:        initTrait.Properties.Image,
-			Command:      initTrait.Properties.Command,
-			Env:          envVars, // Now contains envs from both properties and traits
-			EnvFrom:      envFromSources,
-			VolumeMounts: volumeMounts,
+			Name:            initContainerName,
+			Image:           initTrait.Properties.Image,
+			Command:         initTrait.Properties.Command,
+			Env:             envVars, // Now contains envs from both properties and traits
+			EnvFrom:         envFromSources,
+			VolumeMounts:    volumeMounts,
+			ImagePullPolicy: corev1.PullIfNotPresent,
 		}
 
 		// Apply nested resource requirements to the init container if present
