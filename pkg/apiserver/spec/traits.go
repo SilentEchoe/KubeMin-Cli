@@ -32,9 +32,10 @@ type StorageTraitSpec struct {
 	SourceName string `json:"sourceName,omitempty"` // For ConfigMap/Secret volume sources
 
 	// For "persistent" type
-	Create    bool   `json:"create,omitempty"`    // If true, create PVC. Defaults to false (referencing existing).
-	Size      string `json:"size,omitempty"`      // Used when Create is true.
-	ClaimName string `json:"claimName,omitempty"` // Name of existing PVC to use. If empty, defaults to Name.
+	Create       bool   `json:"create,omitempty"`       // If true, create PVC. Defaults to false (referencing existing).
+	Size         string `json:"size,omitempty"`         // Used when Create is true.
+	ClaimName    string `json:"claimName,omitempty"`    // Name of existing PVC to use. If empty, defaults to Name.
+	StorageClass string `json:"storageClass,omitempty"` // StorageClass to use for the PVC.
 }
 
 type ConfigMapSpec struct {

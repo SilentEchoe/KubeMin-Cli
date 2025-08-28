@@ -58,12 +58,17 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			if err != nil {
 				return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volName, err)
 			}
+			pvcSpec := corev1.PersistentVolumeClaimSpec{
+				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
+				Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
+			}
+			if vol.StorageClass != "" {
+				pvcSpec.StorageClassName = &vol.StorageClass
+			}
+
 			pvc := corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
-				Spec: corev1.PersistentVolumeClaimSpec{
-					AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},
-					Resources:   corev1.VolumeResourceRequirements{Requests: corev1.ResourceList{corev1.ResourceStorage: qty}},
-				},
+				Spec:       pvcSpec,
 			}
 
 			if vol.Create {
