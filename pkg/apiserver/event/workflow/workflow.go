@@ -228,6 +228,10 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		}
 		jobs = append(jobs, jobTask)
 	}
+	klog.Infof("Generated %d jobs for workflow %s:", len(jobs), task.WorkflowName)
+	for i, j := range jobs {
+		klog.Infof("  [%d] Job Name: %s, Type: %s", i, j.Name, j.JobType)
+	}
 	return jobs
 }
 

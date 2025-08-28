@@ -136,6 +136,13 @@ func (c *DeployPVCJobCtl) shouldUpdatePVC(existing, desired *corev1.PersistentVo
 }
 
 func (c *DeployPVCJobCtl) wait(ctx context.Context) {
+	var pvcName string
+	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
+		pvcName = p.Name
+	} else {
+		pvcName = c.job.Name // fallback for logging
+	}
+
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
@@ -143,17 +150,18 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) {
 	for {
 		select {
 		case <-timeout:
-			klog.Warningf("timed out waiting for PVC: %s", c.job.Name)
+			klog.Warningf("timed out waiting for PVC: %s", pvcName)
 			c.job.Status = config.StatusFailed
 			return
 		case <-ticker.C:
 			isReady, err := c.getPVCStatus(ctx)
 			if err != nil {
-				klog.Errorf("error checking PVC status: %v", err)
+				klog.Errorf("error checking PVC %s status: %v", pvcName, err)
 				c.job.Status = config.StatusFailed
 				return
 			}
 			if isReady {
+				klog.Infof("PVC %s is ready.", pvcName)
 				c.job.Status = config.StatusCompleted
 				return
 			}
@@ -162,7 +170,14 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) {
 }
 
 func (c *DeployPVCJobCtl) getPVCStatus(ctx context.Context) (bool, error) {
-	pvc, err := c.client.CoreV1().PersistentVolumeClaims(c.job.Namespace).Get(ctx, c.job.Name, metav1.GetOptions{})
+	var pvcName string
+	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
+		pvcName = p.Name
+	} else {
+		return false, fmt.Errorf("failed to get PVC info from job: %s", c.job.Name)
+	}
+
+	pvc, err := c.client.CoreV1().PersistentVolumeClaims(c.job.Namespace).Get(ctx, pvcName, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			return false, nil

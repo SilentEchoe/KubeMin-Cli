@@ -115,7 +115,11 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 			job.Error = errMsg
 		}
 		job.EndTime = time.Now().Unix()
-		klog.Infof("finish job: %s,status: %s", job.Name, job.Status)
+		if job.Error != "" {
+			klog.Infof("finish job: %s, status: %s, error: %s", job.Name, job.Status, job.Error)
+		} else {
+			klog.Infof("finish job: %s, status: %s", job.Name, job.Status)
+		}
 		ack()
 		klog.Infof("updating job info into db...")
 		err := jobCtl.SaveInfo(ctx)
