@@ -84,7 +84,8 @@ func NewConfig() *Config {
 		ExitOnLostLeader: true,
 		DTMAddr:          "",
 		EnableTracing:    true,
-		JaegerEndpoint:   "http://localhost:14268/api/traces",
+		JaegerEndpoint:   "",
+		//JaegerEndpoint:   "http://localhost:14268/api/traces",
 	}
 }
 
