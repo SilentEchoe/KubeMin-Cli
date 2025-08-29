@@ -28,6 +28,7 @@ type WorkflowSteps struct {
 
 type WorkflowStep struct {
 	Name         string         `json:"name"`
+	Level        int            `json:"level,omitempty"`
 	WorkflowType config.JobType `json:"workflowType"`
 	Properties   []Policies     `json:"properties"`
 }

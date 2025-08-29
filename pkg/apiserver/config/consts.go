@@ -61,7 +61,7 @@ const (
 )
 
 const (
-	StatusCompleted      Status = "completed"                      //创建
+	StatusCompleted      Status = "completed"                      //执行完毕
 	StatusDisabled       Status = "disabled"                       //已关闭
 	StatusCreated        Status = "created"                        //创建
 	StatusRunning        Status = "running"                        //运行中
@@ -85,6 +85,15 @@ const (
 	StatusDebugAfter     Status = "debug_after"                    //调试之后
 	StatusUnstable       Status = "unstable"                       //不稳定
 	StatusManualApproval Status = "wait_for_manual_error_handling" //等待手动错误处理
+)
+
+const (
+	// JobPriorityHigh defines the high priority level, for resources like PVC, ConfigMap, Secret.
+	JobPriorityHigh = 0
+	// JobPriorityNormal defines the normal priority level, for resources like Deployments, StatefulSets.
+	JobPriorityNormal = 10
+	// JobPriorityLow defines the low priority level, for cleanup or notification jobs.
+	JobPriorityLow = 20
 )
 
 // 用户侧声明的存储类型（API 入参）

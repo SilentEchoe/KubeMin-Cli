@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -120,33 +121,46 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// sub cancel signal from redis
-	// 从redis中订阅取消信号
-	//cancelChan, closeFunc := cache.NewRedisCache(config2.RedisCommonCacheTokenDB()).Subscribe(fmt.Sprintf("workflowctl-cancel-%s-%d", c.workflowTask.WorkflowName, c.workflowTask.TaskID))
-	//defer func() {
-	//	log.Infof("pubsub channel: %s/%d closed", c.workflowTask.WorkflowName, c.workflowTask.TaskID)
-	//	_ = closeFunc()
-
-	//}()
-
 	go func() {
 		for {
 			select {
-			//case <-cancelChan:
-			//	cancel()
-			//	return
 			case <-ctx.Done():
 				return
 			}
 		}
 	}()
 
-	tasks := GenerateJobTask(ctx, w.workflowTask, w.Store)
-	job.RunJobs(ctx, tasks, concurrency, w.Client, w.Store, w.ack)
+	stagedTasks := GenerateJobTasks(ctx, w.workflowTask, w.Store)
+
+	var levels []int
+	for level := range stagedTasks {
+		levels = append(levels, level)
+	}
+	sort.Ints(levels)
+
+	for _, level := range levels {
+		tasksInLevel := stagedTasks[level]
+		if len(tasksInLevel) == 0 {
+			continue
+		}
+		klog.Infof("Executing workflow '%s', level %d with %d jobs.", w.workflowTask.WorkflowName, level, len(tasksInLevel))
+
+		job.RunJobs(ctx, tasksInLevel, concurrency, w.Client, w.Store, w.ack)
+
+		for _, task := range tasksInLevel {
+			if task.Status != config.StatusCompleted {
+				klog.Errorf("Workflow '%s' failed at level %d on job '%s' (status: %s). Aborting.", w.workflowTask.WorkflowName, level, task.Name, task.Status)
+				w.workflowTask.Status = config.StatusFailed
+				return
+			}
+		}
+		klog.Infof("Workflow '%s', level %d completed successfully.", w.workflowTask.WorkflowName, level)
+	}
+
 	w.updateWorkflowStatus(ctx)
 }
 
-func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []*model.JobTask {
+func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) map[int][]*model.JobTask {
 	// Step1.根据 appId 查询所有组件
 	workflow := model.Workflow{
 		ID: task.WorkflowId,
@@ -186,7 +200,11 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 	}
 
 	// 构建Jobs
-	var jobs []*model.JobTask
+	stagedJobs := make(map[int][]*model.JobTask)
+	stagedJobs[config.JobPriorityHigh] = []*model.JobTask{}
+	stagedJobs[config.JobPriorityNormal] = []*model.JobTask{}
+	stagedJobs[config.JobPriorityLow] = []*model.JobTask{}
+
 	for _, step := range workflowStep.Steps {
 		componentSteps := FindComponents(ComponentList, step.Name)
 		if componentSteps == nil {
@@ -198,25 +216,31 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 		switch componentSteps.ComponentType {
 		case config.ServerJob:
 			jobTask.JobType = string(config.JobDeploy)
-			// webservice 默认为无状态服务，使用Deployment 构建
 			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
+			stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTask)
+
 		case config.StoreJob:
 			jobTask.JobType = string(config.JobDeployStore)
 			storeJobs := job.GenerateStoreService(componentSteps)
 			if storeJobs != nil {
 				jobTask.JobInfo = storeJobs.StatefulSet
-				var err error
-				jobs, err = CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, jobs)
+				stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTask)
+
+				var pvcJobs []*model.JobTask
+				pvcJobs, err = CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, pvcJobs)
 				if err != nil {
 					klog.Errorf("failed to create PVC jobs for component %s: %v", componentSteps.Name, err)
 				}
+				stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], pvcJobs...)
 			}
 		case config.ConfJob:
 			jobTask.JobType = string(config.JobDeployConfigMap)
 			jobTask.JobInfo = job.GenerateConfigMap(componentSteps, &properties)
+			stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], jobTask)
 		case config.SecretJob:
 			jobTask.JobType = string(config.JobDeploySecret)
 			jobTask.JobInfo = job.GenerateSecret(componentSteps, &properties)
+			stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], jobTask)
 		}
 
 		// 创建Service
@@ -224,15 +248,21 @@ func GenerateJobTask(ctx context.Context, task *model.WorkflowQueue, ds datastor
 			jobTaskService := NewJobTask(fmt.Sprintf("%s", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
 			jobTaskService.JobType = string(config.JobDeployService)
 			jobTaskService.JobInfo = job.GenerateService(fmt.Sprintf("%s", componentSteps.Name), "default", nil, properties.Ports)
-			jobs = append(jobs, jobTaskService)
+			stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTaskService)
 		}
-		jobs = append(jobs, jobTask)
 	}
-	klog.Infof("Generated %d jobs for workflow %s:", len(jobs), task.WorkflowName)
-	for i, j := range jobs {
-		klog.Infof("  [%d] Job Name: %s, Type: %s", i, j.Name, j.JobType)
+	totalJobs := 0
+	for level, jobs := range stagedJobs {
+		if len(jobs) > 0 {
+			klog.Infof("Generated %d jobs for workflow %s at level %d:", len(jobs), task.WorkflowName, level)
+			totalJobs += len(jobs)
+			for i, j := range jobs {
+				klog.Infof("  [%d] Job Name: %s, Type: %s", i, j.Name, j.JobType)
+			}
+		}
 	}
-	return jobs
+	klog.Infof("Generated a total of %d jobs for workflow %s.", totalJobs, task.WorkflowName)
+	return stagedJobs
 }
 
 func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.JobTask {
@@ -261,8 +291,8 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 	//将状态更改为队列中
 	task.Status = config.StatusQueued
 	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
-		klog.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
-		return fmt.Errorf("%s:%d update t status error", task.WorkflowName, task.TaskID)
+		klog.Errorf("%s:%s update t status error", task.WorkflowName, task.TaskID)
+		return fmt.Errorf("%s:%s update t status error", task.WorkflowName, task.TaskID)
 	}
 	// 执行新的任务
 	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)

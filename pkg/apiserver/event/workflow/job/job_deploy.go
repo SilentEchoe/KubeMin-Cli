@@ -225,7 +225,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
-			Namespace: "default",
+			Namespace: component.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &component.Replicas,
@@ -249,7 +249,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			},
 		},
 	}
-	
+
 	return deployment
 }
 
