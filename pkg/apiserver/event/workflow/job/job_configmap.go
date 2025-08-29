@@ -57,10 +57,11 @@ func (c *DeployConfigMapJobCtl) SaveInfo(ctx context.Context) error {
 }
 
 func (c *DeployConfigMapJobCtl) Run(ctx context.Context) {
+	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
-		klog.Errorf("DeployConfigMapJob run error: %v", err)
+		logger.Error(err, "DeployConfigMapJob run error")
 		c.job.Status = config.StatusFailed
 		c.ack()
 		return
@@ -109,6 +110,7 @@ func (c *DeployConfigMapJobCtl) deployExistingConfigMap(ctx context.Context, cm 
 }
 
 func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
+	logger := klog.FromContext(ctx)
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
 	// Update if exists, create if not.
 	if existing, err := cli.Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {
@@ -117,12 +119,12 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 		if _, err := cli.Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
 			return fmt.Errorf("update configmap %q failed: %w", cm.Name, err)
 		}
-		klog.Infof("configmap %s/%s updated", cm.Namespace, cm.Name)
+		logger.Info("ConfigMap updated", "namespace", cm.Namespace, "name", cm.Name)
 	} else if k8serrors.IsNotFound(err) {
 		if _, err := cli.Create(ctx, cm, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("create configmap %q failed: %w", cm.Name, err)
 		}
-		klog.Infof("configmap %s/%s created", cm.Namespace, cm.Name)
+		logger.Info("ConfigMap created", "namespace", cm.Namespace, "name", cm.Name)
 	} else if err != nil {
 		return fmt.Errorf("get configmap %q failed: %w", cm.Name, err)
 	}

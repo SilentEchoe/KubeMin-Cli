@@ -59,10 +59,11 @@ func (c *DeploySecretJobCtl) SaveInfo(ctx context.Context) error {
 }
 
 func (c *DeploySecretJobCtl) Run(ctx context.Context) {
+	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
 	c.ack()
 	if err := c.run(ctx); err != nil {
-		klog.Errorf("DeploySecretJob run error: %v", err)
+		logger.Error(err, "DeploySecretJob run error")
 		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
 		c.ack()
@@ -72,6 +73,7 @@ func (c *DeploySecretJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeploySecretJobCtl) run(ctx context.Context) error {
+	logger := klog.FromContext(ctx)
 	if c.client == nil {
 		return fmt.Errorf("client is nil")
 	}
@@ -132,19 +134,19 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 			if !equalSecretPayload(existing, secret) {
 				return fmt.Errorf("secret %s/%s is immutable; content differs and cannot be updated", secret.Namespace, secret.Name)
 			}
-			klog.Infof("secret %s/%s is immutable and unchanged; skipping update", secret.Namespace, secret.Name)
+			logger.Info("Secret is immutable and unchanged; skipping update", "secretName", secret.Name, "namespace", secret.Namespace)
 		} else {
 			secret.ResourceVersion = existing.ResourceVersion
 			if _, err := cli.Update(ctx, secret, metav1.UpdateOptions{}); err != nil {
 				return fmt.Errorf("update secret %q failed: %w", secret.Name, err)
 			}
-			klog.Infof("secret %s/%s updated", secret.Namespace, secret.Name)
+			logger.Info("Secret updated", "secretName", secret.Name, "namespace", secret.Namespace)
 		}
 	} else if k8serrors.IsNotFound(err) {
 		if _, err := cli.Create(ctx, secret, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("create secret %q failed: %w", secret.Name, err)
 		}
-		klog.Infof("secret %s/%s created", secret.Namespace, secret.Name)
+		logger.Info("Secret created", "secretName", secret.Name, "namespace", secret.Namespace)
 	} else if err != nil {
 		return fmt.Errorf("get secret %q failed: %w", secret.Name, err)
 	}

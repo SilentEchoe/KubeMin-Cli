@@ -60,11 +60,12 @@ func (c *DeployPVCJobCtl) SaveInfo(ctx context.Context) error {
 }
 
 func (c *DeployPVCJobCtl) Run(ctx context.Context) {
+	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
 	c.ack()
 
 	if err := c.run(ctx); err != nil {
-		klog.Errorf("DeployPVCJob run error: %v", err)
+		logger.Error(err, "DeployPVCJob run error")
 		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
 		c.ack()
@@ -75,6 +76,7 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeployPVCJobCtl) run(ctx context.Context) error {
+	logger := klog.FromContext(ctx)
 	if c.client == nil {
 		return fmt.Errorf("client is nil")
 	}
@@ -96,9 +98,9 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("failed to update PVC %q: %w", pvc.Name, err)
 			}
-			klog.Infof("PVC %q updated successfully", pvc.Name)
+			logger.Info("PVC updated successfully", "pvcName", pvc.Name)
 		} else {
-			klog.Infof("PVC %q is up-to-date, skipping update", pvc.Name)
+			logger.Info("PVC is up-to-date, skipping update", "pvcName", pvc.Name)
 		}
 	} else if k8serrors.IsNotFound(err) {
 		// PVC不存在，创建新的
@@ -106,7 +108,7 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 		if err != nil {
 			return fmt.Errorf("failed to create PVC %q: %w", pvc.Name, err)
 		}
-		klog.Infof("PVC %q created successfully", pvc.Name)
+		logger.Info("PVC created successfully", "pvcName", pvc.Name)
 	} else {
 		return fmt.Errorf("failed to check PVC existence: %w", err)
 	}
@@ -136,6 +138,7 @@ func (c *DeployPVCJobCtl) shouldUpdatePVC(existing, desired *corev1.PersistentVo
 }
 
 func (c *DeployPVCJobCtl) wait(ctx context.Context) {
+	logger := klog.FromContext(ctx)
 	var pvcName string
 	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
 		pvcName = p.Name
@@ -150,18 +153,18 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) {
 	for {
 		select {
 		case <-timeout:
-			klog.Warningf("timed out waiting for PVC: %s", pvcName)
+			logger.Info("Timed out waiting for PVC", "pvcName", pvcName)
 			c.job.Status = config.StatusFailed
 			return
 		case <-ticker.C:
 			isReady, err := c.getPVCStatus(ctx)
 			if err != nil {
-				klog.Errorf("error checking PVC %s status: %v", pvcName, err)
+				logger.Error(err, "Error checking PVC status", "pvcName", pvcName)
 				c.job.Status = config.StatusFailed
 				return
 			}
 			if isReady {
-				klog.Infof("PVC %s is ready.", pvcName)
+				logger.Info("PVC is ready", "pvcName", pvcName)
 				c.job.Status = config.StatusCompleted
 				return
 			}

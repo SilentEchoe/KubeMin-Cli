@@ -22,6 +22,7 @@ func InitTracerProvider(serviceName, jaegerEndpoint string) (func(context.Contex
 
 	// Create a new tracer provider with a batch span processor and the Jaeger exporter.
 	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithBatcher(exporter),
 		sdktrace.WithResource(resource.NewWithAttributes(
 			semconv.SchemaURL,

@@ -6,10 +6,15 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 )
@@ -56,19 +61,20 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 }
 
 func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
+	logger := klog.FromContext(ctx)
 	if len(jobs) == 0 {
-		klog.Info("no jobs to run")
+		logger.Info("no jobs to run")
 		return
 	}
 
 	if concurrency == 1 {
 		for _, job := range jobs {
-			klog.Info("Job started: ", job.Name, job.JobType)
+			logger.Info("Job started", "jobName", job.Name, "jobType", job.JobType)
 			runJob(ctx, job, client, store, ack)
 			// DEBUG: Log job completion status before checking for failure.
-			klog.Infof("DEBUG: Job finished running: %s, Status is: %s", job.Name, job.Status)
+			logger.Info("DEBUG: Job finished running", "jobName", job.Name, "status", job.Status)
 			if jobStatusFailed(job.Status) {
-				klog.Errorf("Job %s failed with status %s, stopping workflow execution.", job.Name, job.Status)
+				logger.Error(nil, "Job failed, stopping workflow execution.", "jobName", job.Name, "status", job.Status)
 				return
 			}
 		}
@@ -79,12 +85,28 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 }
 
 func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
+	// Start a new span for this specific job, it will be a child of the workflow span
+	tracer := otel.Tracer("job-runner")
+	ctx, span := tracer.Start(ctx, job.Name, trace.WithAttributes(
+		attribute.String("job.name", job.Name),
+		attribute.String("job.type", job.JobType),
+	))
+	defer span.End()
+
+	// Create a logger with both workflow traceID and the new job spanID
+	logger := klog.FromContext(ctx).WithValues(
+		"spanID", span.SpanContext().SpanID().String(),
+		"jobName", job.Name,
+	)
+	ctx = klog.NewContext(ctx, logger)
+
 	if job == nil {
-		klog.Errorf("runJob received nil job")
+		klog.Error("runJob received nil job") // This log cannot have context
 		return
 	}
 
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
+		logger.Info("Job skipped", "status", job.Status)
 		return
 	}
 	job.Status = config.StatusPrepare
@@ -92,39 +114,42 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	ack()
 
 	if store == nil {
-		klog.Errorf("start job store is nil")
+		klog.Error("start job store is nil") // This log cannot have context
 		return
 	}
-	klog.Infof("start job: %s, status: %s", job.JobType, job.Status)
+	logger.Info("Starting job", "jobType", job.JobType, "status", job.Status)
 	jobCtl := initJobCtl(job, client, store, ack)
 	if jobCtl == nil {
 		errMsg := fmt.Sprintf("failed to initialize job controller for job: %s", job.Name)
-		klog.Error(errMsg)
+		logger.Error(nil, errMsg)
 		job.Status = config.StatusFailed
 		job.Error = errMsg
 		job.EndTime = time.Now().Unix()
+		span.SetStatus(codes.Error, "Failed to initialize job controller")
+		span.RecordError(errors.New(errMsg))
 		ack()
 		return
 	}
 
 	defer func() {
-		if err := recover(); err != nil {
-			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
-			klog.Error(errMsg)
+		if r := recover(); r != nil {
+			errMsg := fmt.Sprintf("job panic: %v", r)
+			logger.Error(errors.New(errMsg), "Panic recovered in job execution")
 			job.Status = config.StatusFailed
 			job.Error = errMsg
+			span.SetStatus(codes.Error, "Panic in job execution")
+			span.RecordError(errors.New(errMsg))
 		}
 		job.EndTime = time.Now().Unix()
 		if job.Error != "" {
-			klog.Infof("finish job: %s, status: %s, error: %s", job.Name, job.Status, job.Error)
+			logger.Info("Finished job with error", "status", job.Status, "error", job.Error)
 		} else {
-			klog.Infof("finish job: %s, status: %s", job.Name, job.Status)
+			logger.Info("Finished job successfully", "status", job.Status)
 		}
 		ack()
-		klog.Infof("updating job info into db...")
-		err := jobCtl.SaveInfo(ctx)
-		if err != nil {
-			klog.Errorf("update job info into db error: %v", err)
+		logger.Info("Updating job info in db...")
+		if err := jobCtl.SaveInfo(ctx); err != nil {
+			logger.Error(err, "Failed to update job info in db")
 		}
 	}()
 	// 执行对应的JOb任务

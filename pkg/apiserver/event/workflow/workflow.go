@@ -19,6 +19,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Workflow struct {
@@ -107,14 +111,26 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 }
 
 func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
+	// 1. Start a new trace for this workflow execution
+	tracer := otel.Tracer("workflow-runner")
+	ctx, span := tracer.Start(ctx, w.workflowTask.WorkflowName, trace.WithAttributes(
+		attribute.String("workflow.name", w.workflowTask.WorkflowName),
+		attribute.String("workflow.task_id", w.workflowTask.TaskID),
+	))
+	defer span.End()
+
+	// 2. Create a logger with the traceID and put it in the context
+	logger := klog.FromContext(ctx).WithValues("traceID", span.SpanContext().TraceID().String())
+	ctx = klog.NewContext(ctx, logger)
+
 	// 将工作流的状态更改为运行中
 	w.workflowTask.Status = config.StatusRunning
 	w.workflowTask.CreateTime = time.Now()
 	w.ack()
-	klog.Infof("start workflow: %s, status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status)
+	logger.Info("Starting workflow", "workflowName", w.workflowTask.WorkflowName, "status", w.workflowTask.Status)
 
 	defer func() {
-		klog.Infof("finish workflow: %s, status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status)
+		logger.Info("Finished workflow", "workflowName", w.workflowTask.WorkflowName, "status", w.workflowTask.Status)
 		w.ack()
 	}()
 
@@ -143,38 +159,42 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 		if len(tasksInLevel) == 0 {
 			continue
 		}
-		klog.Infof("Executing workflow '%s', level %d with %d jobs.", w.workflowTask.WorkflowName, level, len(tasksInLevel))
+		logger.Info("Executing workflow level", "workflowName", w.workflowTask.WorkflowName, "level", level, "jobCount", len(tasksInLevel))
 
 		job.RunJobs(ctx, tasksInLevel, concurrency, w.Client, w.Store, w.ack)
 
 		for _, task := range tasksInLevel {
 			if task.Status != config.StatusCompleted {
-				klog.Errorf("Workflow '%s' failed at level %d on job '%s' (status: %s). Aborting.", w.workflowTask.WorkflowName, level, task.Name, task.Status)
+				logger.Error(nil, "Workflow failed at job, aborting.", "workflowName", w.workflowTask.WorkflowName, "level", level, "jobName", task.Name, "jobStatus", task.Status)
 				w.workflowTask.Status = config.StatusFailed
+				span.SetStatus(codes.Error, "Workflow failed")
+				span.RecordError(fmt.Errorf("job %s failed with status %s", task.Name, task.Status))
 				return
 			}
 		}
-		klog.Infof("Workflow '%s', level %d completed successfully.", w.workflowTask.WorkflowName, level)
+		logger.Info("Workflow level completed successfully", "workflowName", w.workflowTask.WorkflowName, "level", level)
 	}
 
+	span.SetStatus(codes.Ok, "Workflow completed successfully")
 	w.updateWorkflowStatus(ctx)
 }
 
 func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) map[int][]*model.JobTask {
+	logger := klog.FromContext(ctx)
 	// Step1.根据 appId 查询所有组件
 	workflow := model.Workflow{
 		ID: task.WorkflowId,
 	}
 	err := ds.Get(ctx, &workflow)
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error: %v", err)
+		logger.Error(err, "Failed to get workflow for generating job tasks", "workflowID", task.WorkflowId)
 		return nil
 	}
 
 	// 将 JSONStruct 序列化为字节切片
 	steps, err := json.Marshal(workflow.Steps)
 	if err != nil {
-		klog.Errorf("Workflow.Steps deserialization failure: %v", err)
+		logger.Error(err, "Failed to marshal workflow steps")
 		return nil
 	}
 
@@ -182,7 +202,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	var workflowStep model.WorkflowSteps
 	err = json.Unmarshal(steps, &workflowStep)
 	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure: %v", err)
+		logger.Error(err, "Failed to unmarshal workflow steps")
 		return nil
 	}
 
@@ -190,7 +210,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	component, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
 
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error: %v", err)
+		logger.Error(err, "Failed to list application components", "appID", task.AppID)
 		return nil
 	}
 	var ComponentList []*model.ApplicationComponent
@@ -211,7 +231,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 			continue
 		}
 		jobTask := NewJobTask(componentSteps.Name, componentSteps.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
-		properties := ParseProperties(componentSteps.Properties)
+		properties := ParseProperties(ctx, componentSteps.Properties)
 
 		switch componentSteps.ComponentType {
 		case config.ServerJob:
@@ -229,7 +249,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 				var pvcJobs []*model.JobTask
 				pvcJobs, err = CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, pvcJobs)
 				if err != nil {
-					klog.Errorf("failed to create PVC jobs for component %s: %v", componentSteps.Name, err)
+					logger.Error(err, "Failed to create PVC jobs", "componentName", componentSteps.Name)
 				}
 				stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], pvcJobs...)
 			}
@@ -254,14 +274,14 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	totalJobs := 0
 	for level, jobs := range stagedJobs {
 		if len(jobs) > 0 {
-			klog.Infof("Generated %d jobs for workflow %s at level %d:", len(jobs), task.WorkflowName, level)
+			logger.Info("Generated jobs for workflow level", "jobCount", len(jobs), "workflowName", task.WorkflowName, "level", level)
 			totalJobs += len(jobs)
 			for _, j := range jobs {
-				klog.Infof("Job Name:[%s], Job Type:[%s], Job Level:[%d]", j.Name, j.JobType, level)
+				logger.Info("Generated job details", "jobName", j.Name, "jobType", j.JobType, "level", level)
 			}
 		}
 	}
-	klog.Infof("Generated a total of %d jobs for workflow %s.", totalJobs, task.WorkflowName)
+	logger.Info("Generated total jobs for workflow", "totalJobs", totalJobs, "workflowName", task.WorkflowName)
 	return stagedJobs
 }
 
@@ -307,17 +327,18 @@ func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
 	}
 }
 
-func ParseProperties(properties *model.JSONStruct) model.Properties {
+func ParseProperties(ctx context.Context, properties *model.JSONStruct) model.Properties {
+	logger := klog.FromContext(ctx)
 	cProperties, err := json.Marshal(properties)
 	if err != nil {
-		klog.Errorf("Component.Properties deserialization failure: %v", err)
+		logger.Error(err, "Component.Properties deserialization failure")
 		return model.Properties{}
 	}
 
 	var propertied model.Properties
 	err = json.Unmarshal(cProperties, &propertied)
 	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure: %v", err)
+		logger.Error(err, "WorkflowSteps deserialization failure")
 		return model.Properties{}
 	}
 	return propertied
