@@ -95,11 +95,11 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		klog.Errorf("start job store is nil")
 		return
 	}
-	klog.Infof(fmt.Sprintf("start job: %s,status: %s", job.JobType, job.Status))
+	klog.Infof("start job: %s, status: %s", job.JobType, job.Status)
 	jobCtl := initJobCtl(job, client, store, ack)
 	if jobCtl == nil {
 		errMsg := fmt.Sprintf("failed to initialize job controller for job: %s", job.Name)
-		klog.Errorf(errMsg)
+		klog.Error(errMsg)
 		job.Status = config.StatusFailed
 		job.Error = errMsg
 		job.EndTime = time.Now().Unix()
@@ -110,7 +110,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	defer func() {
 		if err := recover(); err != nil {
 			errMsg := fmt.Sprintf("job: %s panic: %v", job.Name, err)
-			klog.Errorf(errMsg)
+			klog.Error(errMsg)
 			job.Status = config.StatusFailed
 			job.Error = errMsg
 		}

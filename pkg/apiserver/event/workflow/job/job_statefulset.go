@@ -116,24 +116,22 @@ func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {
 	for {
 		select {
 		case <-timeout:
-			klog.Infof(fmt.Sprintf("%s", c.job.Name))
+			klog.Infof("timeout waiting for job %s", c.job.Name)
 			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil || newResources == nil {
-				msg := fmt.Sprintf("get resource owner info error: %v", err)
-				klog.Errorf(msg)
+				klog.Errorf("get resource owner info error: %v", err)
 				c.job.Status = config.StatusFailed
 			}
 		default:
 			time.Sleep(2 * time.Second)
 			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
-				msg := fmt.Sprintf("get resource owner info error: %v", err)
-				klog.Errorf(msg)
+				klog.Errorf("get resource owner info error: %v", err)
 				c.job.Status = config.StatusFailed
 				return
 			}
 			if newResources != nil {
-				klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", newResources.Name, newResources.Replicas, newResources.ReadyReplicas))
+				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
 				if newResources.Ready {
 					c.job.Status = config.StatusCompleted
 					return
@@ -226,12 +224,12 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 	if err != nil {
 		if errors.IsNotFound(err) {
 			klog.Infof("StatefulSet deploy is nil")
-			klog.Infoln(fmt.Sprintf("StatefulSet Name :%s, Namespace: %s", name, namespace))
+			klog.Infof("StatefulSet Name: %s, Namespace: %s", name, namespace)
 			return nil, nil
 		}
 		return nil, err
 	}
-	klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas))
+	klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas)
 	isOk := false
 	if *statefulSet.Spec.Replicas == statefulSet.Status.ReadyReplicas {
 		isOk = true

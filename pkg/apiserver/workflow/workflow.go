@@ -12,7 +12,7 @@ import (
 func LintWorkflow(workflow *model.Workflow) error {
 	if workflow.ProjectId == "" {
 		err := fmt.Errorf("project should not be empty")
-		klog.Errorf(err.Error())
+		klog.Errorf("%v", err)
 		return err
 	}
 	// 判断工作流的名称是否符合正则表达式的规范
@@ -23,8 +23,8 @@ func LintWorkflow(workflow *model.Workflow) error {
 	}
 	if !match {
 		errMsg := "workflow identifier supports uppercase and lowercase letters, digits, and hyphens"
-		klog.Errorf(errMsg)
-		return fmt.Errorf(errMsg)
+		klog.Error(errMsg)
+		return fmt.Errorf("%s", errMsg)
 	}
 	return nil
 }

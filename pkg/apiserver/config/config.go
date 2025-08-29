@@ -34,6 +34,12 @@ type Config struct {
 	// Istio Enable
 	IstioEnable bool
 
+	// EnableTracing enables distributed tracing
+	EnableTracing bool
+
+	// JaegerEndpoint is the endpoint of the Jaeger collector
+	JaegerEndpoint string
+
 	// AddonCacheTime is how long between two cache operations
 	AddonCacheTime time.Duration
 
@@ -77,6 +83,8 @@ func NewConfig() *Config {
 		IstioEnable:      false,
 		ExitOnLostLeader: true,
 		DTMAddr:          "",
+		EnableTracing:    false,
+		JaegerEndpoint:   "http://localhost:14268/api/traces",
 	}
 }
 
@@ -94,6 +102,8 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
 	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
+	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
+	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
 	addFlags(fs)
 }
 

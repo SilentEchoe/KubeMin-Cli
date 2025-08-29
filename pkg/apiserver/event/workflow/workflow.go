@@ -35,23 +35,23 @@ func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 
 func (w *Workflow) InitQueue(ctx context.Context) {
 	if w.Store == nil {
-		klog.Errorf("datastore is nil")
+		klog.Error("datastore is nil")
 		return
 	}
 	// 从数据库中查找未完成的任务
 	tasks, err := w.WorkflowService.TaskRunning(ctx)
 	if err != nil {
-		klog.Errorf(fmt.Sprintf("find task running error:%s", err))
+		klog.Errorf("find task running error: %v", err)
 		return
 	}
 	// 如果重启Queue，则取消所有正在运行的tasks
 	for _, task := range tasks {
 		err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID)
 		if err != nil {
-			klog.Errorf(fmt.Sprintf("cance task error:%s", err))
+			klog.Errorf("cancel task error: %v", err)
 			return
 		}
-		klog.Infof(fmt.Sprintf("cance task :%s", task.TaskID))
+		klog.Infof("cancel task: %s", task.TaskID)
 	}
 }
 
@@ -87,7 +87,7 @@ func NewWorkflowController(workflowTask *model.WorkflowQueue, client *kubernetes
 		workflowTask: workflowTask,
 		Store:        store,
 		Client:       client,
-		prefix:       fmt.Sprintf("workflowctl-%s-%d", workflowTask.WorkflowName, workflowTask.TaskID),
+		prefix:       fmt.Sprintf("workflowctl-%s-%s", workflowTask.WorkflowName, workflowTask.TaskID),
 	}
 	ctl.ack = ctl.updateWorkflowTask
 	return ctl
@@ -98,11 +98,11 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 	taskInColl := w.workflowTask
 	// 如果当前的task状态为：通过，暂停，超时，拒绝；则不处理，直接返回
 	if taskInColl.Status == config.StatusPassed || taskInColl.Status == config.StatusFailed || taskInColl.Status == config.StatusTimeout || taskInColl.Status == config.StatusReject {
-		klog.Info(fmt.Sprintf("%s:%s:%s task already done", taskInColl.WorkflowName, taskInColl.TaskID, taskInColl.Status))
+		klog.Infof("workflow %s, task %s, status %s: task already done, skipping update", taskInColl.WorkflowName, taskInColl.TaskID, taskInColl.Status)
 		return
 	}
 	if err := w.Store.Put(context.Background(), w.workflowTask); err != nil {
-		klog.Errorf("%s:%s update t status error", w.workflowTask.WorkflowName, w.workflowTask.TaskID)
+		klog.Errorf("update task status error for workflow %s, task %s: %v", w.workflowTask.WorkflowName, w.workflowTask.TaskID, err)
 	}
 }
 
@@ -111,10 +111,10 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	w.workflowTask.Status = config.StatusRunning
 	w.workflowTask.CreateTime = time.Now()
 	w.ack()
-	klog.Infof(fmt.Sprintf("start workflow: %s,status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status))
+	klog.Infof("start workflow: %s, status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status)
 
 	defer func() {
-		klog.Infof(fmt.Sprintf("finish workflow: %s,status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status))
+		klog.Infof("finish workflow: %s, status: %s", w.workflowTask.WorkflowName, w.workflowTask.Status)
 		w.ack()
 	}()
 
@@ -167,14 +167,14 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	}
 	err := ds.Get(ctx, &workflow)
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error: %s", err)
+		klog.Errorf("Generate JobTask Components error: %v", err)
 		return nil
 	}
 
 	// 将 JSONStruct 序列化为字节切片
 	steps, err := json.Marshal(workflow.Steps)
 	if err != nil {
-		klog.Errorf("Workflow.Steps deserialization failure: %s", err)
+		klog.Errorf("Workflow.Steps deserialization failure: %v", err)
 		return nil
 	}
 
@@ -182,7 +182,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	var workflowStep model.WorkflowSteps
 	err = json.Unmarshal(steps, &workflowStep)
 	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
+		klog.Errorf("WorkflowSteps deserialization failure: %v", err)
 		return nil
 	}
 
@@ -190,7 +190,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	component, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
 
 	if err != nil {
-		klog.Errorf("Generate JobTask Components error: %s", err)
+		klog.Errorf("Generate JobTask Components error: %v", err)
 		return nil
 	}
 	var ComponentList []*model.ApplicationComponent
@@ -256,8 +256,8 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 		if len(jobs) > 0 {
 			klog.Infof("Generated %d jobs for workflow %s at level %d:", len(jobs), task.WorkflowName, level)
 			totalJobs += len(jobs)
-			for i, j := range jobs {
-				klog.Infof("  [%d] Job Name: %s, Type: %s", i, j.Name, j.JobType)
+			for _, j := range jobs {
+				klog.Infof("Job Name:[%s], Job Type:[%s], Job Level:[%d]", j.Name, j.JobType, level)
 			}
 		}
 	}
@@ -291,8 +291,8 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 	//将状态更改为队列中
 	task.Status = config.StatusQueued
 	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
-		klog.Errorf("%s:%s update t status error", task.WorkflowName, task.TaskID)
-		return fmt.Errorf("%s:%s update t status error", task.WorkflowName, task.TaskID)
+		klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
+		return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
 	}
 	// 执行新的任务
 	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
@@ -303,21 +303,21 @@ func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
 	w.workflowTask.Status = config.StatusCompleted
 	err := w.Store.Put(ctx, w.workflowTask)
 	if err != nil {
-		klog.Errorf("update Workflow status err:%s", err)
+		klog.Errorf("update Workflow status err: %v", err)
 	}
 }
 
 func ParseProperties(properties *model.JSONStruct) model.Properties {
 	cProperties, err := json.Marshal(properties)
 	if err != nil {
-		klog.Errorf("Component.Properties deserialization failure: %s", err)
+		klog.Errorf("Component.Properties deserialization failure: %v", err)
 		return model.Properties{}
 	}
 
 	var propertied model.Properties
 	err = json.Unmarshal(cProperties, &propertied)
 	if err != nil {
-		klog.Errorf("WorkflowSteps deserialization failure: %s", err)
+		klog.Errorf("WorkflowSteps deserialization failure: %v", err)
 		return model.Properties{}
 	}
 	return propertied

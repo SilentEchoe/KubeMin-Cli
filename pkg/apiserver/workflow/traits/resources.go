@@ -28,7 +28,10 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		return nil, nil
 	}
 
-	var resourceReq corev1.ResourceRequirements
+		resourceReq := corev1.ResourceRequirements{
+		Requests: make(corev1.ResourceList),
+		Limits:   make(corev1.ResourceList),
+	}
 
 	if resourceSpec.CPU != "" {
 		qty, err := resource.ParseQuantity(resourceSpec.CPU)
@@ -44,7 +47,7 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		if err != nil {
 			return nil, fmt.Errorf("invalid memory resource %q: %w", resourceSpec.Memory, err)
 		}
-		resourceReq.Requests[corev1.ResourceCPU] = qty
+		resourceReq.Requests[corev1.ResourceMemory] = qty
 		resourceReq.Limits[corev1.ResourceMemory] = qty
 	}
 

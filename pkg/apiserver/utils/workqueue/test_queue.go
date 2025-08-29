@@ -12,5 +12,5 @@ type People struct {
 }
 
 func (p *People) String() string {
-	return fmt.Sprintf("print: %v", p)
+	return fmt.Sprintf("print: {Name: %s}", p.Name)
 }

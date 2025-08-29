@@ -132,24 +132,22 @@ func (c *DeployJobCtl) wait(ctx context.Context) {
 	for {
 		select {
 		case <-timeout:
-			klog.Infof(fmt.Sprintf("%s", c.job.Name))
+			klog.Infof("timeout waiting for job %s", c.job.Name)
 			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil || newResources == nil {
-				msg := fmt.Sprintf("get resource owner info error: %v", err)
-				klog.Errorf(msg)
+				klog.Errorf("get resource owner info error: %v", err)
 				c.job.Status = config.StatusFailed
 			}
 		default:
 			time.Sleep(2 * time.Second)
 			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
-				msg := fmt.Sprintf("get resource owner info error: %v", err)
-				klog.Errorf(msg)
+				klog.Errorf("get resource owner info error: %v", err)
 				c.job.Status = config.StatusFailed
 				return
 			}
 			if newResources != nil {
-				klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", newResources.Name, newResources.Replicas, newResources.ReadyReplicas))
+				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
 				if newResources.Ready {
 					c.job.Status = config.StatusCompleted
 					return
@@ -170,7 +168,7 @@ func getDeploymentStatus(kubeClient *kubernetes.Clientset, namespace string, nam
 		}
 		return nil, err
 	}
-	klog.Infof(fmt.Sprintf("newResources:%s, Replicas:%d ,ReadyReplicas:%d ", deploy.Name, deploy.Spec.Replicas, deploy.Status.ReadyReplicas))
+	klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", deploy.Name, deploy.Spec.Replicas, deploy.Status.ReadyReplicas)
 	isOk := false
 	if *deploy.Spec.Replicas == deploy.Status.ReadyReplicas {
 		isOk = true

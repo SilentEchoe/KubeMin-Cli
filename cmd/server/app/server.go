@@ -1,21 +1,24 @@
 package app
 
 import (
-	"KubeMin-Cli/cmd/server/app/options"
-	server "KubeMin-Cli/pkg/apiserver"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/profiling"
-	"KubeMin-Cli/version"
 	"context"
 	"flag"
 	"fmt"
-	"github.com/fatih/color"
-	"github.com/spf13/cobra"
-	"k8s.io/klog/v2"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/fatih/color"
+	"github.com/spf13/cobra"
+	"k8s.io/klog/v2"
+
+	"KubeMin-Cli/cmd/server/app/options"
+	server "KubeMin-Cli/pkg/apiserver"
+	"KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/profiling"
+	"KubeMin-Cli/pkg/tracing"
+	"KubeMin-Cli/version"
 )
 
 // NewAPIServerCommand creates a *cobra.Command object with default parameters
@@ -96,6 +99,20 @@ func Run(s *options.ServerRunOptions) error {
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
 	klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
+
+	if s.GenericServerRunOptions.EnableTracing {
+		klog.InfoS("Distributed tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint)
+		shutdown, err := tracing.InitTracerProvider("kubemin-cli", s.GenericServerRunOptions.JaegerEndpoint)
+		if err != nil {
+			return fmt.Errorf("failed to init tracer provider: %w", err)
+		}
+		defer func() {
+			if err := shutdown(context.Background()); err != nil {
+				klog.ErrorS(err, "Failed to shutdown tracer provider")
+			}
+		}()
+	}
+
 	apiServer := server.New(*s.GenericServerRunOptions)
 	return apiServer.Run(ctx, errChan)
 }
