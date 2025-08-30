@@ -1,0 +1,61 @@
+# 分布式工作流配置示例
+distributed_workflow:
+  # 是否启用分布式模式
+  enabled: true
+  
+  # 当分布式组件不可用时是否降级到本地模式
+  fallback_to_local: true
+  
+  # Redis配置
+  redis:
+    addr: "localhost:6379"
+    password: ""
+    db: 0
+    pool_size: 10
+    min_idle_conns: 5
+    max_retries: 3
+    dial_timeout: 5s
+    read_timeout: 3s
+    write_timeout: 3s
+  
+  # 调度器配置
+  scheduler:
+    task_queue: "workflow:tasks"
+    priority_queue: "workflow:priority"
+    result_queue: "workflow:results"
+    max_workers: 10
+    worker_timeout: 30s
+    heartbeat_interval: 10s
+    max_retries: 3
+    retry_delay: 5s
+    task_timeout: 5m
+    schedule_interval: 1s
+    cleanup_interval: 60s
+  
+  # Worker池配置
+  worker_pool:
+    size: 4                    # 初始Worker数量
+    max_tasks_per_worker: 10   # 每个Worker最大并发任务数
+    scale_up_threshold: 0.8    # 扩容阈值（负载超过80%）
+    scale_down_threshold: 0.2  # 缩容阈值（负载低于20%）
+    scale_interval: 30s        # 自动伸缩检查间隔
+
+# Kafka配置示例（可选）
+kafka:
+  brokers:
+    - "localhost:9092"
+    - "localhost:9093"
+    - "localhost:9094"
+  consumer_group: "workflow-group"
+  producer_timeout: 10s
+  consumer_timeout: 10s
+  retry_backoff: 1s
+  max_retries: 3
+  
+  # SASL认证（可选）
+  sasl_enabled: false
+  sasl_username: ""
+  sasl_password: ""
+  
+  # TLS配置（可选）
+  tls_enabled: false

@@ -25,3 +25,8 @@ func StartEventWorker(ctx context.Context, errChan chan error) {
 		go workers[i].Start(ctx, errChan)
 	}
 }
+
+// GetWorkers get all registered workers
+func GetWorkers() []Worker {
+	return workers
+}

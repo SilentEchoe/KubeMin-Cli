@@ -48,6 +48,15 @@ type Config struct {
 
 	// KubeBurst the burst of kube client
 	KubeBurst int
+	
+	// RedisAddr for distributed workflow
+	RedisAddr string
+	
+	// EnableDistributed enables distributed workflow mode
+	EnableDistributed bool
+	
+	// MaxWorkers maximum number of workflow workers
+	MaxWorkers int
 
 	// KubeQPS the QPS of kube client
 	KubeQPS float64
@@ -86,6 +95,9 @@ func NewConfig() *Config {
 		EnableTracing:    true,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
+		RedisAddr:         "", // Empty means local mode
+		EnableDistributed: false,
+		MaxWorkers:        10,
 	}
 }
 
@@ -105,6 +117,9 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
+	fs.StringVar(&c.RedisAddr, "redis-addr", configParameter.RedisAddr, "Redis server address for distributed workflow (e.g., localhost:6379)")
+	fs.BoolVar(&c.EnableDistributed, "enable-distributed", configParameter.EnableDistributed, "Enable distributed workflow mode")
+	fs.IntVar(&c.MaxWorkers, "max-workers", configParameter.MaxWorkers, "Maximum number of workflow workers")
 	addFlags(fs)
 }
 

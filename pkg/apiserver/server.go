@@ -146,8 +146,16 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	}
 
-	// event
-	if err := s.beanContainer.Provides(event.InitEvent()...); err != nil {
+	// event - 支持分布式模式
+	var eventBeans []interface{}
+	if s.cfg.RedisAddr != "" {
+		// 使用分布式模式
+		eventBeans = event.InitEventWithOptions(s.cfg.RedisAddr)
+	} else {
+		// 使用本地模式
+		eventBeans = event.InitEvent()
+	}
+	if err := s.beanContainer.Provides(eventBeans...); err != nil {
 		return fmt.Errorf("fail to provides the event bean to the container: %w", err)
 	}
 

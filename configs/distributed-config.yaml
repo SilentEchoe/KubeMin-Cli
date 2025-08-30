@@ -1,0 +1,50 @@
+# KubeMin-Cli 分布式工作流配置
+
+# API Server配置
+bindAddr: ":8008"
+
+# 数据库配置
+datastore:
+  type: "mysql"
+  database: "kubemin_cli"
+  url: "root:123456@tcp(127.0.0.1:3306)/kubemin_cli?charset=utf8&parseTime=true"
+
+# Leader选举配置
+leaderConfig:
+  lockName: "apiserver-lock"
+  duration: 5s
+
+# Kubernetes客户端配置
+kubeQPS: 100
+kubeBurst: 300
+
+# 分布式工作流配置
+# Redis地址，留空则使用本地模式
+redisAddr: "localhost:6379"
+
+# 启用分布式模式
+enableDistributed: true
+
+# 工作流Worker数量
+maxWorkers: 10
+
+# 是否在失去Leader时退出
+exitOnLostLeader: true
+
+# 分布式追踪配置
+enableTracing: true
+jaegerEndpoint: "http://localhost:14268/api/traces"
+
+# Istio配置
+istioEnable: false
+
+# DTM分布式事务管理（可选）
+dtmAddr: ""
+
+# 缓存配置
+cache:
+  type: "redis"
+  address: "localhost:6379"
+  password: ""
+  db: 0
+  poolSize: 10
