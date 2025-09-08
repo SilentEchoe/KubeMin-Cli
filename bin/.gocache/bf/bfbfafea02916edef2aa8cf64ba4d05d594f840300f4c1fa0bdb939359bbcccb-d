@@ -1,0 +1,16 @@
+./client.go
+./client_rest_resources.go
+./codec.go
+./doc.go
+./dryrun.go
+./fieldowner.go
+./fieldvalidation.go
+./interfaces.go
+./metadata_client.go
+./namespaced_client.go
+./object.go
+./options.go
+./patch.go
+./typed_client.go
+./unstructured_client.go
+./watch.go

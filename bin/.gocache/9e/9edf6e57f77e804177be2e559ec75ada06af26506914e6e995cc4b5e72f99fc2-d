@@ -1,0 +1,5 @@
+./client_go_adapter.go
+./doc.go
+./leaderelection.go
+./registry.go
+./workqueue.go

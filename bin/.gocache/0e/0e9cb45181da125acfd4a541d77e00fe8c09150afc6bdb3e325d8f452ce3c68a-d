@@ -1,0 +1,7 @@
+./admissionregistration_client.go
+./doc.go
+./generated_expansion.go
+./mutatingwebhookconfiguration.go
+./validatingadmissionpolicy.go
+./validatingadmissionpolicybinding.go
+./validatingwebhookconfiguration.go

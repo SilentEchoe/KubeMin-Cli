@@ -1,0 +1,7 @@
+./job.go
+./job_configmap.go
+./job_deploy.go
+./job_pvc.go
+./job_secret.go
+./job_service.go
+./job_statefulset.go

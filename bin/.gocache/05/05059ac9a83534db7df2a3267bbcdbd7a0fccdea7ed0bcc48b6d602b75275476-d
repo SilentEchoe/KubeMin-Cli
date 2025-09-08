@@ -1,0 +1,4 @@
+./controllerrevision.go
+./deployment.go
+./interface.go
+./statefulset.go

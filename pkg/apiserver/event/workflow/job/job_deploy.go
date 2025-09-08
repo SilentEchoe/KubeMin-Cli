@@ -1,21 +1,20 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"context"
-	"encoding/json"
-	"fmt"
-	"sync"
-	"time"
+    "KubeMin-Cli/pkg/apiserver/config"
+    "KubeMin-Cli/pkg/apiserver/domain/model"
+    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+    "context"
+    "encoding/json"
+    "fmt"
+    "sync"
+    "time"
 
-	app "k8s.io/api/apps/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+    appsv1 "k8s.io/api/apps/v1"
+    corev1 "k8s.io/api/core/v1"
+    "k8s.io/apimachinery/pkg/api/errors"
+    k8serrors "k8s.io/apimachinery/pkg/api/errors"
+    metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
@@ -76,15 +75,15 @@ func (c *DeployJobCtl) Run(ctx context.Context) {
 }
 
 func (c *DeployJobCtl) run(ctx context.Context) error {
-	if c.client == nil {
-		return fmt.Errorf("client is nil")
-	}
-	var deploy *app.Deployment
-	if d, ok := c.job.JobInfo.(*app.Deployment); ok {
-		deploy = d
-	} else {
-		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
-	}
+    if c.client == nil {
+        return fmt.Errorf("client is nil")
+    }
+    var deploy *appsv1.Deployment
+    if d, ok := c.job.JobInfo.(*appsv1.Deployment); ok {
+        deploy = d
+    } else {
+        return fmt.Errorf("deploy Job Job.Info Conversion type failure")
+    }
 
 	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deploy.Name, deploy.Namespace)
 	if err != nil {

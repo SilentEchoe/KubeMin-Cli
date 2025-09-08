@@ -1,0 +1,5 @@
+./expansion_generated.go
+./ingress.go
+./ingressclass.go
+./ipaddress.go
+./servicecidr.go

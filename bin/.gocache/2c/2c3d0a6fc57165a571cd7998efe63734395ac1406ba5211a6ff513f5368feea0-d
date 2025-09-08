@@ -1,0 +1,3 @@
+./apimachinery.go
+./errors.go
+./restmapper.go

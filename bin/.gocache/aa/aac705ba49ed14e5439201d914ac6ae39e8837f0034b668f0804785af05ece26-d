@@ -1,0 +1,13 @@
+./conversion.go
+./deepcopy.go
+./defaults.go
+./doc.go
+./generated.pb.go
+./marshal.go
+./register.go
+./types.go
+./types_jsonschema.go
+./zz_generated.conversion.go
+./zz_generated.deepcopy.go
+./zz_generated.defaults.go
+./zz_generated.prerelease-lifecycle.go

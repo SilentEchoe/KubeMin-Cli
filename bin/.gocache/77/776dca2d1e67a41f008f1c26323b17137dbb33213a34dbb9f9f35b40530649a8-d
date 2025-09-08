@@ -1,0 +1,11 @@
+./auth_loaders.go
+./client_config.go
+./config.go
+./doc.go
+./flag.go
+./helpers.go
+./loader.go
+./merge.go
+./merged_client_builder.go
+./overrides.go
+./validation.go

@@ -1,6 +1,21 @@
 package apiserver
 
 import (
+	"context"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
+	"k8s.io/klog/v2"
+	ctrl "sigs.k8s.io/controller-runtime"
+
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event"
@@ -9,31 +24,13 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
-	pkgUtils "KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
-	"KubeMin-Cli/pkg/apiserver/utils/filters"
-	"context"
-	"fmt"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"k8s.io/client-go/kubernetes"
-	"net/http"
-	"strings"
-	"time"
-
-	restfulSpec "github.com/emicklei/go-restful-openapi/v2"
-	"github.com/gin-gonic/gin"
-	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/leaderelection"
-	"k8s.io/client-go/tools/leaderelection/resourcelock"
-	"k8s.io/klog/v2"
-	ctrl "sigs.k8s.io/controller-runtime"
 )
 
 // APIServer interface for call api server
 type APIServer interface {
 	Run(context.Context, chan error) error
-	BuildRestfulConfig() (*restfulSpec.Config, error)
 }
 
 // restServer rest server
@@ -58,9 +55,6 @@ func New(cfg config.Config) (a APIServer) {
 }
 
 func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	var staticFilters []pkgUtils.FilterFunction
-	// 开启 GZIP
-	staticFilters = append(staticFilters, filters.Gzip)
 	for _, pre := range api.GetAPIPrefix() {
 		if strings.HasPrefix(req.URL.Path, pre) {
 			s.webContainer.ServeHTTP(res, req)
@@ -68,6 +62,7 @@ func (s *restServer) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 	req.URL.Path = "/"
+	s.webContainer.ServeHTTP(res, req)
 }
 
 func (s *restServer) buildIoCContainer() error {
@@ -161,31 +156,27 @@ func (s *restServer) RegisterAPIRoute() {
 	// 初始化中间件
 	s.webContainer.Use(gin.Recovery())
 
-	// Add tracing middleware if enabled
+	// Always enable request logging
+	s.webContainer.Use(middleware.Logging())
+
+	// Enable tracing middleware if configured
 	if s.cfg.EnableTracing {
 		s.webContainer.Use(otelgin.Middleware("kubemin-cli"))
-		s.webContainer.Use(middleware.Logging())
 	}
+
+	// Enable gzip compression for responses
+	s.webContainer.Use(middleware.Gzip())
 
 	// 获取所有注册的API
 	apis := api.GetRegisteredAPI()
 	// 为每个API前缀创建路由组
 	for _, prefix := range api.GetAPIPrefix() {
 		group := s.webContainer.Group(prefix)
-		// 注册所有API到当前前缀组
 		for _, api := range apis {
 			api.RegisterRoutes(group)
 		}
 	}
 
-}
-
-func (s *restServer) BuildRestfulConfig() (*restfulSpec.Config, error) {
-	if err := s.buildIoCContainer(); err != nil {
-		return nil, err
-	}
-	s.RegisterAPIRoute()
-	return nil, nil
 }
 
 func (s *restServer) startHTTP(ctx context.Context) error {

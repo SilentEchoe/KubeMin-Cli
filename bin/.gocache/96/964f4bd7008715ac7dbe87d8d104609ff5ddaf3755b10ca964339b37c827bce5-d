@@ -1,0 +1,5 @@
+./interface.go
+./mutatingadmissionpolicy.go
+./mutatingadmissionpolicybinding.go
+./validatingadmissionpolicy.go
+./validatingadmissionpolicybinding.go

@@ -1,0 +1,5 @@
+./clustertrustbundle.go
+./clustertrustbundlespec.go
+./podcertificaterequest.go
+./podcertificaterequestspec.go
+./podcertificaterequeststatus.go

@@ -1,0 +1,17 @@
+./containerresourcemetricsource.go
+./containerresourcemetricstatus.go
+./crossversionobjectreference.go
+./externalmetricsource.go
+./externalmetricstatus.go
+./horizontalpodautoscaler.go
+./horizontalpodautoscalercondition.go
+./horizontalpodautoscalerspec.go
+./horizontalpodautoscalerstatus.go
+./metricspec.go
+./metricstatus.go
+./objectmetricsource.go
+./objectmetricstatus.go
+./podsmetricsource.go
+./podsmetricstatus.go
+./resourcemetricsource.go
+./resourcemetricstatus.go

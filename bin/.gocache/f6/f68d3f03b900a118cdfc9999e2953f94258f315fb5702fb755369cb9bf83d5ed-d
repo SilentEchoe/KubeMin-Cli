@@ -1,0 +1,7 @@
+./expansion_generated.go
+./mutatingadmissionpolicy.go
+./mutatingadmissionpolicybinding.go
+./mutatingwebhookconfiguration.go
+./validatingadmissionpolicy.go
+./validatingadmissionpolicybinding.go
+./validatingwebhookconfiguration.go
