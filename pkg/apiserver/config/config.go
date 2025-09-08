@@ -43,20 +43,26 @@ type Config struct {
 	// AddonCacheTime is how long between two cache operations
 	AddonCacheTime time.Duration
 
-	// LeaderConfig for leader election
-	LeaderConfig leaderConfig
+    // LeaderConfig for leader election
+    LeaderConfig leaderConfig
 
 	// KubeBurst the burst of kube client
 	KubeBurst int
 	
-	// RedisAddr for distributed workflow
-	RedisAddr string
+    // RedisAddr for distributed workflow
+    RedisAddr string
 	
 	// EnableDistributed enables distributed workflow mode
 	EnableDistributed bool
 	
-	// MaxWorkers maximum number of workflow workers
-	MaxWorkers int
+    // MaxWorkers maximum number of workflow workers
+    MaxWorkers int
+
+    // LeaseNamespace for heartbeat leases (K8s coordination API)
+    LeaseNamespace string
+
+    // LeaseDurationSeconds TTL for heartbeat leases
+    LeaseDurationSeconds int32
 
 	// KubeQPS the QPS of kube client
 	KubeQPS float64
@@ -74,7 +80,7 @@ type RedisCacheConfig struct {
 }
 
 func NewConfig() *Config {
-	return &Config{
+    return &Config{
 		BindAddr: "0.0.0.0:8000",
 		LeaderConfig: leaderConfig{
 			ID:       uuid.New().String(),
@@ -95,10 +101,12 @@ func NewConfig() *Config {
 		EnableTracing:    true,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
-		RedisAddr:         "", // Empty means local mode
-		EnableDistributed: false,
-		MaxWorkers:        10,
-	}
+        RedisAddr:         "", // Empty means local mode
+        EnableDistributed: false,
+        MaxWorkers:        10,
+        LeaseNamespace:    "min-cli-system",
+        LeaseDurationSeconds: 10,
+    }
 }
 
 func (c *Config) Validate() []error {
@@ -117,10 +125,11 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
-	fs.StringVar(&c.RedisAddr, "redis-addr", configParameter.RedisAddr, "Redis server address for distributed workflow (e.g., localhost:6379)")
-	fs.BoolVar(&c.EnableDistributed, "enable-distributed", configParameter.EnableDistributed, "Enable distributed workflow mode")
-	fs.IntVar(&c.MaxWorkers, "max-workers", configParameter.MaxWorkers, "Maximum number of workflow workers")
-	addFlags(fs)
+    // redis-addr and enable-distributed are intentionally omitted.
+    fs.IntVar(&c.MaxWorkers, "max-workers", configParameter.MaxWorkers, "Maximum number of workflow workers")
+    fs.StringVar(&c.LeaseNamespace, "lease-namespace", configParameter.LeaseNamespace, "Namespace to store heartbeat Leases for distributed workflow")
+    fs.Int32Var(&c.LeaseDurationSeconds, "lease-ttl", configParameter.LeaseDurationSeconds, "Lease TTL (seconds) for heartbeat Leases")
+    addFlags(fs)
 }
 
 func addFlags(fs *pflag.FlagSet) {

@@ -33,7 +33,7 @@
 
 ## Security & Configuration Tips
 - Do not hardcode secrets; use environment or config and mask in logs.
-- Common flags: `--bind-addr`, `--redis-addr`, `--enable-distributed`, `--max-workers`, `--id`, `--lock-name`.
+- Common flags: `--bind-addr`, `--max-workers`, `--id`, `--lock-name`.
+- Distributed queue config: prefer `Cache.CacheHost` (e.g., `redis:6379`) in config over CLI flags; env `REDIS_ADDR` is a fallback.
 - Distributed script env: `REDIS_HOST`, `REDIS_PORT`, `MAX_WORKERS`, `NODE_ID`, `BIND_ADDR`.
 - Manifests belong in `deploy/`; avoid `:latest` images and always set requests/limits.
-

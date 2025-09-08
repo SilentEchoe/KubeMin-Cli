@@ -86,8 +86,6 @@ export NODE_ID=${NODE_ID}
 echo -e "${GREEN}Starting KubeMin-Cli...${NC}"
 ./kubemin-cli \
     --bind-addr=${BIND_ADDR} \
-    --redis-addr=${REDIS_ADDR} \
-    --enable-distributed=true \
     --max-workers=${MAX_WORKERS} \
     --id=${NODE_ID} \
     --lock-name=apiserver-lock \

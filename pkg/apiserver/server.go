@@ -146,15 +146,9 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
 	}
 
-	// event - 支持分布式模式
-	var eventBeans []interface{}
-	if s.cfg.RedisAddr != "" {
-		// 使用分布式模式
-		eventBeans = event.InitEventWithOptions(s.cfg.RedisAddr)
-	} else {
-		// 使用本地模式
-		eventBeans = event.InitEvent()
-	}
+    // event - 统一通过配置初始化（内部将基于副本数与配置自动选择分布式或本地模式）
+    var eventBeans []interface{}
+    eventBeans = event.InitEventWithOptions(&s.cfg)
 	if err := s.beanContainer.Provides(eventBeans...); err != nil {
 		return fmt.Errorf("fail to provides the event bean to the container: %w", err)
 	}
@@ -204,17 +198,21 @@ func (s *restServer) startHTTP(ctx context.Context) error {
 }
 
 func (s *restServer) Run(ctx context.Context, errChan chan error) error {
-	// build the Ioc Container
-	if err := s.buildIoCContainer(); err != nil {
-		return err
-	}
+    // build the Ioc Container
+    if err := s.buildIoCContainer(); err != nil {
+        return err
+    }
 
-	s.RegisterAPIRoute()
+    s.RegisterAPIRoute()
 
-	l, err := s.setupLeaderElection(errChan)
-	if err != nil {
-		return err
-	}
+    // Start all event workers on every node. Role is controlled by leader callbacks.
+    klog.Infof("starting event workers on node: %s", s.cfg.LeaderConfig.ID)
+    go event.StartEventWorker(ctx, errChan)
+
+    l, err := s.setupLeaderElection(errChan)
+    if err != nil {
+        return err
+    }
 
 	go func() {
 		leaderelection.RunOrDie(ctx, *l)
@@ -224,36 +222,49 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 }
 
 func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.LeaderElectionConfig, error) {
-	restCfg := ctrl.GetConfigOrDie()
-	DefaultKubeVelaNS := "min-cli-system"
-	rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, DefaultKubeVelaNS, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
-		Identity: s.cfg.LeaderConfig.ID,
-	}, restCfg, time.Second*10)
-	if err != nil {
-		klog.ErrorS(err, "Unable to setup the resource lock")
-		return nil, err
-	}
-	return &leaderelection.LeaderElectionConfig{
-		Lock:          rl,
-		LeaseDuration: time.Second * 15,
-		RenewDeadline: time.Second * 10,
-		RetryPeriod:   time.Second * 2,
-		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				go event.StartEventWorker(ctx, errChan)
-			},
-			OnStoppedLeading: func() {
-				if s.cfg.ExitOnLostLeader {
-					errChan <- fmt.Errorf("leader lost %s", s.cfg.LeaderConfig.ID)
-				}
-			},
-			OnNewLeader: func(identity string) {
-				if identity == s.cfg.LeaderConfig.ID {
-					return
-				}
-				klog.Infof("new leader elected: %s", identity)
-			},
-		},
-		ReleaseOnCancel: true,
-	}, nil
+    restCfg := ctrl.GetConfigOrDie()
+    DefaultKubeVelaNS := "min-cli-system"
+    rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, DefaultKubeVelaNS, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
+        Identity: s.cfg.LeaderConfig.ID,
+    }, restCfg, time.Second*10)
+    if err != nil {
+        klog.ErrorS(err, "Unable to setup the resource lock")
+        return nil, err
+    }
+    return &leaderelection.LeaderElectionConfig{
+        Lock:          rl,
+        LeaseDuration: time.Second * 15,
+        RenewDeadline: time.Second * 10,
+        RetryPeriod:   time.Second * 2,
+        Callbacks: leaderelection.LeaderCallbacks{
+            OnStartedLeading: func(ctx context.Context) {
+                klog.Infof("node %s became leader; switching to writer role", s.cfg.LeaderConfig.ID)
+                // Notify workers they are on the leader node (writer role)
+                for _, w := range event.GetWorkers() {
+                    if la, ok := w.(event.LeaderAware); ok {
+                        la.SetAsLeader(true)
+                    }
+                }
+            },
+            OnStoppedLeading: func() {
+                klog.Infof("node %s stopped leading", s.cfg.LeaderConfig.ID)
+                if s.cfg.ExitOnLostLeader {
+                    errChan <- fmt.Errorf("leader lost %s", s.cfg.LeaderConfig.ID)
+                }
+            },
+            OnNewLeader: func(identity string) {
+                if identity == s.cfg.LeaderConfig.ID {
+                    return
+                }
+                klog.Infof("new leader elected: %s", identity)
+                // This node is follower; notify workers (executor role)
+                for _, w := range event.GetWorkers() {
+                    if la, ok := w.(event.LeaderAware); ok {
+                        la.SetAsLeader(false)
+                    }
+                }
+            },
+        },
+        ReleaseOnCancel: true,
+    }, nil
 }

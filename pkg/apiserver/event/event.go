@@ -12,6 +12,12 @@ type Worker interface {
 	Start(ctx context.Context, errChan chan error)
 }
 
+// LeaderAware marks a worker that reacts to leader state changes.
+// Implemented by distributed workers to switch between write and execute roles.
+type LeaderAware interface {
+	SetAsLeader(isLeader bool)
+}
+
 // InitEvent init all event worker
 func InitEvent() []interface{} {
 	workflowCol := &workflow.Workflow{}
