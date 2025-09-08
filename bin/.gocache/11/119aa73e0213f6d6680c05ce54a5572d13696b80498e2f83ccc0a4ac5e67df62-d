@@ -1,6 +1,0 @@
-./ingress.go
-./ingressclass.go
-./interface.go
-./ipaddress.go
-./networkpolicy.go
-./servicecidr.go

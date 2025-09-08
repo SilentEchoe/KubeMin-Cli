@@ -1,5 +1,0 @@
-./clusterrole.go
-./clusterrolebinding.go
-./interface.go
-./role.go
-./rolebinding.go

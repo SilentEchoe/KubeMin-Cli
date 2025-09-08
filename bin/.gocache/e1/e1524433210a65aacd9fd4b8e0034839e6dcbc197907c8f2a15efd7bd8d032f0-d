@@ -1,5 +1,0 @@
-./groupversionresource.go
-./migrationcondition.go
-./storageversionmigration.go
-./storageversionmigrationspec.go
-./storageversionmigrationstatus.go

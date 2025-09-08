@@ -1,5 +1,0 @@
-./deviceclass.go
-./interface.go
-./resourceclaim.go
-./resourceclaimtemplate.go
-./resourceslice.go

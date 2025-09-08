@@ -1,8 +1,0 @@
-./doc.go
-./env.go
-./init.go
-./probe.go
-./processor.go
-./resources.go
-./sidecar.go
-./storage.go

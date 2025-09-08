@@ -1,5 +1,0 @@
-./controllerrevision.go
-./deployment.go
-./expansion_generated.go
-./statefulset.go
-./statefulset_expansion.go

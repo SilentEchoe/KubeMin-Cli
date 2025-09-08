@@ -1,5 +1,0 @@
-./interface.go
-./mutatingwebhookconfiguration.go
-./validatingadmissionpolicy.go
-./validatingadmissionpolicybinding.go
-./validatingwebhookconfiguration.go

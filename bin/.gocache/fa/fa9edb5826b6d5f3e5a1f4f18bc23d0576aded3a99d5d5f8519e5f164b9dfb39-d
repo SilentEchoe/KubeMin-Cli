@@ -1,4 +1,0 @@
-./healthzadaptor.go
-./leaderelection.go
-./leasecandidate.go
-./metrics.go

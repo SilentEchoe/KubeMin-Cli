@@ -1,5 +1,0 @@
-./cache.go
-./delegating_by_gvk_cache.go
-./doc.go
-./informer_cache.go
-./multi_namespace_cache.go

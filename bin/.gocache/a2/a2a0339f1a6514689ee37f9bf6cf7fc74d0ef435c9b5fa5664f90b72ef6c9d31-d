@@ -1,6 +1,0 @@
-./apps_client.go
-./controllerrevision.go
-./deployment.go
-./doc.go
-./generated_expansion.go
-./statefulset.go

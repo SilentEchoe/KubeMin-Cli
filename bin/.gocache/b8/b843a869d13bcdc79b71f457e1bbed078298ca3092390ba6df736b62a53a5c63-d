@@ -1,5 +1,0 @@
-./clusterrole.go
-./clusterrolebinding.go
-./expansion_generated.go
-./role.go
-./rolebinding.go

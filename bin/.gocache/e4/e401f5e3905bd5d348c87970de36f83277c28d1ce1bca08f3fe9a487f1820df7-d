@@ -1,5 +1,0 @@
-./doc.go
-./helpers.go
-./register.go
-./types.go
-./zz_generated.deepcopy.go

@@ -1,5 +1,0 @@
-./doc.go
-./enqueue.go
-./enqueue_mapped.go
-./enqueue_owner.go
-./eventhandler.go

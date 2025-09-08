@@ -1,6 +1,0 @@
-./daemonset.go
-./deployment.go
-./ingress.go
-./interface.go
-./networkpolicy.go
-./replicaset.go

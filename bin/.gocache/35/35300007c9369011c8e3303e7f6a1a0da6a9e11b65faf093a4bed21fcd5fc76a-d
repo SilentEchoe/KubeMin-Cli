@@ -1,9 +1,0 @@
-./controllerrevision.go
-./daemonset.go
-./daemonset_expansion.go
-./deployment.go
-./expansion_generated.go
-./replicaset.go
-./replicaset_expansion.go
-./statefulset.go
-./statefulset_expansion.go

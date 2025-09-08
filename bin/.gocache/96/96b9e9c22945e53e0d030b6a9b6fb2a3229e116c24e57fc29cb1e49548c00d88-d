@@ -1,8 +1,0 @@
-./doc.go
-./generated_expansion.go
-./ingress.go
-./ingressclass.go
-./ipaddress.go
-./networking_client.go
-./networkpolicy.go
-./servicecidr.go

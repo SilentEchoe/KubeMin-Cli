@@ -1,7 +1,0 @@
-./authorization_client.go
-./doc.go
-./generated_expansion.go
-./localsubjectaccessreview.go
-./selfsubjectaccessreview.go
-./selfsubjectrulesreview.go
-./subjectaccessreview.go

@@ -1,4 +1,0 @@
-./eviction.go
-./poddisruptionbudget.go
-./poddisruptionbudgetspec.go
-./poddisruptionbudgetstatus.go
