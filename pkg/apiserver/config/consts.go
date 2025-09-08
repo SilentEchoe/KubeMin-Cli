@@ -7,6 +7,7 @@ const (
 	TIDB              = "tidb"
 	MYSQL             = "mysql"
 	DBNAME_KUBEMINCLI = "kubemincli"
+	NAMESPACE         = "min-cli-system"
 )
 
 const (

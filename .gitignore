@@ -17,6 +17,9 @@
 *.idea/
 *.vscode/
 *.DS_Store
+*.bin
+/bin/
+
 
 # Local log files
 /logs/

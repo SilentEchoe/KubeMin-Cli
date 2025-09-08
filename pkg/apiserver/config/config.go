@@ -15,9 +15,11 @@ var (
 )
 
 type leaderConfig struct {
-	ID       string
-	LockName string
-	Duration time.Duration
+	ID           string
+	LockName     string
+	Duration     time.Duration
+	Namespace    string
+	ReplicaCount int
 }
 
 type Config struct {
@@ -54,6 +56,8 @@ type Config struct {
 
 	//ExitOnLostLeader will exit the process if this server lost the leader election, set this to true for debugging
 	ExitOnLostLeader bool
+	// Messaging configuration (pub/sub)
+	Messaging MessagingConfig
 }
 
 type RedisCacheConfig struct {
@@ -64,18 +68,33 @@ type RedisCacheConfig struct {
 	Password  string
 }
 
+// MessagingConfig holds pub/sub configuration
+type MessagingConfig struct {
+	Type          string // noop|redis|kafka
+	ChannelPrefix string
+}
+
 func NewConfig() *Config {
 	return &Config{
 		BindAddr: "0.0.0.0:8000",
 		LeaderConfig: leaderConfig{
-			ID:       uuid.New().String(),
-			LockName: "apiserver-lock",
-			Duration: time.Second * 5,
+			ID:           uuid.New().String(),
+			LockName:     "apiserver-lock",
+			Duration:     time.Second * 5,
+			Namespace:    NAMESPACE,
+			ReplicaCount: 1,
 		},
 		Datastore: datastore.Config{
 			Type:     MYSQL,
 			Database: DBNAME_KUBEMINCLI,
 			URL:      fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
+		},
+		Cache: RedisCacheConfig{
+			CacheHost: "localhost",
+			CacheType: "redis",
+			UserName:  "",
+			Password:  "",
+			CacheDB:   0,
 		},
 		KubeQPS:          100,
 		KubeBurst:        300,
@@ -86,6 +105,7 @@ func NewConfig() *Config {
 		EnableTracing:    true,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
+		Messaging: MessagingConfig{Type: "noop"},
 	}
 }
 
@@ -100,11 +120,16 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.StringVar(&c.LeaderConfig.ID, "id", configParameter.LeaderConfig.ID, "the holder identity name")
 	fs.StringVar(&c.LeaderConfig.LockName, "lock-name", configParameter.LeaderConfig.LockName, "the lease lock resource name")
 	fs.DurationVar(&c.LeaderConfig.Duration, "duration", configParameter.LeaderConfig.Duration, "the lease lock resource name")
+	fs.StringVar(&c.LeaderConfig.Namespace, "leader-namespace", configParameter.LeaderConfig.Namespace, "namespace for leader election lease")
+	fs.IntVar(&c.LeaderConfig.ReplicaCount, "replica-count", configParameter.LeaderConfig.ReplicaCount, "replica count of this service")
 	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
 	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
+	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
+	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
+	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
 	addFlags(fs)
 }
 

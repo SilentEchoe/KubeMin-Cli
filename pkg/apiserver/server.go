@@ -24,8 +24,10 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
+	apimsg "KubeMin-Cli/pkg/apiserver/messaging"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
+	kube "KubeMin-Cli/pkg/apiserver/utils/kube"
 )
 
 // APIServer interface for call api server
@@ -35,13 +37,15 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-	webContainer  *gin.Engine
-	beanContainer *container.Container
-	cfg           config.Config
-	dataStore     datastore.DataStore
-	cache         cache.ICache
-	KubeClient    *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-	KubeConfig    *rest.Config          `inject:"kubeConfig"`
+	webContainer   *gin.Engine
+	beanContainer  *container.Container
+	cfg            config.Config
+	dataStore      datastore.DataStore
+	cache          cache.ICache
+	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig     *rest.Config          `inject:"kubeConfig"`
+	workersStarted bool
+	workersCancel  context.CancelFunc
 }
 
 // New create api server with config data
@@ -98,11 +102,9 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
-	var iCache cache.ICache
-	switch s.cfg.Cache.CacheType {
-	case "":
-		iCache = cache.New(false, cache.CacheTypeMem)
-	}
+    // Initialize cache implementation. Default to in-memory cache.
+    // Note: current ICache only supports memory; redis variant is used for messaging/locks.
+    iCache := cache.New(false, cache.CacheTypeMem)
 
 	// 将db 注入到IOC中
 	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
@@ -111,6 +113,27 @@ func (s *restServer) buildIoCContainer() error {
 
 	if err := s.beanContainer.ProvideWithName("cache", iCache); err != nil {
 		return fmt.Errorf("fail to provides the cache bean to the container: %w", err)
+	}
+
+	// Initialize messaging broker (noop by default; redis if configured)
+	var broker apimsg.Broker
+	switch s.cfg.Messaging.Type {
+	case "redis":
+		addr := s.cfg.Cache.CacheHost
+		db := int(s.cfg.Cache.CacheDB)
+		user := s.cfg.Cache.UserName
+		pass := s.cfg.Cache.Password
+		if rb, err := apimsg.NewRedisBroker(addr, user, pass, db); err != nil {
+			klog.Warningf("init redis broker failed, falling back to noop: %v", err)
+			broker = &apimsg.NoopBroker{}
+		} else {
+			broker = rb
+		}
+	default:
+		broker = &apimsg.NoopBroker{}
+	}
+	if err := s.beanContainer.ProvideWithName("broker", broker); err != nil {
+		return fmt.Errorf("fail to provides the broker bean to the container: %w", err)
 	}
 
 	// 将操作k8s的权限全都注入到IOC中
@@ -122,6 +145,11 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
 	}
 
+    // provide config for downstream components that need it (inject by type)
+    if err := s.beanContainer.Provides(&s.cfg); err != nil {
+        return fmt.Errorf("fail to provides the config bean to the container: %w", err)
+    }
+
 	// domain
 	services := service.InitServiceBean(s.cfg)
 	for _, svc := range services {
@@ -131,10 +159,7 @@ func (s *restServer) buildIoCContainer() error {
 	}
 
 	// 注册 workflowService
-	workflowService := service.NewWorkflowService()
-	if err := s.beanContainer.ProvideWithName("workflowService", workflowService); err != nil {
-		return fmt.Errorf("fail to provides the workflowService bean to the container: %w", err)
-	}
+	// removed duplicate named registration; workflowService is already provided via InitServiceBean
 
 	// interfaces
 	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
@@ -194,6 +219,7 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 
 	s.RegisterAPIRoute()
 
+	// 服务选举
 	l, err := s.setupLeaderElection(errChan)
 	if err != nil {
 		return err
@@ -208,8 +234,11 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 
 func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.LeaderElectionConfig, error) {
 	restCfg := ctrl.GetConfigOrDie()
-	DefaultKubeVelaNS := "min-cli-system"
-	rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, DefaultKubeVelaNS, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
+	ns := s.cfg.LeaderConfig.Namespace
+	if ns == "" {
+		ns = config.NAMESPACE
+	}
+	rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, ns, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
 		Identity: s.cfg.LeaderConfig.ID,
 	}, restCfg, time.Second*10)
 	if err != nil {
@@ -224,6 +253,15 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				go event.StartEventWorker(ctx, errChan)
+				// if replicas == 1, leader also acts as worker; otherwise leader only dispatch
+				if strings.ToLower(s.cfg.Messaging.Type) == "redis" {
+					count := kube.DetectReplicaCount(ctx, s.KubeClient)
+					if count <= 1 {
+						s.startWorkers(ctx, errChan)
+					} else {
+						s.stopWorkers()
+					}
+				}
 			},
 			OnStoppedLeading: func() {
 				if s.cfg.ExitOnLostLeader {
@@ -235,8 +273,32 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 					return
 				}
 				klog.Infof("new leader elected: %s", identity)
+				// we are follower now; if distributed, ensure workers started
+				if strings.ToLower(s.cfg.Messaging.Type) == "redis" {
+					s.startWorkers(context.Background(), errChan)
+				}
 			},
 		},
 		ReleaseOnCancel: true,
 	}, nil
+}
+
+func (s *restServer) startWorkers(ctx context.Context, errChan chan error) {
+	if s.workersStarted {
+		return
+	}
+	s.workersStarted = true
+	var wctx context.Context
+	wctx, s.workersCancel = context.WithCancel(ctx)
+	go event.StartWorkerSubscriber(wctx, errChan)
+}
+
+func (s *restServer) stopWorkers() {
+	if !s.workersStarted {
+		return
+	}
+	if s.workersCancel != nil {
+		s.workersCancel()
+	}
+	s.workersStarted = false
 }

@@ -1,40 +1,51 @@
 package workflow
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
-	"sort"
-	"sync"
-	"time"
+    "context"
+    "encoding/json"
+    "fmt"
+    "strings"
+    "sort"
+    "sync"
+    "time"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+    corev1 "k8s.io/api/core/v1"
+    "k8s.io/client-go/kubernetes"
+    "k8s.io/client-go/rest"
+    "k8s.io/klog/v2"
+    "sigs.k8s.io/controller-runtime/pkg/client"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
+    "KubeMin-Cli/pkg/apiserver/config"
+    "KubeMin-Cli/pkg/apiserver/domain/model"
+    "KubeMin-Cli/pkg/apiserver/domain/service"
+    "KubeMin-Cli/pkg/apiserver/domain/repository"
+    "KubeMin-Cli/pkg/apiserver/event/workflow/job"
+    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+    apimsg "KubeMin-Cli/pkg/apiserver/messaging"
+    "go.opentelemetry.io/otel"
+    "go.opentelemetry.io/otel/attribute"
+    "go.opentelemetry.io/otel/codes"
+    "go.opentelemetry.io/otel/trace"
 )
 
 type Workflow struct {
-	KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
-	KubeConfig      *rest.Config            `inject:"kubeConfig"`
-	Store           datastore.DataStore     `inject:"datastore"`
-	WorkflowService service.WorkflowService `inject:""`
+    KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
+    KubeConfig      *rest.Config            `inject:"kubeConfig"`
+    Store           datastore.DataStore     `inject:"datastore"`
+    WorkflowService service.WorkflowService `inject:""`
+    Broker          apimsg.Broker            `inject:"broker"`
+    Cfg             *config.Config           `inject:""`
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
-	w.InitQueue(ctx)
-	go w.WorkflowTaskSender()
+    w.InitQueue(ctx)
+    // If broker is available and msg-type indicates distributed (redis), act as dispatcher (leader path)
+    if w.isDistributed() {
+        go w.Dispatcher()
+        return
+    }
+    // fallback to original single-instance execution
+    go w.WorkflowTaskSender()
 }
 
 func (w *Workflow) InitQueue(ctx context.Context) {
@@ -59,6 +70,7 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 	}
 }
 
+// WorkflowTaskSender is the original local executor scanning DB and running tasks.
 func (w *Workflow) WorkflowTaskSender() {
 	for {
 		time.Sleep(time.Second * 3)
@@ -75,6 +87,101 @@ func (w *Workflow) WorkflowTaskSender() {
 			}
 		}
 	}
+}
+
+// Dispatcher scans waiting tasks and publishes dispatch messages.
+func (w *Workflow) Dispatcher() {
+    // topic prefix
+    topic := w.dispatchTopic()
+    broker := w.Broker
+    for {
+        time.Sleep(time.Second * 3)
+        ctx := context.Background()
+        //获取等待的任务
+        waitingTasks, err := w.WorkflowService.WaitingTasks(ctx)
+        if err != nil || len(waitingTasks) == 0 {
+            continue
+        }
+        for _, task := range waitingTasks {
+            payload := apimsg.TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
+            b, err := apimsg.MarshalTaskDispatch(payload)
+            if err != nil {
+                klog.Errorf("marshal task dispatch failed: %v", err)
+                continue
+            }
+            if err := broker.Publish(ctx, topic, b); err != nil {
+                klog.Errorf("publish task dispatch failed: %v", err)
+                continue
+            }
+            klog.Infof("dispatched task: %s", task.TaskID)
+        }
+    }
+}
+
+// StartWorker subscribes to task dispatch topic and executes tasks.
+func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
+    if !w.isDistributed() {
+        return
+    }
+    broker := w.Broker
+    topic := w.dispatchTopic()
+    sub, err := broker.Subscribe(ctx, topic)
+    if err != nil {
+        klog.Errorf("subscribe failed: %v", err)
+        return
+    }
+    klog.Infof("worker subscribed topic: %s", topic)
+    go func() {
+        <-ctx.Done()
+        _ = sub.Unsubscribe(context.Background())
+    }()
+    for {
+        select {
+        case <-ctx.Done():
+            return
+        case msg, ok := <-sub.C():
+            if !ok {
+                return
+            }
+            td, err := apimsg.UnmarshalTaskDispatch(msg)
+            if err != nil {
+                klog.Errorf("decode dispatch failed: %v", err)
+                continue
+            }
+            // load task and execute
+            task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+            if err != nil {
+                klog.Errorf("load task %s failed: %v", td.TaskID, err)
+                continue
+            }
+            if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+                klog.Errorf("run task %s failed: %v", td.TaskID, err)
+            }
+        case err := <-sub.Err():
+            if err != nil {
+                klog.Errorf("subscription error: %v", err)
+            }
+        }
+    }
+}
+
+func (w *Workflow) isDistributed() bool {
+    // Use Messaging.Type via config to decide distributed mode
+    if w.Cfg == nil {
+        return false
+    }
+    return strings.ToLower(w.Cfg.Messaging.Type) == "redis"
+}
+
+func (w *Workflow) dispatchTopic() string {
+    prefix := ""
+    if w.Cfg != nil {
+        prefix = w.Cfg.Messaging.ChannelPrefix
+    }
+    if prefix == "" {
+        prefix = "kubemin"
+    }
+    return fmt.Sprintf("%s.workflow.dispatch", prefix)
 }
 
 type WorkflowCtl struct {
@@ -308,15 +415,15 @@ func FindComponents(components []*model.ApplicationComponent, name string) *mode
 
 // 更改工作流队列的状态，并运行它
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
-	//将状态更改为队列中
-	task.Status = config.StatusQueued
-	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
-		klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
-		return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
-	}
-	// 执行新的任务
-	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
-	return nil
+    //将状态更改为队列中
+    task.Status = config.StatusQueued
+    if success := w.WorkflowService.UpdateTask(ctx, task); !success {
+        klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
+        return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
+    }
+    // 执行新的任务
+    go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
+    return nil
 }
 
 func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
