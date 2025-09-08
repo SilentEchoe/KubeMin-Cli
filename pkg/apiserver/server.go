@@ -25,9 +25,11 @@ import (
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
 	apimsg "KubeMin-Cli/pkg/apiserver/messaging"
+	qpkg "KubeMin-Cli/pkg/apiserver/queue"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	kube "KubeMin-Cli/pkg/apiserver/utils/kube"
+	"os"
 )
 
 // APIServer interface for call api server
@@ -102,9 +104,9 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
-    // Initialize cache implementation. Default to in-memory cache.
-    // Note: current ICache only supports memory; redis variant is used for messaging/locks.
-    iCache := cache.New(false, cache.CacheTypeMem)
+	// Initialize cache implementation. Default to in-memory cache.
+	// Note: current ICache only supports memory; redis variant is used for messaging/locks.
+	iCache := cache.New(false, cache.CacheTypeMem)
 
 	// 将db 注入到IOC中
 	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
@@ -132,8 +134,31 @@ func (s *restServer) buildIoCContainer() error {
 	default:
 		broker = &apimsg.NoopBroker{}
 	}
+
 	if err := s.beanContainer.ProvideWithName("broker", broker); err != nil {
 		return fmt.Errorf("fail to provides the broker bean to the container: %w", err)
+	}
+
+	// Initialize work queue (Redis Streams if configured; noop otherwise)
+	var q qpkg.Queue
+	streamKey := s.dispatchTopic()
+	switch s.cfg.Messaging.Type {
+	case "redis":
+		addr := s.cfg.Cache.CacheHost
+		db := int(s.cfg.Cache.CacheDB)
+		user := s.cfg.Cache.UserName
+		pass := s.cfg.Cache.Password
+		if rq, err := qpkg.NewRedisStreams(addr, user, pass, db, streamKey); err != nil {
+			klog.Warningf("init redis streams failed, falling back to noop: %v", err)
+			q = &qpkg.NoopQueue{}
+		} else {
+			q = rq
+		}
+	default:
+		q = &qpkg.NoopQueue{}
+	}
+	if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
+		return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
 	}
 
 	// 将操作k8s的权限全都注入到IOC中
@@ -145,10 +170,10 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
 	}
 
-    // provide config for downstream components that need it (inject by type)
-    if err := s.beanContainer.Provides(&s.cfg); err != nil {
-        return fmt.Errorf("fail to provides the config bean to the container: %w", err)
-    }
+	// provide config for downstream components that need it (inject by type)
+	if err := s.beanContainer.Provides(&s.cfg); err != nil {
+		return fmt.Errorf("fail to provides the config bean to the container: %w", err)
+	}
 
 	// domain
 	services := service.InitServiceBean(s.cfg)
@@ -175,6 +200,15 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to populate the bean container: %w", err)
 	}
 	return nil
+}
+
+// dispatchTopic computes the Redis Streams key for workflow dispatch
+func (s *restServer) dispatchTopic() string {
+	prefix := s.cfg.Messaging.ChannelPrefix
+	if prefix == "" {
+		prefix = "kubemin"
+	}
+	return fmt.Sprintf("%s.workflow.dispatch", prefix)
 }
 
 func (s *restServer) RegisterAPIRoute() {
@@ -217,6 +251,14 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 		return err
 	}
 
+	// Enforce odd replica count at startup: if even, exit so that last-started pod exits
+	cnt := kube.DetectReplicaCount(ctx, s.KubeClient)
+	if cnt%2 == 0 {
+		klog.Errorf("replica count is even (%d); exiting to maintain odd replicas", cnt)
+		os.Exit(0)
+		return nil
+	}
+
 	s.RegisterAPIRoute()
 
 	// 服务选举
@@ -253,14 +295,12 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				go event.StartEventWorker(ctx, errChan)
-				// if replicas == 1, leader also acts as worker; otherwise leader only dispatch
-				if strings.ToLower(s.cfg.Messaging.Type) == "redis" {
-					count := kube.DetectReplicaCount(ctx, s.KubeClient)
-					if count <= 1 {
-						s.startWorkers(ctx, errChan)
-					} else {
-						s.stopWorkers()
-					}
+				// replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
+				count := kube.DetectReplicaCount(ctx, s.KubeClient)
+				if count >= 3 {
+					s.stopWorkers()
+				} else {
+					s.startWorkers(ctx, errChan)
 				}
 			},
 			OnStoppedLeading: func() {
@@ -273,8 +313,9 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 					return
 				}
 				klog.Infof("new leader elected: %s", identity)
-				// we are follower now; if distributed, ensure workers started
-				if strings.ToLower(s.cfg.Messaging.Type) == "redis" {
+				// we are follower now; if distributed (>=3), ensure workers started
+				cnt := kube.DetectReplicaCount(context.Background(), s.KubeClient)
+				if cnt >= 3 {
 					s.startWorkers(context.Background(), errChan)
 				}
 			},

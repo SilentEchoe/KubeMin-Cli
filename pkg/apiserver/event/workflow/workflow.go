@@ -22,6 +22,7 @@ import (
     "KubeMin-Cli/pkg/apiserver/event/workflow/job"
     "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
     apimsg "KubeMin-Cli/pkg/apiserver/messaging"
+    qpkg "KubeMin-Cli/pkg/apiserver/queue"
     "go.opentelemetry.io/otel"
     "go.opentelemetry.io/otel/attribute"
     "go.opentelemetry.io/otel/codes"
@@ -33,19 +34,19 @@ type Workflow struct {
     KubeConfig      *rest.Config            `inject:"kubeConfig"`
     Store           datastore.DataStore     `inject:"datastore"`
     WorkflowService service.WorkflowService `inject:""`
-    Broker          apimsg.Broker            `inject:"broker"`
+    Queue           qpkg.Queue               `inject:"queue"`
     Cfg             *config.Config           `inject:""`
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
     w.InitQueue(ctx)
-    // If broker is available and msg-type indicates distributed (redis), act as dispatcher (leader path)
-    if w.isDistributed() {
-        go w.Dispatcher()
+    // If queue is noop (local mode), fall back to direct DB scan executor for functionality.
+    if _, ok := w.Queue.(*qpkg.NoopQueue); ok {
+        go w.WorkflowTaskSender()
         return
     }
-    // fallback to original single-instance execution
-    go w.WorkflowTaskSender()
+    // Redis Streams path: leader runs dispatcher; workers managed by server callbacks.
+    go w.Dispatcher()
 }
 
 func (w *Workflow) InitQueue(ctx context.Context) {
@@ -91,9 +92,6 @@ func (w *Workflow) WorkflowTaskSender() {
 
 // Dispatcher scans waiting tasks and publishes dispatch messages.
 func (w *Workflow) Dispatcher() {
-    // topic prefix
-    topic := w.dispatchTopic()
-    broker := w.Broker
     for {
         time.Sleep(time.Second * 3)
         ctx := context.Background()
@@ -109,8 +107,8 @@ func (w *Workflow) Dispatcher() {
                 klog.Errorf("marshal task dispatch failed: %v", err)
                 continue
             }
-            if err := broker.Publish(ctx, topic, b); err != nil {
-                klog.Errorf("publish task dispatch failed: %v", err)
+            if _, err := w.Queue.Enqueue(ctx, b); err != nil {
+                klog.Errorf("enqueue task dispatch failed: %v", err)
                 continue
             }
             klog.Infof("dispatched task: %s", task.TaskID)
@@ -120,46 +118,38 @@ func (w *Workflow) Dispatcher() {
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
-    if !w.isDistributed() {
-        return
-    }
-    broker := w.Broker
-    topic := w.dispatchTopic()
-    sub, err := broker.Subscribe(ctx, topic)
-    if err != nil {
-        klog.Errorf("subscribe failed: %v", err)
-        return
-    }
-    klog.Infof("worker subscribed topic: %s", topic)
-    go func() {
-        <-ctx.Done()
-        _ = sub.Unsubscribe(context.Background())
-    }()
+    group := w.consumerGroup()
+    consumer := w.consumerName()
+    klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
     for {
         select {
         case <-ctx.Done():
             return
-        case msg, ok := <-sub.C():
-            if !ok {
-                return
-            }
-            td, err := apimsg.UnmarshalTaskDispatch(msg)
+        default:
+            msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
             if err != nil {
-                klog.Errorf("decode dispatch failed: %v", err)
+                klog.V(4).Infof("read group error: %v", err)
                 continue
             }
-            // load task and execute
-            task, err := repository.TaskById(ctx, w.Store, td.TaskID)
-            if err != nil {
-                klog.Errorf("load task %s failed: %v", td.TaskID, err)
-                continue
-            }
-            if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-                klog.Errorf("run task %s failed: %v", td.TaskID, err)
-            }
-        case err := <-sub.Err():
-            if err != nil {
-                klog.Errorf("subscription error: %v", err)
+            for _, m := range msgs {
+                td, err := apimsg.UnmarshalTaskDispatch(m.Payload)
+                if err != nil {
+                    klog.Errorf("decode dispatch failed: %v", err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+                if err != nil {
+                    klog.Errorf("load task %s failed: %v", td.TaskID, err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+                    klog.Errorf("run task %s failed: %v", td.TaskID, err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                _ = w.Queue.Ack(ctx, group, m.ID)
             }
         }
     }
@@ -182,6 +172,14 @@ func (w *Workflow) dispatchTopic() string {
         prefix = "kubemin"
     }
     return fmt.Sprintf("%s.workflow.dispatch", prefix)
+}
+
+func (w *Workflow) consumerGroup() string { return "workflow-workers" }
+func (w *Workflow) consumerName() string {
+    if w.Cfg != nil {
+        return w.Cfg.LeaderConfig.ID
+    }
+    return "worker"
 }
 
 type WorkflowCtl struct {

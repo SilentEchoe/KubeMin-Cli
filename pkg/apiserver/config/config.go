@@ -105,7 +105,7 @@ func NewConfig() *Config {
 		EnableTracing:    true,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
-		Messaging: MessagingConfig{Type: "noop"},
+		Messaging: MessagingConfig{Type: "redis"},
 	}
 }
 
