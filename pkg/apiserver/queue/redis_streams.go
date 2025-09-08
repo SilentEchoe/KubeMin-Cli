@@ -28,12 +28,7 @@ func NewRedisStreams(addr, username, password string, db int, key string) (*Redi
     return &RedisStreams{cli: cli, key: key}, nil
 }
 
-func (r *RedisStreams) EnsureGroup(ctx context.Context) error {
-    // Create default group lazily in server where group name is known; here no-op.
-    return nil
-}
-
-func (r *RedisStreams) ensureGroup(ctx context.Context, group string) error {
+func (r *RedisStreams) EnsureGroup(ctx context.Context, group string) error {
     // XGroupCreateMkStream is idempotent if group exists; ignore BUSYGROUP error.
     return r.cli.XGroupCreateMkStream(ctx, r.key, group, "$").Err()
 }
@@ -47,7 +42,7 @@ func (r *RedisStreams) Enqueue(ctx context.Context, payload []byte) (string, err
 }
 
 func (r *RedisStreams) ReadGroup(ctx context.Context, group, consumer string, count int, block time.Duration) ([]Message, error) {
-    _ = r.ensureGroup(ctx, group) // best-effort ensure
+    _ = r.EnsureGroup(ctx, group) // best-effort ensure
     res, err := r.cli.XReadGroup(ctx, &redis.XReadGroupArgs{
         Group:    group,
         Consumer: consumer,
@@ -83,3 +78,32 @@ func (r *RedisStreams) Ack(ctx context.Context, group string, ids ...string) err
     return r.cli.XAck(ctx, r.key, group, ids...).Err()
 }
 
+func (r *RedisStreams) AutoClaim(ctx context.Context, group, consumer string, minIdle time.Duration, count int) ([]Message, error) {
+    // Use XAutoClaim to claim stale messages. Start from 0-0 each time for simplicity.
+    start := "0-0"
+    res, _, err := r.cli.XAutoClaim(ctx, &redis.XAutoClaimArgs{
+        Stream:   r.key,
+        Group:    group,
+        Consumer: consumer,
+        MinIdle:  minIdle,
+        Start:    start,
+        Count:    int64(count),
+    }).Result()
+    if err != nil && err != redis.Nil {
+        return nil, err
+    }
+    var msgs []Message
+    for _, m := range res {
+        if raw, ok := m.Values["p"]; ok {
+            switch v := raw.(type) {
+            case string:
+                msgs = append(msgs, Message{ID: m.ID, Payload: []byte(v)})
+            case []byte:
+                msgs = append(msgs, Message{ID: m.ID, Payload: v})
+            }
+        }
+    }
+    return msgs, nil
+}
+
+func (r *RedisStreams) Close(ctx context.Context) error { return r.cli.Close() }

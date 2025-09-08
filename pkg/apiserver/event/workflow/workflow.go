@@ -4,7 +4,6 @@ import (
     "context"
     "encoding/json"
     "fmt"
-    "strings"
     "sort"
     "sync"
     "time"
@@ -21,7 +20,6 @@ import (
     "KubeMin-Cli/pkg/apiserver/domain/repository"
     "KubeMin-Cli/pkg/apiserver/event/workflow/job"
     "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-    apimsg "KubeMin-Cli/pkg/apiserver/messaging"
     qpkg "KubeMin-Cli/pkg/apiserver/queue"
     "go.opentelemetry.io/otel"
     "go.opentelemetry.io/otel/attribute"
@@ -36,6 +34,21 @@ type Workflow struct {
     WorkflowService service.WorkflowService `inject:""`
     Queue           qpkg.Queue               `inject:"queue"`
     Cfg             *config.Config           `inject:""`
+}
+
+// TaskDispatch is the minimal payload for dispatching a workflow task to a worker.
+type TaskDispatch struct {
+    TaskID     string `json:"taskId"`
+    WorkflowID string `json:"workflowId"`
+    ProjectID  string `json:"projectId"`
+    AppID      string `json:"appId"`
+}
+
+func MarshalTaskDispatch(t TaskDispatch) ([]byte, error) { return json.Marshal(t) }
+func UnmarshalTaskDispatch(b []byte) (TaskDispatch, error) {
+    var t TaskDispatch
+    err := json.Unmarshal(b, &t)
+    return t, err
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
@@ -101,8 +114,8 @@ func (w *Workflow) Dispatcher() {
             continue
         }
         for _, task := range waitingTasks {
-            payload := apimsg.TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
-            b, err := apimsg.MarshalTaskDispatch(payload)
+            payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
+            b, err := MarshalTaskDispatch(payload)
             if err != nil {
                 klog.Errorf("marshal task dispatch failed: %v", err)
                 continue
@@ -121,10 +134,39 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
     group := w.consumerGroup()
     consumer := w.consumerName()
     klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
+    staleTicker := time.NewTicker(15 * time.Second)
+    defer staleTicker.Stop()
     for {
         select {
         case <-ctx.Done():
             return
+        case <-staleTicker.C:
+            // periodically claim stale pending messages
+            msgs, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
+            if err != nil {
+                klog.V(4).Infof("auto-claim error: %v", err)
+                continue
+            }
+            for _, m := range msgs {
+                td, err := UnmarshalTaskDispatch(m.Payload)
+                if err != nil {
+                    klog.Errorf("decode dispatch (claim) failed: %v", err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+                if err != nil {
+                    klog.Errorf("load task %s failed: %v", td.TaskID, err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+                    klog.Errorf("run task %s failed: %v", td.TaskID, err)
+                    _ = w.Queue.Ack(ctx, group, m.ID)
+                    continue
+                }
+                _ = w.Queue.Ack(ctx, group, m.ID)
+            }
         default:
             msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
             if err != nil {
@@ -132,7 +174,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
                 continue
             }
             for _, m := range msgs {
-                td, err := apimsg.UnmarshalTaskDispatch(m.Payload)
+                td, err := UnmarshalTaskDispatch(m.Payload)
                 if err != nil {
                     klog.Errorf("decode dispatch failed: %v", err)
                     _ = w.Queue.Ack(ctx, group, m.ID)
@@ -153,14 +195,6 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
             }
         }
     }
-}
-
-func (w *Workflow) isDistributed() bool {
-    // Use Messaging.Type via config to decide distributed mode
-    if w.Cfg == nil {
-        return false
-    }
-    return strings.ToLower(w.Cfg.Messaging.Type) == "redis"
 }
 
 func (w *Workflow) dispatchTopic() string {

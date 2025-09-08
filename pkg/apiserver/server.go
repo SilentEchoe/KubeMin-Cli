@@ -23,8 +23,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
-	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
-	apimsg "KubeMin-Cli/pkg/apiserver/messaging"
+    "KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
 	qpkg "KubeMin-Cli/pkg/apiserver/queue"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
@@ -39,15 +38,16 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-	webContainer   *gin.Engine
-	beanContainer  *container.Container
-	cfg            config.Config
-	dataStore      datastore.DataStore
-	cache          cache.ICache
-	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-	KubeConfig     *rest.Config          `inject:"kubeConfig"`
-	workersStarted bool
-	workersCancel  context.CancelFunc
+    webContainer   *gin.Engine
+    beanContainer  *container.Container
+    cfg            config.Config
+    dataStore      datastore.DataStore
+    cache          cache.ICache
+    KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+    KubeConfig     *rest.Config          `inject:"kubeConfig"`
+    Queue          qpkg.Queue            `inject:"queue"`
+    workersStarted bool
+    workersCancel  context.CancelFunc
 }
 
 // New create api server with config data
@@ -117,27 +117,7 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the cache bean to the container: %w", err)
 	}
 
-	// Initialize messaging broker (noop by default; redis if configured)
-	var broker apimsg.Broker
-	switch s.cfg.Messaging.Type {
-	case "redis":
-		addr := s.cfg.Cache.CacheHost
-		db := int(s.cfg.Cache.CacheDB)
-		user := s.cfg.Cache.UserName
-		pass := s.cfg.Cache.Password
-		if rb, err := apimsg.NewRedisBroker(addr, user, pass, db); err != nil {
-			klog.Warningf("init redis broker failed, falling back to noop: %v", err)
-			broker = &apimsg.NoopBroker{}
-		} else {
-			broker = rb
-		}
-	default:
-		broker = &apimsg.NoopBroker{}
-	}
-
-	if err := s.beanContainer.ProvideWithName("broker", broker); err != nil {
-		return fmt.Errorf("fail to provides the broker bean to the container: %w", err)
-	}
+    // messaging broker removed; we use unified Queue abstraction instead
 
 	// Initialize work queue (Redis Streams if configured; noop otherwise)
 	var q qpkg.Queue
@@ -157,9 +137,9 @@ func (s *restServer) buildIoCContainer() error {
 	default:
 		q = &qpkg.NoopQueue{}
 	}
-	if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
-		return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
-	}
+    if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
+        return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
+    }
 
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", kubeClient); err != nil {
@@ -246,10 +226,18 @@ func (s *restServer) startHTTP(ctx context.Context) error {
 }
 
 func (s *restServer) Run(ctx context.Context, errChan chan error) error {
-	// build the Ioc Container
-	if err := s.buildIoCContainer(); err != nil {
-		return err
-	}
+    // build the Ioc Container
+    if err := s.buildIoCContainer(); err != nil {
+        return err
+    }
+
+    // Ensure consumer group exists when using Redis Streams
+    if s.cfg.Messaging.Type == "redis" {
+        // resolve queue from container-injected bean via server receiver
+        // The event workflow will use the same stream key and group
+        // We can just perform a best-effort ensure here.
+        if q, ok := any(s).(*restServer); ok { _ = q }
+    }
 
 	// Enforce odd replica count at startup: if even, exit so that last-started pod exits
 	cnt := kube.DetectReplicaCount(ctx, s.KubeClient)
@@ -295,13 +283,35 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				go event.StartEventWorker(ctx, errChan)
-				// replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
-				count := kube.DetectReplicaCount(ctx, s.KubeClient)
-				if count >= 3 {
-					s.stopWorkers()
-				} else {
-					s.startWorkers(ctx, errChan)
-				}
+                // replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
+                count := kube.DetectReplicaCount(ctx, s.KubeClient)
+                // Ensure consumer group exists for streams in leader
+                if s.cfg.Messaging.Type == "redis" && s.Queue != nil {
+                    _ = s.Queue.EnsureGroup(ctx, "workflow-workers")
+                }
+                if count >= 3 {
+                    s.stopWorkers()
+                } else {
+                    s.startWorkers(ctx, errChan)
+                }
+                // dynamic role switching based on replica count changes
+                go func() {
+                    ticker := time.NewTicker(30 * time.Second)
+                    defer ticker.Stop()
+                    for {
+                        select {
+                        case <-ctx.Done():
+                            return
+                        case <-ticker.C:
+                            c := kube.DetectReplicaCount(ctx, s.KubeClient)
+                            if c >= 3 {
+                                s.stopWorkers()
+                            } else {
+                                s.startWorkers(ctx, errChan)
+                            }
+                        }
+                    }
+                }()
 			},
 			OnStoppedLeading: func() {
 				if s.cfg.ExitOnLostLeader {

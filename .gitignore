@@ -23,3 +23,6 @@
 
 # Local log files
 /logs/
+
+# Local Go build cache if created
+.gocache/

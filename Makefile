@@ -4,8 +4,6 @@ SHELL := /bin/bash
 MODULE      ?= KubeMin-Cli
 BINARY_NAME ?= kubemin-cli
 
-# Build cache (local path to avoid sandbox issues)
-GOCACHE     ?= $(abspath ./.gocache)
 
 # Go settings
 GO           ?= go
@@ -28,18 +26,18 @@ endif
 all: build
 
 build:
-	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOCACHE=$(GOCACHE) $(GO) build $(GOFLAGS) -o $(DEVNULL) $(LDFLAGS) $(MAIN_PKG)
+	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) $(GO) build $(GOFLAGS) -o $(DEVNULL) $(LDFLAGS) $(MAIN_PKG)
 	@echo "Build completed (binary discarded)"
 
 # Cross-compile examples
 build-linux:
-	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOCACHE=$(GOCACHE) GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-linux-amd64 $(LDFLAGS) $(MAIN_PKG)
+	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOOS=linux GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-linux-amd64 $(LDFLAGS) $(MAIN_PKG)
 
 build-darwin:
-	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOCACHE=$(GOCACHE) GOOS=darwin GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-darwin-amd64 $(LDFLAGS) $(MAIN_PKG)
+	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOOS=darwin GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-darwin-amd64 $(LDFLAGS) $(MAIN_PKG)
 
 build-windows:
-	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOCACHE=$(GOCACHE) GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-windows-amd64.exe $(LDFLAGS) $(MAIN_PKG)
+	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOOS=windows GOARCH=amd64 $(GO) build $(GOFLAGS) -o $(BINARY_NAME)-windows-amd64.exe $(LDFLAGS) $(MAIN_PKG)
 
 run:
 	$(GO) run $(MAIN_PKG)
@@ -57,4 +55,4 @@ tidy:
 	$(GO) mod tidy
 
 clean:
-	rm -rf $(GOCACHE) $(BINARY_NAME)*
+	rm -rf $(BINARY_NAME)*
