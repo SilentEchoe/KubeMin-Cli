@@ -20,7 +20,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.37.0
 	gorm.io/driver/mysql v1.5.7
 	gorm.io/gorm v1.25.12
-	helm.sh/helm/v3 v3.11.2
 	k8s.io/api v0.34.0
 	k8s.io/apimachinery v0.34.0
 	k8s.io/client-go v0.34.0
@@ -40,6 +39,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
+	github.com/evanphx/json-patch v5.6.0+incompatible // indirect
 	github.com/evanphx/json-patch/v5 v5.9.0 // indirect
 	github.com/facebookgo/structtag v0.0.0-20150214074306-217e25fb9691 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
