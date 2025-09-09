@@ -25,4 +25,6 @@ type Queue interface {
     AutoClaim(ctx context.Context, group, consumer string, minIdle time.Duration, count int) ([]Message, error)
     // Close releases any underlying resources.
     Close(ctx context.Context) error
+    // Stats returns stream backlog size and pending count for a group.
+    Stats(ctx context.Context, group string) (backlog int64, pending int64, err error)
 }

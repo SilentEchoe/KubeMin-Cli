@@ -25,7 +25,7 @@ import (
 func NewAPIServerCommand() *cobra.Command {
 	s := options.NewServerRunOptions()
 
-	// Initialize klog flags
+	// Initialize log flags
 	klog.InitFlags(nil)
 
 	cmd := &cobra.Command{
@@ -42,7 +42,7 @@ func NewAPIServerCommand() *cobra.Command {
 
 	fs := cmd.Flags()
 	namedFlagSets := s.Flags()
-	// Add klog flags to the command's flag set
+	// Add log flags to the command's flag set
 	namedFlagSets.FlagSet("klog").AddGoFlagSet(flag.CommandLine)
 
 	for _, set := range namedFlagSets.FlagSets {
@@ -62,7 +62,7 @@ func Run(s *options.ServerRunOptions) error {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	//开启分析服务
+	// Start the analysis service
 	go profiling.StartProfilingServer(errChan)
 
 	// Start log cleanup service
@@ -74,7 +74,6 @@ func Run(s *options.ServerRunOptions) error {
 			klog.Fatalf("Failed to create log directory %s: %v", logDir, err)
 		}
 	}
-
 	go utils.StartLogCleanup(logDir, 7*24*time.Hour)
 
 	go func() {

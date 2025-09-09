@@ -1,3 +1,3 @@
 package version
 
-var KubeMinCliVersion = "0.0.1"
+var KubeMinCliVersion = "0.0.2"

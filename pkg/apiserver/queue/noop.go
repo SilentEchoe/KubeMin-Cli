@@ -25,3 +25,4 @@ func (n *NoopQueue) AutoClaim(ctx context.Context, group, consumer string, minId
     return nil, nil
 }
 func (n *NoopQueue) Close(ctx context.Context) error { return nil }
+func (n *NoopQueue) Stats(ctx context.Context, group string) (int64, int64, error) { return 0, 0, nil }

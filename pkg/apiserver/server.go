@@ -23,7 +23,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
-    "KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
+	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
 	qpkg "KubeMin-Cli/pkg/apiserver/queue"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
@@ -38,16 +38,16 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-    webContainer   *gin.Engine
-    beanContainer  *container.Container
-    cfg            config.Config
-    dataStore      datastore.DataStore
-    cache          cache.ICache
-    KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-    KubeConfig     *rest.Config          `inject:"kubeConfig"`
-    Queue          qpkg.Queue            `inject:"queue"`
-    workersStarted bool
-    workersCancel  context.CancelFunc
+	webContainer   *gin.Engine
+	beanContainer  *container.Container
+	cfg            config.Config
+	dataStore      datastore.DataStore
+	cache          cache.ICache
+	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig     *rest.Config          `inject:"kubeConfig"`
+	Queue          qpkg.Queue            `inject:"queue"`
+	workersStarted bool
+	workersCancel  context.CancelFunc
 }
 
 // New create api server with config data
@@ -117,14 +117,14 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the cache bean to the container: %w", err)
 	}
 
-    // messaging broker removed; we use unified Queue abstraction instead
+	// messaging broker removed; we use unified Queue abstraction instead
 
 	// Initialize work queue (Redis Streams if configured; noop otherwise)
 	var q qpkg.Queue
 	streamKey := s.dispatchTopic()
 	switch s.cfg.Messaging.Type {
 	case "redis":
-		addr := s.cfg.Cache.CacheHost
+		addr := fmt.Sprintf("%s:%d", s.cfg.Cache.CacheHost, s.cfg.Cache.CacheProt)
 		db := int(s.cfg.Cache.CacheDB)
 		user := s.cfg.Cache.UserName
 		pass := s.cfg.Cache.Password
@@ -137,9 +137,10 @@ func (s *restServer) buildIoCContainer() error {
 	default:
 		q = &qpkg.NoopQueue{}
 	}
-    if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
-        return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
-    }
+	// 注入消息队列
+	if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
+		return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
+	}
 
 	// 将操作k8s的权限全都注入到IOC中
 	if err := s.beanContainer.ProvideWithName("kubeClient", kubeClient); err != nil {
@@ -163,9 +164,6 @@ func (s *restServer) buildIoCContainer() error {
 		}
 	}
 
-	// 注册 workflowService
-	// removed duplicate named registration; workflowService is already provided via InitServiceBean
-
 	// interfaces
 	if err := s.beanContainer.Provides(api.InitAPIBean()...); err != nil {
 		return fmt.Errorf("fail to provides the api bean to the container: %w", err)
@@ -182,7 +180,7 @@ func (s *restServer) buildIoCContainer() error {
 	return nil
 }
 
-// dispatchTopic computes the Redis Streams key for workflow dispatch
+// dispatchTopic 计算用于工作流分发的Redis Streams键
 func (s *restServer) dispatchTopic() string {
 	prefix := s.cfg.Messaging.ChannelPrefix
 	if prefix == "" {
@@ -226,18 +224,20 @@ func (s *restServer) startHTTP(ctx context.Context) error {
 }
 
 func (s *restServer) Run(ctx context.Context, errChan chan error) error {
-    // build the Ioc Container
-    if err := s.buildIoCContainer(); err != nil {
-        return err
-    }
+	// build the Ioc Container
+	if err := s.buildIoCContainer(); err != nil {
+		return err
+	}
 
-    // Ensure consumer group exists when using Redis Streams
-    if s.cfg.Messaging.Type == "redis" {
-        // resolve queue from container-injected bean via server receiver
-        // The event workflow will use the same stream key and group
-        // We can just perform a best-effort ensure here.
-        if q, ok := any(s).(*restServer); ok { _ = q }
-    }
+	// Ensure consumer group exists when using Redis Streams
+	if s.cfg.Messaging.Type == "redis" {
+		// resolve queue from container-injected bean via server receiver
+		// The event workflow will use the same stream key and group
+		// We can just perform a best-effort ensure here.
+		if q, ok := any(s).(*restServer); ok {
+			_ = q
+		}
+	}
 
 	// Enforce odd replica count at startup: if even, exit so that last-started pod exits
 	cnt := kube.DetectReplicaCount(ctx, s.KubeClient)
@@ -288,30 +288,48 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
                 // Ensure consumer group exists for streams in leader
                 if s.cfg.Messaging.Type == "redis" && s.Queue != nil {
                     _ = s.Queue.EnsureGroup(ctx, "workflow-workers")
+                    // start metrics ticker for backlog/pending
+                    go func() {
+                        t := time.NewTicker(30 * time.Second)
+                        defer t.Stop()
+                        for {
+                            select {
+                            case <-ctx.Done():
+                                return
+                            case <-t.C:
+                                if s.Queue == nil { continue }
+                                if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
+                                    klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
+                                } else {
+                                    klog.V(4).Infof("queue stats error: %v", err)
+                                }
+                            }
+                        }
+                    }()
                 }
                 if count >= 3 {
                     s.stopWorkers()
                 } else {
                     s.startWorkers(ctx, errChan)
                 }
-                // dynamic role switching based on replica count changes
-                go func() {
-                    ticker := time.NewTicker(30 * time.Second)
-                    defer ticker.Stop()
-                    for {
-                        select {
-                        case <-ctx.Done():
-                            return
-                        case <-ticker.C:
-                            c := kube.DetectReplicaCount(ctx, s.KubeClient)
-                            if c >= 3 {
-                                s.stopWorkers()
-                            } else {
-                                s.startWorkers(ctx, errChan)
-                            }
-                        }
-                    }
-                }()
+				// dynamic role switching based on replica count changes
+				go func() {
+					ticker := time.NewTicker(30 * time.Second)
+					defer ticker.Stop()
+					for {
+						select {
+						case <-ctx.Done():
+							return
+						case <-ticker.C:
+							c := kube.DetectReplicaCount(ctx, s.KubeClient)
+							if c >= 3 {
+								s.stopWorkers()
+							} else {
+								s.startWorkers(ctx, errChan)
+							}
+						}
+					}
+				}()
 			},
 			OnStoppedLeading: func() {
 				if s.cfg.ExitOnLostLeader {

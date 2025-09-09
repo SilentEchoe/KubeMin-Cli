@@ -107,3 +107,19 @@ func (r *RedisStreams) AutoClaim(ctx context.Context, group, consumer string, mi
 }
 
 func (r *RedisStreams) Close(ctx context.Context) error { return r.cli.Close() }
+
+func (r *RedisStreams) Stats(ctx context.Context, group string) (int64, int64, error) {
+    xl, err1 := r.cli.XLen(ctx, r.key).Result()
+    xp, err2 := r.cli.XPending(ctx, r.key, group).Result()
+    var cnt int64
+    if err2 == nil && xp != nil {
+        cnt = xp.Count
+    }
+    if err1 != nil {
+        return 0, cnt, err1
+    }
+    if err2 != nil && err2 != redis.Nil {
+        return xl, 0, err2
+    }
+    return xl, cnt, nil
+}

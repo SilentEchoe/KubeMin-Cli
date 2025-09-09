@@ -120,11 +120,12 @@ func (w *Workflow) Dispatcher() {
                 klog.Errorf("marshal task dispatch failed: %v", err)
                 continue
             }
-            if _, err := w.Queue.Enqueue(ctx, b); err != nil {
+            if id, err := w.Queue.Enqueue(ctx, b); err != nil {
                 klog.Errorf("enqueue task dispatch failed: %v", err)
                 continue
+            } else {
+                klog.Infof("dispatched task: %s, streamID: %s", task.TaskID, id)
             }
-            klog.Infof("dispatched task: %s", task.TaskID)
         }
     }
 }
@@ -165,6 +166,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
                     _ = w.Queue.Ack(ctx, group, m.ID)
                     continue
                 }
+                klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, td.TaskID)
                 _ = w.Queue.Ack(ctx, group, m.ID)
             }
         default:
@@ -191,6 +193,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
                     _ = w.Queue.Ack(ctx, group, m.ID)
                     continue
                 }
+                klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, td.TaskID)
                 _ = w.Queue.Ack(ctx, group, m.ID)
             }
         }

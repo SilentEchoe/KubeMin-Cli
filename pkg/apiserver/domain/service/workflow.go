@@ -105,15 +105,12 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 	// Also ensure Properties.Image is populated to keep a single source of truth downstream.
 	resolvedImage := req.Properties.Image
 	if resolvedImage == "" {
-		resolvedImage = req.Image
-	}
-	if req.Properties.Image == "" && resolvedImage != "" {
-		req.Properties.Image = resolvedImage
+		resolvedImage = config.DefaultNamespace
 	}
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppId:         appID,
-		Namespace:     "",
+		Namespace:     req.NameSpace,
 		Image:         resolvedImage,
 		Replicas:      req.Replicas,
 		ComponentType: req.ComponentType,

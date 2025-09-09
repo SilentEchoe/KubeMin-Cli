@@ -55,6 +55,7 @@ type CreateComponentRequest struct {
 	Name          string         `json:"name"`
 	ComponentType config.JobType `json:"type"`
 	Image         string         `json:"image,omitempty"` // Deprecated: use properties.image
+	NameSpace     string         `json:"nameSpace"`
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
 	Traits        Traits         `json:"traits"`

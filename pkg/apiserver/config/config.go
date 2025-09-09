@@ -62,6 +62,7 @@ type Config struct {
 
 type RedisCacheConfig struct {
 	CacheHost string
+	CacheProt int
 	CacheType string
 	CacheDB   int64
 	UserName  string
@@ -91,6 +92,7 @@ func NewConfig() *Config {
 		},
 		Cache: RedisCacheConfig{
 			CacheHost: "localhost",
+			CacheProt: 6379,
 			CacheType: "redis",
 			UserName:  "",
 			Password:  "",
