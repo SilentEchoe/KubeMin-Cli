@@ -1,13 +1,13 @@
 package traits
 
 import (
-	"fmt"
+    "fmt"
 
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/klog/v2"
+    corev1 "k8s.io/api/core/v1"
+    "k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/spec"
-	"KubeMin-Cli/pkg/apiserver/utils"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    "KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // InitProcessor creates init containers (pre-main) and applies nested traits

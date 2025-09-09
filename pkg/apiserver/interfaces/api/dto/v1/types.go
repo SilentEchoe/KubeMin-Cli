@@ -1,10 +1,10 @@
 package v1
 
 import (
-	"time"
+    "time"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/spec"
+    "KubeMin-Cli/pkg/apiserver/config"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 var (

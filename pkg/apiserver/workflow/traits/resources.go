@@ -1,12 +1,12 @@
 package traits
 
 import (
-	"fmt"
+    "fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"KubeMin-Cli/pkg/apiserver/spec"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 // ResourcesProcessor applies compute resources (cpu/memory/gpu) to a container.

@@ -1,12 +1,12 @@
 package traits
 
 import (
-	"fmt"
+    "fmt"
 
 	corev1 "k8s.io/api/core/v1"
 
 	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/spec"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 // EnvsProcessor implements the user-friendly `envs` trait. It translates a

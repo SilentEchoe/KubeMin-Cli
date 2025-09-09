@@ -1,13 +1,13 @@
 package traits
 
 import (
-	"fmt"
+    "fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/spec"
-	"KubeMin-Cli/pkg/apiserver/utils"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    "KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // SidecarProcessor materializes additional containers attached to the Pod.

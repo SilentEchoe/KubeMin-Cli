@@ -2,12 +2,12 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/spec"
-	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	corev1 "k8s.io/api/core/v1"
-	"testing"
+    "KubeMin-Cli/pkg/apiserver/domain/model"
+    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    "encoding/json"
+    "github.com/stretchr/testify/assert"
+    corev1 "k8s.io/api/core/v1"
+    "testing"
 )
 
 const userInputJSON = `
