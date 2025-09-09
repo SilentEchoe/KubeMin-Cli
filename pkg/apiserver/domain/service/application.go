@@ -63,10 +63,10 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 	// 创建App组件
 	for _, component := range req.Component {
-		// Unify image source: prefer Properties.Image; fallback to top-level Image.
-		if component.Properties.Image == "" && component.Image != "" {
-			component.Properties.Image = component.Image
+		if component.Properties.Image == "" {
+			return nil, bcode.ErrComponentNotImageSet
 		}
+
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
