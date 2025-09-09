@@ -1,10 +1,10 @@
 package v1
 
 import (
-    "time"
+	"time"
 
-    "KubeMin-Cli/pkg/apiserver/config"
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/config"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 var (
@@ -43,6 +43,7 @@ type NameAlias struct {
 
 type CreateApplicationsRequest struct {
 	Name          string                      `json:"name" validate:"checkname"`
+	NameSpace     string                      `json:"namespace" validate:"checkname"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
 	Project       string                      `json:"project"`

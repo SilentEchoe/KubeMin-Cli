@@ -102,17 +102,12 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 	if req.Replicas <= 0 {
 		req.Replicas = 1
 	}
-	// Prefer Properties.Image if set; otherwise fallback to top-level Image.
-	// Also ensure Properties.Image is populated to keep a single source of truth downstream.
-	resolvedImage := req.Properties.Image
-	if resolvedImage == "" {
-		resolvedImage = config.DefaultNamespace
-	}
+
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppId:         appID,
 		Namespace:     req.NameSpace,
-		Image:         resolvedImage,
+		Image:         req.Properties.Image,
 		Replicas:      req.Replicas,
 		ComponentType: req.ComponentType,
 	}

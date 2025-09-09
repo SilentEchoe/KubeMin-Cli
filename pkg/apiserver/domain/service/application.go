@@ -42,6 +42,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	application := model.Applications{
 		ID:          utils.RandStringByNumLowercase(24),
 		Name:        req.Name,
+		Namespace:   req.NameSpace,
 		Alias:       req.Alias,
 		Project:     req.Project,
 		Version:     req.Version,
@@ -55,18 +56,22 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	if exist {
 		return nil, bcode.ErrApplicationExist
 	}
+	if application.Namespace != "" {
+		application.Namespace = config.DefaultNamespace
+	}
+
 	if err := repository.CreateApplications(ctx, c.Store, &application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist
 		}
 		return nil, err
 	}
-	// 创建App组件
+	// create app component
 	for _, component := range req.Component {
 		if component.Properties.Image == "" {
 			return nil, bcode.ErrComponentNotImageSet
 		}
-
+		component.NameSpace = application.Namespace
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
@@ -75,7 +80,6 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 		nComponent.Properties = properties
 
-		//附加特性
 		traits, err := model.NewJSONStructByStruct(component.Traits)
 		if err != nil {
 			klog.Errorf("new trait failure,%s", err.Error())
@@ -90,7 +94,8 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 	}
 
-	// 如果没有定义工作流，默认会自动按照组件和运维特征数组的顺序进行部署，并把Paas服务所在的当前集群作为目标集群。
+	//If the workflow is not defined, it will automatically deploy according to the sequence of components and operation characteristics arrays
+	//and use the current cluster where the PaaS service is located as the target cluster.
 	workflowName := ""
 	workflowAlias := fmt.Sprintf("%s-%s", req.Alias, "default-workflow")
 	var workflowStep *model.JSONStruct
