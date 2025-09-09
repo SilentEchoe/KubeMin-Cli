@@ -3,11 +3,12 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"time"
+
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/klog/v2"
-	"reflect"
 	"sigs.k8s.io/yaml"
-	"time"
 )
 
 var tableNamePrefix = "min_"

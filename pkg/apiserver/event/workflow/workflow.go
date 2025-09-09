@@ -1,65 +1,65 @@
 package workflow
 
 import (
-    "context"
-    "encoding/json"
-    "fmt"
-    "sort"
-    "sync"
-    "time"
+	"context"
+	"encoding/json"
+	"fmt"
+	"sort"
+	"sync"
+	"time"
 
-    corev1 "k8s.io/api/core/v1"
-    "k8s.io/client-go/kubernetes"
-    "k8s.io/client-go/rest"
-    "k8s.io/klog/v2"
-    "sigs.k8s.io/controller-runtime/pkg/client"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-    "KubeMin-Cli/pkg/apiserver/config"
-    "KubeMin-Cli/pkg/apiserver/domain/model"
-    "KubeMin-Cli/pkg/apiserver/domain/service"
-    "KubeMin-Cli/pkg/apiserver/domain/repository"
-    "KubeMin-Cli/pkg/apiserver/event/workflow/job"
-    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-    qpkg "KubeMin-Cli/pkg/apiserver/queue"
-    "go.opentelemetry.io/otel"
-    "go.opentelemetry.io/otel/attribute"
-    "go.opentelemetry.io/otel/codes"
-    "go.opentelemetry.io/otel/trace"
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/domain/repository"
+	"KubeMin-Cli/pkg/apiserver/domain/service"
+	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	qpkg "KubeMin-Cli/pkg/apiserver/queue"
 )
 
 type Workflow struct {
-    KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
-    KubeConfig      *rest.Config            `inject:"kubeConfig"`
-    Store           datastore.DataStore     `inject:"datastore"`
-    WorkflowService service.WorkflowService `inject:""`
-    Queue           qpkg.Queue               `inject:"queue"`
-    Cfg             *config.Config           `inject:""`
+	KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
+	KubeConfig      *rest.Config            `inject:"kubeConfig"`
+	Store           datastore.DataStore     `inject:"datastore"`
+	WorkflowService service.WorkflowService `inject:""`
+	Queue           qpkg.Queue              `inject:"queue"`
+	Cfg             *config.Config          `inject:""`
 }
 
 // TaskDispatch is the minimal payload for dispatching a workflow task to a worker.
 type TaskDispatch struct {
-    TaskID     string `json:"taskId"`
-    WorkflowID string `json:"workflowId"`
-    ProjectID  string `json:"projectId"`
-    AppID      string `json:"appId"`
+	TaskID     string `json:"taskId"`
+	WorkflowID string `json:"workflowId"`
+	ProjectID  string `json:"projectId"`
+	AppID      string `json:"appId"`
 }
 
 func MarshalTaskDispatch(t TaskDispatch) ([]byte, error) { return json.Marshal(t) }
 func UnmarshalTaskDispatch(b []byte) (TaskDispatch, error) {
-    var t TaskDispatch
-    err := json.Unmarshal(b, &t)
-    return t, err
+	var t TaskDispatch
+	err := json.Unmarshal(b, &t)
+	return t, err
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
-    w.InitQueue(ctx)
-    // If queue is noop (local mode), fall back to direct DB scan executor for functionality.
-    if _, ok := w.Queue.(*qpkg.NoopQueue); ok {
-        go w.WorkflowTaskSender()
-        return
-    }
-    // Redis Streams path: leader runs dispatcher; workers managed by server callbacks.
-    go w.Dispatcher()
+	w.InitQueue(ctx)
+	// If queue is noop (local mode), fall back to direct DB scan executor for functionality.
+	if _, ok := w.Queue.(*qpkg.NoopQueue); ok {
+		go w.WorkflowTaskSender()
+		return
+	}
+	// Redis Streams path: leader runs dispatcher; workers managed by server callbacks.
+	go w.Dispatcher()
 }
 
 func (w *Workflow) InitQueue(ctx context.Context) {
@@ -105,118 +105,118 @@ func (w *Workflow) WorkflowTaskSender() {
 
 // Dispatcher scans waiting tasks and publishes dispatch messages.
 func (w *Workflow) Dispatcher() {
-    for {
-        time.Sleep(time.Second * 3)
-        ctx := context.Background()
-        //获取等待的任务
-        waitingTasks, err := w.WorkflowService.WaitingTasks(ctx)
-        if err != nil || len(waitingTasks) == 0 {
-            continue
-        }
-        for _, task := range waitingTasks {
-            payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
-            b, err := MarshalTaskDispatch(payload)
-            if err != nil {
-                klog.Errorf("marshal task dispatch failed: %v", err)
-                continue
-            }
-            if id, err := w.Queue.Enqueue(ctx, b); err != nil {
-                klog.Errorf("enqueue task dispatch failed: %v", err)
-                continue
-            } else {
-                klog.Infof("dispatched task: %s, streamID: %s", task.TaskID, id)
-            }
-        }
-    }
+	for {
+		time.Sleep(time.Second * 3)
+		ctx := context.Background()
+		//获取等待的任务
+		waitingTasks, err := w.WorkflowService.WaitingTasks(ctx)
+		if err != nil || len(waitingTasks) == 0 {
+			continue
+		}
+		for _, task := range waitingTasks {
+			payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
+			b, err := MarshalTaskDispatch(payload)
+			if err != nil {
+				klog.Errorf("marshal task dispatch failed: %v", err)
+				continue
+			}
+			if id, err := w.Queue.Enqueue(ctx, b); err != nil {
+				klog.Errorf("enqueue task dispatch failed: %v", err)
+				continue
+			} else {
+				klog.Infof("dispatched task: %s, streamID: %s", task.TaskID, id)
+			}
+		}
+	}
 }
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
-    group := w.consumerGroup()
-    consumer := w.consumerName()
-    klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
-    staleTicker := time.NewTicker(15 * time.Second)
-    defer staleTicker.Stop()
-    for {
-        select {
-        case <-ctx.Done():
-            return
-        case <-staleTicker.C:
-            // periodically claim stale pending messages
-            msgs, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
-            if err != nil {
-                klog.V(4).Infof("auto-claim error: %v", err)
-                continue
-            }
-            for _, m := range msgs {
-                td, err := UnmarshalTaskDispatch(m.Payload)
-                if err != nil {
-                    klog.Errorf("decode dispatch (claim) failed: %v", err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                task, err := repository.TaskById(ctx, w.Store, td.TaskID)
-                if err != nil {
-                    klog.Errorf("load task %s failed: %v", td.TaskID, err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-                    klog.Errorf("run task %s failed: %v", td.TaskID, err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, td.TaskID)
-                _ = w.Queue.Ack(ctx, group, m.ID)
-            }
-        default:
-            msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
-            if err != nil {
-                klog.V(4).Infof("read group error: %v", err)
-                continue
-            }
-            for _, m := range msgs {
-                td, err := UnmarshalTaskDispatch(m.Payload)
-                if err != nil {
-                    klog.Errorf("decode dispatch failed: %v", err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                task, err := repository.TaskById(ctx, w.Store, td.TaskID)
-                if err != nil {
-                    klog.Errorf("load task %s failed: %v", td.TaskID, err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-                    klog.Errorf("run task %s failed: %v", td.TaskID, err)
-                    _ = w.Queue.Ack(ctx, group, m.ID)
-                    continue
-                }
-                klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, td.TaskID)
-                _ = w.Queue.Ack(ctx, group, m.ID)
-            }
-        }
-    }
+	group := w.consumerGroup()
+	consumer := w.consumerName()
+	klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
+	staleTicker := time.NewTicker(15 * time.Second)
+	defer staleTicker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-staleTicker.C:
+			// periodically claim stale pending messages
+			msgs, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
+			if err != nil {
+				klog.V(4).Infof("auto-claim error: %v", err)
+				continue
+			}
+			for _, m := range msgs {
+				td, err := UnmarshalTaskDispatch(m.Payload)
+				if err != nil {
+					klog.Errorf("decode dispatch (claim) failed: %v", err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+				if err != nil {
+					klog.Errorf("load task %s failed: %v", td.TaskID, err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+					klog.Errorf("run task %s failed: %v", td.TaskID, err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, td.TaskID)
+				_ = w.Queue.Ack(ctx, group, m.ID)
+			}
+		default:
+			msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
+			if err != nil {
+				klog.V(4).Infof("read group error: %v", err)
+				continue
+			}
+			for _, m := range msgs {
+				td, err := UnmarshalTaskDispatch(m.Payload)
+				if err != nil {
+					klog.Errorf("decode dispatch failed: %v", err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+				if err != nil {
+					klog.Errorf("load task %s failed: %v", td.TaskID, err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+					klog.Errorf("run task %s failed: %v", td.TaskID, err)
+					_ = w.Queue.Ack(ctx, group, m.ID)
+					continue
+				}
+				klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, td.TaskID)
+				_ = w.Queue.Ack(ctx, group, m.ID)
+			}
+		}
+	}
 }
 
 func (w *Workflow) dispatchTopic() string {
-    prefix := ""
-    if w.Cfg != nil {
-        prefix = w.Cfg.Messaging.ChannelPrefix
-    }
-    if prefix == "" {
-        prefix = "kubemin"
-    }
-    return fmt.Sprintf("%s.workflow.dispatch", prefix)
+	prefix := ""
+	if w.Cfg != nil {
+		prefix = w.Cfg.Messaging.ChannelPrefix
+	}
+	if prefix == "" {
+		prefix = "kubemin"
+	}
+	return fmt.Sprintf("%s.workflow.dispatch", prefix)
 }
 
 func (w *Workflow) consumerGroup() string { return "workflow-workers" }
 func (w *Workflow) consumerName() string {
-    if w.Cfg != nil {
-        return w.Cfg.LeaderConfig.ID
-    }
-    return "worker"
+	if w.Cfg != nil {
+		return w.Cfg.LeaderConfig.ID
+	}
+	return "worker"
 }
 
 type WorkflowCtl struct {
@@ -450,15 +450,15 @@ func FindComponents(components []*model.ApplicationComponent, name string) *mode
 
 // 更改工作流队列的状态，并运行它
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
-    //将状态更改为队列中
-    task.Status = config.StatusQueued
-    if success := w.WorkflowService.UpdateTask(ctx, task); !success {
-        klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
-        return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
-    }
-    // 执行新的任务
-    go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
-    return nil
+	//将状态更改为队列中
+	task.Status = config.StatusQueued
+	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
+		klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
+		return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
+	}
+	// 执行新的任务
+	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
+	return nil
 }
 
 func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {

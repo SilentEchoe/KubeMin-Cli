@@ -1,10 +1,6 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 	"sync"
@@ -13,12 +9,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
-	_ "k8s.io/client-go/applyconfigurations/meta/v1"
-
 	"k8s.io/apimachinery/pkg/util/intstr"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 type DeployServiceJobCtl struct {

@@ -1,9 +1,10 @@
 package main
 
 import (
+	"log"
+
 	"KubeMin-Cli/cmd/server/app"
 	"KubeMin-Cli/pkg/apiserver/workflow/traits"
-	"log"
 )
 
 func main() {

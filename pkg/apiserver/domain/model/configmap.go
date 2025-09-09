@@ -1,9 +1,10 @@
 package model
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"fmt"
 	"strings"
+
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // ConfigMapData 定义ConfigMap的数据结构

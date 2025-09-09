@@ -1,7 +1,6 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 	"github.com/fatih/color"
@@ -18,6 +17,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 )
 

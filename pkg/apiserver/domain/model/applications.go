@@ -2,7 +2,7 @@ package model
 
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/spec"
+	"KubeMin-Cli/pkg/apiserver/spec"
 )
 
 func init() {

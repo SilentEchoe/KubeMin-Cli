@@ -1,12 +1,13 @@
 package config
 
 import (
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
+
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
 var (
@@ -15,10 +16,10 @@ var (
 )
 
 type leaderConfig struct {
-    ID           string
-    LockName     string
-    Duration     time.Duration
-    Namespace    string
+	ID        string
+	LockName  string
+	Duration  time.Duration
+	Namespace string
 }
 
 type Config struct {
@@ -79,14 +80,14 @@ type MessagingConfig struct {
 }
 
 func NewConfig() *Config {
-    return &Config{
-        BindAddr: "0.0.0.0:8000",
-        LeaderConfig: leaderConfig{
-            ID:           uuid.New().String(),
-            LockName:     "apiserver-lock",
-            Duration:     time.Second * 5,
-            Namespace:    NAMESPACE,
-        },
+	return &Config{
+		BindAddr: "0.0.0.0:8000",
+		LeaderConfig: leaderConfig{
+			ID:        uuid.New().String(),
+			LockName:  "apiserver-lock",
+			Duration:  time.Second * 5,
+			Namespace: NAMESPACE,
+		},
 		Datastore: datastore.Config{
 			Type:     MYSQL,
 			Database: DBNAME_KUBEMINCLI,
