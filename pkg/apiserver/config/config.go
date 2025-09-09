@@ -1,14 +1,15 @@
 package config
 
 import (
-    "fmt"
-    "time"
+	"fmt"
+	"strings"
+	"time"
 
-    "github.com/google/uuid"
-    "github.com/spf13/pflag"
+	"github.com/google/uuid"
+	"github.com/spf13/pflag"
 
-    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-    "KubeMin-Cli/pkg/apiserver/utils/profiling"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils/profiling"
 )
 
 type leaderConfig struct {
@@ -132,6 +133,13 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
 	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
 	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
-    // profiling flags live in the profiling package; wire them here for convenience
-    profiling.AddFlags(fs)
+	// profiling flags live in the profiling package; wire them here for convenience
+	profiling.AddFlags(fs)
+}
+
+// HasExternalQueue returns true if a non-noop messaging backend is configured,
+// which typically implies a distributed queue (e.g., redis, kafka, nsq).
+func (c Config) HasExternalQueue() bool {
+	t := strings.ToLower(strings.TrimSpace(c.Messaging.Type))
+	return t != "" && t != "noop"
 }

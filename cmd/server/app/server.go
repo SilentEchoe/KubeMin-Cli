@@ -1,13 +1,14 @@
 package app
 
 import (
-	"context"
-	"flag"
-	"fmt"
-	"os"
-	"os/signal"
-	"syscall"
-	"time"
+    "context"
+    "flag"
+    "fmt"
+    "os"
+    "os/signal"
+    "syscall"
+    "time"
+    "strings"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -101,8 +102,13 @@ func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) e
 
     // Simplified auto-tracing: do not rely on replica count
     explicit := s.GenericServerRunOptions.EnableTracing
+    // Treat any non-empty, non-"noop" messaging type as an external/distributed queue
+    hasExternalQueue := func(typ string) bool {
+        t := strings.ToLower(strings.TrimSpace(typ))
+        return t != "" && t != "noop"
+    }
     auto := s.GenericServerRunOptions.AutoTracing &&
-        (s.GenericServerRunOptions.JaegerEndpoint != "" || s.GenericServerRunOptions.Messaging.Type == "redis")
+        (s.GenericServerRunOptions.JaegerEndpoint != "" || hasExternalQueue(s.GenericServerRunOptions.Messaging.Type))
     effective := explicit || auto
     // Propagate effective value so server middleware aligns with provider init
     s.GenericServerRunOptions.EnableTracing = effective

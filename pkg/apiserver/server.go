@@ -229,16 +229,6 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 		return err
 	}
 
-	// Ensure consumer group exists when using Redis Streams
-	if s.cfg.Messaging.Type == "redis" {
-		// resolve queue from container-injected bean via server receiver
-		// The event workflow will use the same stream key and group
-		// We can just perform a best-effort ensure here.
-		if q, ok := any(s).(*restServer); ok {
-			_ = q
-		}
-	}
-
 	// Enforce odd replica count at startup: if even, exit so that last-started pod exits
 	cnt := kube.DetectReplicaCount(ctx, s.KubeClient)
 	if cnt%2 == 0 {
@@ -281,58 +271,9 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		RenewDeadline: time.Second * 10,
 		RetryPeriod:   time.Second * 2,
 		Callbacks: leaderelection.LeaderCallbacks{
-			OnStartedLeading: func(ctx context.Context) {
-				go event.StartEventWorker(ctx, errChan)
-				// replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
-				count := kube.DetectReplicaCount(ctx, s.KubeClient)
-				// Ensure consumer group exists for streams in leader
-				if s.cfg.Messaging.Type == "redis" && s.Queue != nil {
-					_ = s.Queue.EnsureGroup(ctx, "workflow-workers")
-					// start metrics ticker for backlog/pending
-					go func() {
-						t := time.NewTicker(30 * time.Second)
-						defer t.Stop()
-						for {
-							select {
-							case <-ctx.Done():
-								return
-							case <-t.C:
-								if s.Queue == nil {
-									continue
-								}
-								if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
-									klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
-								} else {
-									klog.V(4).Infof("queue stats error: %v", err)
-								}
-							}
-						}
-					}()
-				}
-				if count >= 3 {
-					s.stopWorkers()
-				} else {
-					s.startWorkers(ctx, errChan)
-				}
-				// dynamic role switching based on replica count changes
-				go func() {
-					ticker := time.NewTicker(30 * time.Second)
-					defer ticker.Stop()
-					for {
-						select {
-						case <-ctx.Done():
-							return
-						case <-ticker.C:
-							c := kube.DetectReplicaCount(ctx, s.KubeClient)
-							if c >= 3 {
-								s.stopWorkers()
-							} else {
-								s.startWorkers(ctx, errChan)
-							}
-						}
-					}
-				}()
-			},
+            OnStartedLeading: func(ctx context.Context) {
+                s.onStartedLeading(ctx, errChan)
+            },
 			OnStoppedLeading: func() {
 				if s.cfg.ExitOnLostLeader {
 					errChan <- fmt.Errorf("leader lost %s", s.cfg.LeaderConfig.ID)
@@ -365,11 +306,85 @@ func (s *restServer) startWorkers(ctx context.Context, errChan chan error) {
 }
 
 func (s *restServer) stopWorkers() {
-	if !s.workersStarted {
-		return
-	}
-	if s.workersCancel != nil {
-		s.workersCancel()
-	}
-	s.workersStarted = false
+    if !s.workersStarted {
+        return
+    }
+    if s.workersCancel != nil {
+        s.workersCancel()
+    }
+    s.workersStarted = false
+}
+
+// onStartedLeading encapsulates responsibilities when this instance becomes leader.
+// It starts leader-scoped services, ensures queue readiness, reconciles worker role,
+// and spawns watchers for ongoing adjustments.
+func (s *restServer) onStartedLeading(ctx context.Context, errChan chan error) {
+    // Start event service (leader lifecycle)
+    go event.StartEventWorker(ctx, errChan)
+
+    // Ensure consumer group exists (best-effort) and start queue metrics
+    s.ensureQueueGroup(ctx)
+    s.startQueueMetrics(ctx)
+
+    // Initial reconcile of worker role based on current replica count
+    s.reconcileWorkers(ctx, errChan)
+
+    // Periodically re-evaluate topology and reconcile role
+    s.startReplicaWatcher(ctx, errChan)
+}
+
+func (s *restServer) ensureQueueGroup(ctx context.Context) {
+    if s.Queue == nil {
+        return
+    }
+    _ = s.Queue.EnsureGroup(ctx, "workflow-workers")
+}
+
+func (s *restServer) startQueueMetrics(ctx context.Context) {
+    if s.Queue == nil {
+        return
+    }
+    go func() {
+        t := time.NewTicker(30 * time.Second)
+        defer t.Stop()
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case <-t.C:
+                if s.Queue == nil {
+                    continue
+                }
+                if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
+                    klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
+                } else {
+                    klog.V(4).Infof("queue stats error: %v", err)
+                }
+            }
+        }
+    }()
+}
+
+func (s *restServer) reconcileWorkers(ctx context.Context, errChan chan error) {
+    count := kube.DetectReplicaCount(ctx, s.KubeClient)
+    if count >= 3 {
+        s.stopWorkers()
+    } else {
+        s.startWorkers(ctx, errChan)
+    }
+}
+
+func (s *restServer) startReplicaWatcher(ctx context.Context, errChan chan error) {
+    go func() {
+        ticker := time.NewTicker(30 * time.Second)
+        defer ticker.Stop()
+        for {
+            select {
+            case <-ctx.Done():
+                return
+            case <-ticker.C:
+                s.reconcileWorkers(ctx, errChan)
+            }
+        }
+    }()
 }
