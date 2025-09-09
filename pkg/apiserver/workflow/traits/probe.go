@@ -1,11 +1,12 @@
 package traits
 
 import (
-	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"KubeMin-Cli/pkg/apiserver/spec"
 )
 
 const (

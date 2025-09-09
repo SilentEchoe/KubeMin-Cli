@@ -57,7 +57,7 @@ func (c ResponseCapture) Header() http.Header {
 	return c.ResponseWriter.Header()
 }
 
-// Write write data to response writer and body
+// Write data to response writer and body
 func (c ResponseCapture) Write(data []byte) (int, error) {
 	if !c.wroteHeader {
 		c.WriteHeader(http.StatusOK)

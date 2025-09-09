@@ -27,7 +27,7 @@ import (
 	qpkg "KubeMin-Cli/pkg/apiserver/queue"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
-	kube "KubeMin-Cli/pkg/apiserver/utils/kube"
+	"KubeMin-Cli/pkg/apiserver/utils/kube"
 	"os"
 )
 
@@ -283,35 +283,37 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		Callbacks: leaderelection.LeaderCallbacks{
 			OnStartedLeading: func(ctx context.Context) {
 				go event.StartEventWorker(ctx, errChan)
-                // replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
-                count := kube.DetectReplicaCount(ctx, s.KubeClient)
-                // Ensure consumer group exists for streams in leader
-                if s.cfg.Messaging.Type == "redis" && s.Queue != nil {
-                    _ = s.Queue.EnsureGroup(ctx, "workflow-workers")
-                    // start metrics ticker for backlog/pending
-                    go func() {
-                        t := time.NewTicker(30 * time.Second)
-                        defer t.Stop()
-                        for {
-                            select {
-                            case <-ctx.Done():
-                                return
-                            case <-t.C:
-                                if s.Queue == nil { continue }
-                                if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
-                                    klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
-                                } else {
-                                    klog.V(4).Infof("queue stats error: %v", err)
-                                }
-                            }
-                        }
-                    }()
-                }
-                if count >= 3 {
-                    s.stopWorkers()
-                } else {
-                    s.startWorkers(ctx, errChan)
-                }
+				// replica-based role: >=3 distributed (leader dispatch only), 1 single instance (leader also works)
+				count := kube.DetectReplicaCount(ctx, s.KubeClient)
+				// Ensure consumer group exists for streams in leader
+				if s.cfg.Messaging.Type == "redis" && s.Queue != nil {
+					_ = s.Queue.EnsureGroup(ctx, "workflow-workers")
+					// start metrics ticker for backlog/pending
+					go func() {
+						t := time.NewTicker(30 * time.Second)
+						defer t.Stop()
+						for {
+							select {
+							case <-ctx.Done():
+								return
+							case <-t.C:
+								if s.Queue == nil {
+									continue
+								}
+								if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
+									klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
+								} else {
+									klog.V(4).Infof("queue stats error: %v", err)
+								}
+							}
+						}
+					}()
+				}
+				if count >= 3 {
+					s.stopWorkers()
+				} else {
+					s.startWorkers(ctx, errChan)
+				}
 				// dynamic role switching based on replica count changes
 				go func() {
 					ticker := time.NewTicker(30 * time.Second)

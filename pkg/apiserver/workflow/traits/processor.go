@@ -1,7 +1,6 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,6 +12,7 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/spec"
 )

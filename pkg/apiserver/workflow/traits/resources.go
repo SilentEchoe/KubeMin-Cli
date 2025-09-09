@@ -1,11 +1,12 @@
 package traits
 
 import (
-	spec "KubeMin-Cli/pkg/apiserver/spec"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+
+	"KubeMin-Cli/pkg/apiserver/spec"
 )
 
 // ResourcesProcessor applies compute resources (cpu/memory/gpu) to a container.
@@ -28,7 +29,7 @@ func (r *ResourcesProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		return nil, nil
 	}
 
-		resourceReq := corev1.ResourceRequirements{
+	resourceReq := corev1.ResourceRequirements{
 		Requests: make(corev1.ResourceList),
 		Limits:   make(corev1.ResourceList),
 	}

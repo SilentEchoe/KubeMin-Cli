@@ -1,18 +1,14 @@
 package config
 
 import (
-	"fmt"
-	"time"
+    "fmt"
+    "time"
 
-	"github.com/google/uuid"
-	"github.com/spf13/pflag"
+    "github.com/google/uuid"
+    "github.com/spf13/pflag"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-)
-
-var (
-	// Addr the address for starting profiling server
-	Addr = ""
+    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+    "KubeMin-Cli/pkg/apiserver/utils/profiling"
 )
 
 type leaderConfig struct {
@@ -136,9 +132,6 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
 	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
 	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
-	addFlags(fs)
-}
-
-func addFlags(fs *pflag.FlagSet) {
-	fs.StringVarP(&Addr, "profiling-addr", "", Addr, "if not empty, start the profiling server at the given address")
+    // profiling flags live in the profiling package; wire them here for convenience
+    profiling.AddFlags(fs)
 }
