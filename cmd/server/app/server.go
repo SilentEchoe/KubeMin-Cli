@@ -97,20 +97,31 @@ func Run(s *options.ServerRunOptions) error {
 }
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
-	klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
+    klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
 
-	if s.GenericServerRunOptions.EnableTracing {
-		klog.InfoS("Distributed tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint)
-		shutdown, err := tracing.InitTracerProvider("kubemin-cli", s.GenericServerRunOptions.JaegerEndpoint)
-		if err != nil {
-			return fmt.Errorf("failed to init tracer provider: %w", err)
-		}
-		defer func() {
-			if err := shutdown(context.Background()); err != nil {
-				klog.ErrorS(err, "Failed to shutdown tracer provider")
-			}
-		}()
-	}
+    // Simplified auto-tracing: do not rely on replica count
+    explicit := s.GenericServerRunOptions.EnableTracing
+    auto := s.GenericServerRunOptions.AutoTracing &&
+        (s.GenericServerRunOptions.JaegerEndpoint != "" || s.GenericServerRunOptions.Messaging.Type == "redis")
+    effective := explicit || auto
+    // Propagate effective value so server middleware aligns with provider init
+    s.GenericServerRunOptions.EnableTracing = effective
+    if auto && !explicit {
+        klog.InfoS("Auto tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint, "msgType", s.GenericServerRunOptions.Messaging.Type)
+    }
+
+    if effective {
+        klog.InfoS("Distributed tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint)
+        shutdown, err := tracing.InitTracerProvider("kubemin-cli", s.GenericServerRunOptions.JaegerEndpoint)
+        if err != nil {
+            return fmt.Errorf("failed to init tracer provider: %w", err)
+        }
+        defer func() {
+            if err := shutdown(context.Background()); err != nil {
+                klog.ErrorS(err, "Failed to shutdown tracer provider")
+            }
+        }()
+    }
 
 	apiServer := server.New(*s.GenericServerRunOptions)
 	return apiServer.Run(ctx, errChan)

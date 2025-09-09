@@ -15,11 +15,10 @@ var (
 )
 
 type leaderConfig struct {
-	ID           string
-	LockName     string
-	Duration     time.Duration
-	Namespace    string
-	ReplicaCount int
+    ID           string
+    LockName     string
+    Duration     time.Duration
+    Namespace    string
 }
 
 type Config struct {
@@ -38,6 +37,10 @@ type Config struct {
 
 	// EnableTracing enables distributed tracing
 	EnableTracing bool
+
+	// AutoTracing, when true and EnableTracing is false, auto-enables tracing
+	// if a supported exporter is configured or a distributed queue is used.
+	AutoTracing bool
 
 	// JaegerEndpoint is the endpoint of the Jaeger collector
 	JaegerEndpoint string
@@ -76,15 +79,14 @@ type MessagingConfig struct {
 }
 
 func NewConfig() *Config {
-	return &Config{
-		BindAddr: "0.0.0.0:8000",
-		LeaderConfig: leaderConfig{
-			ID:           uuid.New().String(),
-			LockName:     "apiserver-lock",
-			Duration:     time.Second * 5,
-			Namespace:    NAMESPACE,
-			ReplicaCount: 1,
-		},
+    return &Config{
+        BindAddr: "0.0.0.0:8000",
+        LeaderConfig: leaderConfig{
+            ID:           uuid.New().String(),
+            LockName:     "apiserver-lock",
+            Duration:     time.Second * 5,
+            Namespace:    NAMESPACE,
+        },
 		Datastore: datastore.Config{
 			Type:     MYSQL,
 			Database: DBNAME_KUBEMINCLI,
@@ -105,6 +107,7 @@ func NewConfig() *Config {
 		ExitOnLostLeader: true,
 		DTMAddr:          "",
 		EnableTracing:    true,
+		AutoTracing:      false,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
 		Messaging: MessagingConfig{Type: "redis"},
@@ -121,13 +124,13 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.StringVar(&c.BindAddr, "bind-addr", configParameter.BindAddr, "The bind address used to serve the http APIs.")
 	fs.StringVar(&c.LeaderConfig.ID, "id", configParameter.LeaderConfig.ID, "the holder identity name")
 	fs.StringVar(&c.LeaderConfig.LockName, "lock-name", configParameter.LeaderConfig.LockName, "the lease lock resource name")
-	fs.DurationVar(&c.LeaderConfig.Duration, "duration", configParameter.LeaderConfig.Duration, "the lease lock resource name")
+	fs.DurationVar(&c.LeaderConfig.Duration, "duration", configParameter.LeaderConfig.Duration, "leader election lease duration (e.g.15s)")
 	fs.StringVar(&c.LeaderConfig.Namespace, "leader-namespace", configParameter.LeaderConfig.Namespace, "namespace for leader election lease")
-	fs.IntVar(&c.LeaderConfig.ReplicaCount, "replica-count", configParameter.LeaderConfig.ReplicaCount, "replica count of this service")
 	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
 	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
+	fs.BoolVar(&c.AutoTracing, "auto-tracing", configParameter.AutoTracing, "Auto-enable tracing when Jaeger is configured or messaging is redis (effective only if --enable-tracing=false).")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
 	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
 	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
