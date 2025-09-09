@@ -1,4 +1,4 @@
-package queue
+package messaging
 
 import (
     "context"
@@ -28,3 +28,4 @@ type Queue interface {
     // Stats returns stream backlog size and pending count for a group.
     Stats(ctx context.Context, group string) (backlog int64, pending int64, err error)
 }
+

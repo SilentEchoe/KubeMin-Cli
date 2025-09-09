@@ -16,7 +16,7 @@
   - 依赖注入（IoC）：`pkg/apiserver/utils/container` 提供容器，统一注入 datastore、kubeClient、queue 等。
   - 选主与角色：`client-go` 的 `leaderelection` + `Lease` 实现领导者选举与心跳。
 - 分布式队列（统一抽象）
-  - 接口：`pkg/apiserver/queue/queue.go`
+  - 接口：`pkg/apiserver/infrastructure/messaging/queue.go`
   - 实现：`RedisStreams`（默认分布式实现）、`NoopQueue`（本地/单机占位）
 - 工作流执行
   - Dispatcher（仅领导者运行，分布式下不消费）：扫描 DB Waiting 任务 → 入队。
@@ -26,7 +26,7 @@
 
 1) 单一队列抽象（queue.Queue）
 
-- 决策：去除历史 `messaging` 包，统一保留 `pkg/apiserver/queue`，以 Stream 语义（分组消费、确认）作为抽象。
+- 决策：统一放入 `pkg/apiserver/infrastructure/messaging`，以 Stream 语义（分组消费、确认）作为抽象。
 - 好处：
   - 降低心智负担：Dispatcher/Worker 只依赖一套接口。
   - 便于扩展：后续接入 Kafka 时无需改动上层逻辑。
@@ -58,7 +58,7 @@
 
 ## 队列接口与实现
 
-接口定义：`pkg/apiserver/queue/queue.go`
+接口定义：`pkg/apiserver/infrastructure/messaging/queue.go`
 
 - `type Message struct { ID string; Payload []byte }`
 - `EnsureGroup(ctx, group) error`：确保流与消费组存在。
@@ -71,9 +71,9 @@
 
 实现映射：
 
-- RedisStreams：`pkg/apiserver/queue/redis_streams.go`
+- RedisStreams：`pkg/apiserver/infrastructure/messaging/redis_streams.go`
   - XADD → Enqueue；XGROUP CREATE MKSTREAM → EnsureGroup；XREADGROUP → ReadGroup；XACK → Ack；XAUTOCLAIM → AutoClaim；XLEN/XPENDING → Stats。
-- NoopQueue：`pkg/apiserver/queue/noop.go`
+- NoopQueue：`pkg/apiserver/infrastructure/messaging/noop.go`
   - 占位实现，方便本地运行。
 
 Kafka（规划）：

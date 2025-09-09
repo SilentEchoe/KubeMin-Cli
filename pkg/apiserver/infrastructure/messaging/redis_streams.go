@@ -1,4 +1,4 @@
-package queue
+package messaging
 
 import (
     "context"
@@ -123,3 +123,4 @@ func (r *RedisStreams) Stats(ctx context.Context, group string) (int64, int64, e
     }
     return xl, cnt, nil
 }
+

@@ -24,7 +24,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	qpkg "KubeMin-Cli/pkg/apiserver/queue"
+    msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 )
 
 type Workflow struct {
@@ -32,7 +32,7 @@ type Workflow struct {
 	KubeConfig      *rest.Config            `inject:"kubeConfig"`
 	Store           datastore.DataStore     `inject:"datastore"`
 	WorkflowService service.WorkflowService `inject:""`
-	Queue           qpkg.Queue              `inject:"queue"`
+    Queue           msg.Queue               `inject:"queue"`
 	Cfg             *config.Config          `inject:""`
 }
 
@@ -54,10 +54,10 @@ func UnmarshalTaskDispatch(b []byte) (TaskDispatch, error) {
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 	w.InitQueue(ctx)
 	// If queue is noop (local mode), fall back to direct DB scan executor for functionality.
-	if _, ok := w.Queue.(*qpkg.NoopQueue); ok {
-		go w.WorkflowTaskSender()
-		return
-	}
+    if _, ok := w.Queue.(*msg.NoopQueue); ok {
+        go w.WorkflowTaskSender()
+        return
+    }
 	// Redis Streams path: leader runs dispatcher; workers managed by server callbacks.
 	go w.Dispatcher()
 }

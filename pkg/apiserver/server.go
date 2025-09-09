@@ -24,7 +24,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
-	qpkg "KubeMin-Cli/pkg/apiserver/queue"
+    msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
@@ -45,7 +45,7 @@ type restServer struct {
 	cache          cache.ICache
 	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
 	KubeConfig     *rest.Config          `inject:"kubeConfig"`
-	Queue          qpkg.Queue            `inject:"queue"`
+    Queue          msg.Queue             `inject:"queue"`
 	workersStarted bool
 	workersCancel  context.CancelFunc
 }
@@ -120,23 +120,23 @@ func (s *restServer) buildIoCContainer() error {
 	// messaging broker removed; we use unified Queue abstraction instead
 
 	// Initialize work queue (Redis Streams if configured; noop otherwise)
-	var q qpkg.Queue
+    var q msg.Queue
 	streamKey := s.dispatchTopic()
 	switch s.cfg.Messaging.Type {
-	case "redis":
+    case "redis":
 		addr := fmt.Sprintf("%s:%d", s.cfg.Cache.CacheHost, s.cfg.Cache.CacheProt)
 		db := int(s.cfg.Cache.CacheDB)
 		user := s.cfg.Cache.UserName
 		pass := s.cfg.Cache.Password
-		if rq, err := qpkg.NewRedisStreams(addr, user, pass, db, streamKey); err != nil {
-			klog.Warningf("init redis streams failed, falling back to noop: %v", err)
-			q = &qpkg.NoopQueue{}
-		} else {
-			q = rq
-		}
-	default:
-		q = &qpkg.NoopQueue{}
-	}
+        if rq, err := msg.NewRedisStreams(addr, user, pass, db, streamKey); err != nil {
+            klog.Warningf("init redis streams failed, falling back to noop: %v", err)
+            q = &msg.NoopQueue{}
+        } else {
+            q = rq
+        }
+    default:
+        q = &msg.NoopQueue{}
+    }
 	// 注入消息队列
 	if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
 		return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
