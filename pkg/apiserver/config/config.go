@@ -72,12 +72,14 @@ type RedisCacheConfig struct {
 
 // MessagingConfig holds pub/sub configuration
 type MessagingConfig struct {
-	Type          string // noop|redis|kafka
-	ChannelPrefix string
+    Type          string // noop|redis|kafka
+    ChannelPrefix string
+    // RedisStreamMaxLen sets XADD MAXLEN to cap stream length (<=0 disables).
+    RedisStreamMaxLen int64
 }
 
 func NewConfig() *Config {
-	return &Config{
+    return &Config{
 		BindAddr: "0.0.0.0:8000",
 		LeaderConfig: leaderConfig{
 			ID:        uuid.New().String(),
@@ -108,8 +110,8 @@ func NewConfig() *Config {
 		AutoTracing:      false,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
-		Messaging: MessagingConfig{Type: "redis"},
-	}
+        Messaging: MessagingConfig{Type: "redis", RedisStreamMaxLen: 50000},
+    }
 }
 
 func (c *Config) Validate() []error {
@@ -131,8 +133,9 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.BoolVar(&c.AutoTracing, "auto-tracing", configParameter.AutoTracing, "Auto-enable tracing when Jaeger is configured or messaging is redis (effective only if --enable-tracing=false).")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
 	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
-	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
-	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
+    fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
+    fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
+    fs.Int64Var(&c.Messaging.RedisStreamMaxLen, "msg-redis-maxlen", configParameter.Messaging.RedisStreamMaxLen, "redis streams XADD MAXLEN cap (<=0 to disable)")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

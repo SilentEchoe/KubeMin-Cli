@@ -132,12 +132,16 @@ func (w *Workflow) Dispatcher() {
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
-	group := w.consumerGroup()
-	consumer := w.consumerName()
-	klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
-	staleTicker := time.NewTicker(15 * time.Second)
-	defer staleTicker.Stop()
-	for {
+    group := w.consumerGroup()
+    consumer := w.consumerName()
+    klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
+    // Ensure consumer group exists once on worker start to avoid per-read overhead.
+    if err := w.Queue.EnsureGroup(ctx, group); err != nil {
+        klog.V(4).Infof("ensure group error: %v", err)
+    }
+    staleTicker := time.NewTicker(15 * time.Second)
+    defer staleTicker.Stop()
+    for {
 		select {
 		case <-ctx.Done():
 			return

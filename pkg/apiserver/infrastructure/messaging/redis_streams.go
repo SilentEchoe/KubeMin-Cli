@@ -6,16 +6,20 @@ import (
     "time"
 
     "github.com/redis/go-redis/v9"
+    "k8s.io/klog/v2"
 )
 
 // RedisStreams implements Queue using Redis Streams + Consumer Groups.
 type RedisStreams struct {
     cli   *redis.Client
     key   string
+    // maxLen limits the stream length via XADD MAXLEN to avoid unbounded growth.
+    // When <= 0, no trimming is applied.
+    maxLen int64
 }
 
 // NewRedisStreams creates a Redis Streams queue on key.
-func NewRedisStreams(addr, username, password string, db int, key string) (*RedisStreams, error) {
+func NewRedisStreams(addr, username, password string, db int, key string, maxLen int64) (*RedisStreams, error) {
     if addr == "" || key == "" {
         return nil, errors.New("redis streams requires addr and key")
     }
@@ -25,7 +29,7 @@ func NewRedisStreams(addr, username, password string, db int, key string) (*Redi
     if err := cli.Ping(ctx).Err(); err != nil {
         return nil, err
     }
-    return &RedisStreams{cli: cli, key: key}, nil
+    return &RedisStreams{cli: cli, key: key, maxLen: maxLen}, nil
 }
 
 func (r *RedisStreams) EnsureGroup(ctx context.Context, group string) error {
@@ -38,11 +42,13 @@ func (r *RedisStreams) Enqueue(ctx context.Context, payload []byte) (string, err
         Stream: r.key,
         Values: map[string]interface{}{"p": payload},
     }
+    if r.maxLen > 0 {
+        args.MaxLen = r.maxLen
+    }
     return r.cli.XAdd(ctx, args).Result()
 }
 
 func (r *RedisStreams) ReadGroup(ctx context.Context, group, consumer string, count int, block time.Duration) ([]Message, error) {
-    _ = r.EnsureGroup(ctx, group) // best-effort ensure
     res, err := r.cli.XReadGroup(ctx, &redis.XReadGroupArgs{
         Group:    group,
         Consumer: consumer,
@@ -65,8 +71,10 @@ func (r *RedisStreams) ReadGroup(ctx context.Context, group, consumer string, co
                 case []byte:
                     msgs = append(msgs, Message{ID: m.ID, Payload: v})
                 default:
-                    // ignore malformed
+                    klog.Warningf("redis stream malformed payload type id=%s type=%T", m.ID, v)
                 }
+            } else {
+                klog.Warningf("redis stream message missing payload field 'p' id=%s", m.ID)
             }
         }
     }
@@ -100,7 +108,11 @@ func (r *RedisStreams) AutoClaim(ctx context.Context, group, consumer string, mi
                 msgs = append(msgs, Message{ID: m.ID, Payload: []byte(v)})
             case []byte:
                 msgs = append(msgs, Message{ID: m.ID, Payload: v})
+            default:
+                klog.Warningf("redis stream malformed claimed payload type id=%s type=%T", m.ID, v)
             }
+        } else {
+            klog.Warningf("redis stream claimed message missing payload field 'p' id=%s", m.ID)
         }
     }
     return msgs, nil
@@ -123,4 +135,3 @@ func (r *RedisStreams) Stats(ctx context.Context, group string) (int64, int64, e
     }
     return xl, cnt, nil
 }
-

@@ -121,14 +121,14 @@ func (s *restServer) buildIoCContainer() error {
 
 	// Initialize work queue (Redis Streams if configured; noop otherwise)
     var q msg.Queue
-	streamKey := s.dispatchTopic()
-	switch s.cfg.Messaging.Type {
+    streamKey := s.dispatchTopic()
+    switch s.cfg.Messaging.Type {
     case "redis":
-		addr := fmt.Sprintf("%s:%d", s.cfg.Cache.CacheHost, s.cfg.Cache.CacheProt)
-		db := int(s.cfg.Cache.CacheDB)
-		user := s.cfg.Cache.UserName
-		pass := s.cfg.Cache.Password
-        if rq, err := msg.NewRedisStreams(addr, user, pass, db, streamKey); err != nil {
+        addr := fmt.Sprintf("%s:%d", s.cfg.Cache.CacheHost, s.cfg.Cache.CacheProt)
+        db := int(s.cfg.Cache.CacheDB)
+        user := s.cfg.Cache.UserName
+        pass := s.cfg.Cache.Password
+        if rq, err := msg.NewRedisStreams(addr, user, pass, db, streamKey, s.cfg.Messaging.RedisStreamMaxLen); err != nil {
             klog.Warningf("init redis streams failed, falling back to noop: %v", err)
             q = &msg.NoopQueue{}
         } else {
