@@ -22,13 +22,13 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
+	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
-    msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
-	"KubeMin-Cli/pkg/apiserver/utils/kube"
-	"os"
+    "KubeMin-Cli/pkg/apiserver/utils/kube"
+    "os"
 )
 
 // APIServer interface for call api server
@@ -45,7 +45,7 @@ type restServer struct {
 	cache          cache.ICache
 	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
 	KubeConfig     *rest.Config          `inject:"kubeConfig"`
-    Queue          msg.Queue             `inject:"queue"`
+	Queue          msg.Queue             `inject:"queue"`
 	workersStarted bool
 	workersCancel  context.CancelFunc
 }
@@ -104,9 +104,21 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
-	// Initialize cache implementation. Default to in-memory cache.
-	// Note: current ICache only supports memory; redis variant is used for messaging/locks.
-	iCache := cache.New(false, cache.CacheTypeMem)
+    // Initialize cache implementation. Prefer redis if configured; fallback to memory.
+    var iCache cache.ICache
+    switch strings.ToLower(s.cfg.Cache.CacheType) {
+    case string(cache.CacheTypeRedis):
+        rcli, err := clients.EnsureRedis(s.cfg.Cache)
+        if err != nil {
+            klog.Warningf("init redis cache client failed, fallback to memory: %v", err)
+            iCache = cache.New(false, cache.CacheTypeMem)
+        } else {
+            cache.SetGlobalRedisClient(rcli)
+            iCache = cache.NewRedisICache(rcli, false, s.cfg.Cache.CacheTTL, s.cfg.Cache.KeyPrefix)
+        }
+    default:
+        iCache = cache.New(false, cache.CacheTypeMem)
+    }
 
 	// 将db 注入到IOC中
 	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
@@ -117,26 +129,9 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the cache bean to the container: %w", err)
 	}
 
-	// messaging broker removed; we use unified Queue abstraction instead
-
 	// Initialize work queue (Redis Streams if configured; noop otherwise)
-    var q msg.Queue
-    streamKey := s.dispatchTopic()
-    switch s.cfg.Messaging.Type {
-    case "redis":
-        addr := fmt.Sprintf("%s:%d", s.cfg.Cache.CacheHost, s.cfg.Cache.CacheProt)
-        db := int(s.cfg.Cache.CacheDB)
-        user := s.cfg.Cache.UserName
-        pass := s.cfg.Cache.Password
-        if rq, err := msg.NewRedisStreams(addr, user, pass, db, streamKey, s.cfg.Messaging.RedisStreamMaxLen); err != nil {
-            klog.Warningf("init redis streams failed, falling back to noop: %v", err)
-            q = &msg.NoopQueue{}
-        } else {
-            q = rq
-        }
-    default:
-        q = &msg.NoopQueue{}
-    }
+	streamKey := s.dispatchTopic()
+	q := s.buildQueue(streamKey)
 	// 注入消息队列
 	if err := s.beanContainer.ProvideWithName("queue", q); err != nil {
 		return fmt.Errorf("fail to provides the queue bean to the container: %w", err)
@@ -182,11 +177,36 @@ func (s *restServer) buildIoCContainer() error {
 
 // dispatchTopic 计算用于工作流分发的Redis Streams键
 func (s *restServer) dispatchTopic() string {
-	prefix := s.cfg.Messaging.ChannelPrefix
-	if prefix == "" {
-		prefix = "kubemin"
-	}
-	return fmt.Sprintf("%s.workflow.dispatch", prefix)
+    prefix := s.cfg.Messaging.ChannelPrefix
+    if prefix == "" {
+        prefix = "kubemin"
+    }
+    return fmt.Sprintf("%s.workflow.dispatch", prefix)
+}
+
+// buildQueue constructs the messaging queue based on config.
+// It returns a usable Queue in all cases, falling back to NoopQueue on failures.
+func (s *restServer) buildQueue(streamKey string) msg.Queue {
+    if strings.ToLower(s.cfg.Messaging.Type) != "redis" {
+        return &msg.NoopQueue{}
+    }
+
+    // Reuse shared redis client from factory
+    rcli, err := clients.EnsureRedis(s.cfg.Cache)
+    if err != nil {
+        klog.Warningf("init redis client failed, falling back to noop: %v", err)
+        return &msg.NoopQueue{}
+    }
+    if cache.GetGlobalRedisClient() == nil {
+        cache.SetGlobalRedisClient(rcli)
+    }
+
+    rq, err := msg.NewRedisStreamsWithClient(rcli, streamKey, s.cfg.Messaging.RedisStreamMaxLen)
+    if err != nil {
+        klog.Warningf("init redis streams with client failed, falling back to noop: %v", err)
+        return &msg.NoopQueue{}
+    }
+    return rq
 }
 
 func (s *restServer) RegisterAPIRoute() {
@@ -271,9 +291,9 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 		RenewDeadline: time.Second * 10,
 		RetryPeriod:   time.Second * 2,
 		Callbacks: leaderelection.LeaderCallbacks{
-            OnStartedLeading: func(ctx context.Context) {
-                s.onStartedLeading(ctx, errChan)
-            },
+			OnStartedLeading: func(ctx context.Context) {
+				s.onStartedLeading(ctx, errChan)
+			},
 			OnStoppedLeading: func() {
 				if s.cfg.ExitOnLostLeader {
 					errChan <- fmt.Errorf("leader lost %s", s.cfg.LeaderConfig.ID)
@@ -306,85 +326,85 @@ func (s *restServer) startWorkers(ctx context.Context, errChan chan error) {
 }
 
 func (s *restServer) stopWorkers() {
-    if !s.workersStarted {
-        return
-    }
-    if s.workersCancel != nil {
-        s.workersCancel()
-    }
-    s.workersStarted = false
+	if !s.workersStarted {
+		return
+	}
+	if s.workersCancel != nil {
+		s.workersCancel()
+	}
+	s.workersStarted = false
 }
 
 // onStartedLeading encapsulates responsibilities when this instance becomes leader.
 // It starts leader-scoped services, ensures queue readiness, reconciles worker role,
 // and spawns watchers for ongoing adjustments.
 func (s *restServer) onStartedLeading(ctx context.Context, errChan chan error) {
-    // Start event service (leader lifecycle)
-    go event.StartEventWorker(ctx, errChan)
+	// Start event service (leader lifecycle)
+	go event.StartEventWorker(ctx, errChan)
 
-    // Ensure consumer group exists (best-effort) and start queue metrics
-    s.ensureQueueGroup(ctx)
-    s.startQueueMetrics(ctx)
+	// Ensure consumer group exists (best-effort) and start queue metrics
+	s.ensureQueueGroup(ctx)
+	s.startQueueMetrics(ctx)
 
-    // Initial reconcile of worker role based on current replica count
-    s.reconcileWorkers(ctx, errChan)
+	// Initial reconcile of worker role based on current replica count
+	s.reconcileWorkers(ctx, errChan)
 
-    // Periodically re-evaluate topology and reconcile role
-    s.startReplicaWatcher(ctx, errChan)
+	// Periodically re-evaluate topology and reconcile role
+	s.startReplicaWatcher(ctx, errChan)
 }
 
 func (s *restServer) ensureQueueGroup(ctx context.Context) {
-    if s.Queue == nil {
-        return
-    }
-    _ = s.Queue.EnsureGroup(ctx, "workflow-workers")
+	if s.Queue == nil {
+		return
+	}
+	_ = s.Queue.EnsureGroup(ctx, "workflow-workers")
 }
 
 func (s *restServer) startQueueMetrics(ctx context.Context) {
-    if s.Queue == nil {
-        return
-    }
-    go func() {
-        t := time.NewTicker(30 * time.Second)
-        defer t.Stop()
-        for {
-            select {
-            case <-ctx.Done():
-                return
-            case <-t.C:
-                if s.Queue == nil {
-                    continue
-                }
-                if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
-                    klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
-                } else {
-                    klog.V(4).Infof("queue stats error: %v", err)
-                }
-            }
-        }
-    }()
+	if s.Queue == nil {
+		return
+	}
+	go func() {
+		t := time.NewTicker(30 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				if s.Queue == nil {
+					continue
+				}
+				if bl, pd, err := s.Queue.Stats(ctx, "workflow-workers"); err == nil {
+					klog.Infof("queue stats stream=%s backlog=%d pending=%d", s.dispatchTopic(), bl, pd)
+				} else {
+					klog.V(4).Infof("queue stats error: %v", err)
+				}
+			}
+		}
+	}()
 }
 
 func (s *restServer) reconcileWorkers(ctx context.Context, errChan chan error) {
-    count := kube.DetectReplicaCount(ctx, s.KubeClient)
-    if count >= 3 {
-        s.stopWorkers()
-    } else {
-        s.startWorkers(ctx, errChan)
-    }
+	count := kube.DetectReplicaCount(ctx, s.KubeClient)
+	if count >= 3 {
+		s.stopWorkers()
+	} else {
+		s.startWorkers(ctx, errChan)
+	}
 }
 
 func (s *restServer) startReplicaWatcher(ctx context.Context, errChan chan error) {
-    go func() {
-        ticker := time.NewTicker(30 * time.Second)
-        defer ticker.Stop()
-        for {
-            select {
-            case <-ctx.Done():
-                return
-            case <-ticker.C:
-                s.reconcileWorkers(ctx, errChan)
-            }
-        }
-    }()
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				s.reconcileWorkers(ctx, errChan)
+			}
+		}
+	}()
 }

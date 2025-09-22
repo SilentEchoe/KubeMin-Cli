@@ -22,6 +22,10 @@ func New(noCache bool, cacheType CacheType) ICache {
 	switch cacheType {
 	case CacheTypeMem:
 		return NewMemCache(noCache)
+	case CacheTypeRedis:
+		// Use global client if available; otherwise fallback to memory cache
+		return NewRedisICacheWithClient(redisClient, noCache)
+
 	default:
 		return NewMemCache(noCache)
 	}

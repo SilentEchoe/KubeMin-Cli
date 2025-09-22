@@ -1,128 +1,114 @@
 package cache
 
 import (
-	"context"
-	"github.com/redis/go-redis/v9"
-	"time"
+    "context"
+    "time"
+
+    "github.com/redis/go-redis/v9"
 )
 
-type RedisCache struct {
-	redisClient *redis.Client
-}
-
+// A process-wide redis client for cache/locks that can be set by the app.
 var redisClient *redis.Client
 
-// NewRedisCache callers has to make sure the caller has the settings for redis in their env variables.
-func NewRedisCache(db int) *RedisCache {
-	//if redisClient == nil {
-	//	redisConfig := &redis.Options{
-	//		Addr:     fmt.Sprintf("%s:%d", "", config.RedisPort),
-	//		DB:       db,
-	//		Password: config.RedisPassword,
-	//		Username: config.RedisUserName,
-	//	}
-	//
-	//	redisClient = redis.NewClient(redisConfig)
-	//}
-	return &RedisCache{redisClient: redisClient}
+// SetGlobalRedisClient configures the shared redis client for cache/locks.
+func SetGlobalRedisClient(cli *redis.Client) {
+    redisClient = cli
 }
 
-func (c *RedisCache) Write(key, val string, ttl time.Duration) error {
-	_, err := c.redisClient.Set(context.TODO(), key, val, ttl).Result()
-	return err
+// GetGlobalRedisClient returns the shared redis client if set.
+func GetGlobalRedisClient() *redis.Client { return redisClient }
+
+// Low-level helper preserved for lock initialization to access the global client.
+type RedisCache struct{
+    redisClient *redis.Client
 }
 
-func (c *RedisCache) HWrite(key, field, val string, ttl time.Duration) error {
-	_, err := c.redisClient.HSet(context.TODO(), key, field, val).Result()
-	if err != nil {
-		return err
-	}
-
-	// not thread safe
-	if ttl > 0 {
-		_, err = c.redisClient.Expire(context.Background(), key, ttl).Result()
-	}
-	return err
+// NewRedisCache returns a handle to the global client (used by lock.go).
+func NewRedisCache(_ int) *RedisCache {
+    return &RedisCache{redisClient: redisClient}
 }
 
-func (c *RedisCache) SetNX(key, val string, ttl time.Duration) error {
-	_, err := c.redisClient.SetNX(context.TODO(), key, val, ttl).Result()
-	return err
+// RedisICache implements ICache using Redis as backend with a default TTL.
+type RedisICache struct {
+    cli       *redis.Client
+    noCache   bool
+    ttl       time.Duration
+    keyPrefix string
 }
 
-func (c *RedisCache) Exists(key string) (bool, error) {
-	exists, err := c.redisClient.Exists(context.TODO(), key).Result()
-	if err != nil {
-		return false, err
-	}
+const defaultTTL = 24 * time.Hour
+const defaultKeyPrefix = "kubemin:cache:"
 
-	if exists == 1 {
-		return true, nil
-	} else {
-		return false, nil
-	}
+// NewRedisICacheWithClient creates an ICache backed by the provided client.
+// If cli is nil, falls back to in-memory cache to remain functional.
+func NewRedisICacheWithClient(cli *redis.Client, noCache bool) ICache {
+    if cli == nil {
+        return NewMemCache(noCache)
+    }
+    return &RedisICache{cli: cli, noCache: noCache, ttl: defaultTTL, keyPrefix: defaultKeyPrefix}
 }
 
-func (c *RedisCache) GetString(key string) (string, error) {
-	return c.redisClient.Get(context.TODO(), key).Result()
+// NewRedisICache creates an ICache with custom ttl and prefix.
+func NewRedisICache(cli *redis.Client, noCache bool, ttl time.Duration, prefix string) ICache {
+    if cli == nil {
+        return NewMemCache(noCache)
+    }
+    if ttl <= 0 {
+        ttl = defaultTTL
+    }
+    if prefix == "" {
+        prefix = defaultKeyPrefix
+    }
+    return &RedisICache{cli: cli, noCache: noCache, ttl: ttl, keyPrefix: prefix}
 }
 
-func (c *RedisCache) HGetString(key, field string) (string, error) {
-	return c.redisClient.HGet(context.TODO(), key, field).Result()
+func (c *RedisICache) key(k string) string { return c.keyPrefix + k }
+
+func (c *RedisICache) Store(key string, data string) error {
+    return c.cli.Set(context.Background(), c.key(key), data, c.ttl).Err()
 }
 
-func (c *RedisCache) HGetAllString(key string) (map[string]string, error) {
-	return c.redisClient.HGetAll(context.Background(), key).Result()
+func (c *RedisICache) Load(key string) (string, error) {
+    val, err := c.cli.Get(context.Background(), c.key(key)).Result()
+    if err == redis.Nil {
+        return "", nil
+    }
+    return val, err
 }
 
-func (c *RedisCache) Delete(key string) error {
-	return c.redisClient.Del(context.TODO(), key).Err()
+// List returns the cached values for keys under the prefix.
+// For performance, this uses SCAN; if keys are many, this can be expensive.
+func (c *RedisICache) List() ([]string, error) {
+    var (
+        cursor uint64
+        out    []string
+    )
+    pattern := c.keyPrefix + "*"
+    ctx := context.Background()
+    for {
+        keys, next, err := c.cli.Scan(ctx, cursor, pattern, 100).Result()
+        if err != nil {
+            return out, err
+        }
+        cursor = next
+        if len(keys) > 0 {
+            vals, err := c.cli.MGet(ctx, keys...).Result()
+            if err != nil {
+                return out, err
+            }
+            for _, v := range vals {
+                if v == nil { continue }
+                if s, ok := v.(string); ok { out = append(out, s) }
+            }
+        }
+        if cursor == 0 { break }
+    }
+    return out, nil
 }
 
-func (c *RedisCache) HDelete(key, field string) error {
-	_, err := c.redisClient.HDel(context.Background(), key, field).Result()
-	return err
+func (c *RedisICache) Exists(key string) bool {
+    n, err := c.cli.Exists(context.Background(), c.key(key)).Result()
+    return err == nil && n == 1
 }
 
-func (c *RedisCache) Publish(channel, message string) error {
-	return c.redisClient.Publish(context.Background(), channel, message).Err()
-}
-
-func (c *RedisCache) Subscribe(channel string) (<-chan *redis.Message, func() error) {
-	sub := c.redisClient.Subscribe(context.Background(), channel)
-	return sub.Channel(), sub.Close
-}
-
-func (c *RedisCache) FlushDBAsync() error {
-	return c.redisClient.FlushDBAsync(context.Background()).Err()
-}
-
-func (c *RedisCache) ListSetMembers(key string) ([]string, error) {
-	return c.redisClient.SMembers(context.Background(), key).Result()
-}
-
-func (c *RedisCache) AddElementsToSet(key string, elements []string, ttl time.Duration) error {
-	if len(elements) == 0 {
-		return nil
-	}
-	err := c.redisClient.SAdd(context.Background(), key, elements).Err()
-	if err != nil {
-		return err
-	}
-	c.redisClient.Expire(context.Background(), key, ttl)
-	return nil
-}
-
-func (c *RedisCache) RemoveElementsFromSet(key string, elements []string) error {
-	if len(elements) == 0 {
-		return nil
-	}
-	return c.redisClient.SRem(context.Background(), key, elements).Err()
-}
-
-type RedisCacheAI struct {
-	redisClient *redis.Client
-	ttl         time.Duration
-	noCache     bool
-	hashKey     string
-}
+func (c *RedisICache) IsCacheDisabled() bool { return c.noCache }

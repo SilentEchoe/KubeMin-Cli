@@ -62,12 +62,16 @@ type Config struct {
 }
 
 type RedisCacheConfig struct {
-	CacheHost string
-	CacheProt int
-	CacheType string
-	CacheDB   int64
-	UserName  string
-	Password  string
+    CacheHost string
+    CacheProt int
+    CacheType string
+    CacheDB   int64
+    UserName  string
+    Password  string
+    // CacheTTL sets default ttl for ICache entries
+    CacheTTL  time.Duration
+    // KeyPrefix applied to cache keys in redis
+    KeyPrefix string
 }
 
 // MessagingConfig holds pub/sub configuration
@@ -92,14 +96,16 @@ func NewConfig() *Config {
 			Database: DBNAME_KUBEMINCLI,
 			URL:      fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
 		},
-		Cache: RedisCacheConfig{
-			CacheHost: "localhost",
-			CacheProt: 6379,
-			CacheType: "redis",
-			UserName:  "",
-			Password:  "",
-			CacheDB:   0,
-		},
+        Cache: RedisCacheConfig{
+            CacheHost: "localhost",
+            CacheProt: 6379,
+            CacheType: "redis",
+            UserName:  "",
+            Password:  "",
+            CacheDB:   0,
+            CacheTTL:  24 * time.Hour,
+            KeyPrefix: "kubemin:cache:",
+        },
 		KubeQPS:          100,
 		KubeBurst:        300,
 		AddonCacheTime:   time.Minute * 10,
@@ -132,10 +138,13 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
 	fs.BoolVar(&c.AutoTracing, "auto-tracing", configParameter.AutoTracing, "Auto-enable tracing when Jaeger is configured or messaging is redis (effective only if --enable-tracing=false).")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
-	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
+    // messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
     fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
     fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
     fs.Int64Var(&c.Messaging.RedisStreamMaxLen, "msg-redis-maxlen", configParameter.Messaging.RedisStreamMaxLen, "redis streams XADD MAXLEN cap (<=0 to disable)")
+    // cache-specific flags
+    fs.DurationVar(&c.Cache.CacheTTL, "cache-ttl", configParameter.Cache.CacheTTL, "default TTL for redis cache entries (e.g. 24h)")
+    fs.StringVar(&c.Cache.KeyPrefix, "cache-prefix", configParameter.Cache.KeyPrefix, "key prefix for redis cache entries")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }
