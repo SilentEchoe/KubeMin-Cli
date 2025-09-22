@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	
+
 	// ErrPrimaryEmpty Error that primary key is empty.
 	ErrPrimaryEmpty = NewDBError(fmt.Errorf("entity primary is empty"))
 
@@ -69,6 +69,14 @@ type Config struct {
 	Type     string
 	URL      string
 	Database string
+	// MaxIdleConns defines the maximum number of idle connections kept in the pool.
+	MaxIdleConns int
+	// MaxOpenConns limits the total number of open connections to the database.
+	MaxOpenConns int
+	// ConnMaxLifetime bounds the lifetime of a connection before it's recycled.
+	ConnMaxLifetime time.Duration
+	// ConnMaxIdleTime bounds how long an idle connection is kept in the pool.
+	ConnMaxIdleTime time.Duration
 }
 
 // Entity database data model

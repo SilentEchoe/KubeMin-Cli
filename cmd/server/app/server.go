@@ -1,14 +1,14 @@
 package app
 
 import (
-    "context"
-    "flag"
-    "fmt"
-    "os"
-    "os/signal"
-    "syscall"
-    "time"
-    "strings"
+	"context"
+	"flag"
+	"fmt"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
@@ -16,9 +16,9 @@ import (
 
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/observability"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/profiling"
-	"KubeMin-Cli/pkg/tracing"
 	"KubeMin-Cli/version"
 )
 
@@ -98,36 +98,36 @@ func Run(s *options.ServerRunOptions) error {
 }
 
 func run(ctx context.Context, s *options.ServerRunOptions, errChan chan error) error {
-    klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
+	klog.Infof("KubeMin-Cli information: version: %v", version.KubeMinCliVersion)
 
-    // Simplified auto-tracing: do not rely on replica count
-    explicit := s.GenericServerRunOptions.EnableTracing
-    // Treat any non-empty, non-"noop" messaging type as an external/distributed queue
-    hasExternalQueue := func(typ string) bool {
-        t := strings.ToLower(strings.TrimSpace(typ))
-        return t != "" && t != "noop"
-    }
-    auto := s.GenericServerRunOptions.AutoTracing &&
-        (s.GenericServerRunOptions.JaegerEndpoint != "" || hasExternalQueue(s.GenericServerRunOptions.Messaging.Type))
-    effective := explicit || auto
-    // Propagate effective value so server middleware aligns with provider init
-    s.GenericServerRunOptions.EnableTracing = effective
-    if auto && !explicit {
-        klog.InfoS("Auto tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint, "msgType", s.GenericServerRunOptions.Messaging.Type)
-    }
+	// Simplified auto-tracing: do not rely on replica count
+	explicit := s.GenericServerRunOptions.EnableTracing
+	// Treat any non-empty, non-"noop" messaging type as an external/distributed queue
+	hasExternalQueue := func(typ string) bool {
+		t := strings.ToLower(strings.TrimSpace(typ))
+		return t != "" && t != "noop"
+	}
+	auto := s.GenericServerRunOptions.AutoTracing &&
+		(s.GenericServerRunOptions.JaegerEndpoint != "" || hasExternalQueue(s.GenericServerRunOptions.Messaging.Type))
+	effective := explicit || auto
+	// Propagate effective value so server middleware aligns with provider init
+	s.GenericServerRunOptions.EnableTracing = effective
+	if auto && !explicit {
+		klog.InfoS("Auto tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint, "msgType", s.GenericServerRunOptions.Messaging.Type)
+	}
 
-    if effective {
-        klog.InfoS("Distributed tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint)
-        shutdown, err := tracing.InitTracerProvider("kubemin-cli", s.GenericServerRunOptions.JaegerEndpoint)
-        if err != nil {
-            return fmt.Errorf("failed to init tracer provider: %w", err)
-        }
-        defer func() {
-            if err := shutdown(context.Background()); err != nil {
-                klog.ErrorS(err, "Failed to shutdown tracer provider")
-            }
-        }()
-    }
+	if effective {
+		klog.InfoS("Distributed tracing enabled", "jaegerEndpoint", s.GenericServerRunOptions.JaegerEndpoint)
+		shutdown, err := observability.InitTracerProvider("kubemin-cli", s.GenericServerRunOptions.JaegerEndpoint)
+		if err != nil {
+			return fmt.Errorf("failed to init tracer provider: %w", err)
+		}
+		defer func() {
+			if err := shutdown(context.Background()); err != nil {
+				klog.ErrorS(err, "Failed to shutdown tracer provider")
+			}
+		}()
+	}
 
 	apiServer := server.New(*s.GenericServerRunOptions)
 	return apiServer.Run(ctx, errChan)

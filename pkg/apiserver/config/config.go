@@ -62,28 +62,28 @@ type Config struct {
 }
 
 type RedisCacheConfig struct {
-    CacheHost string
-    CacheProt int
-    CacheType string
-    CacheDB   int64
-    UserName  string
-    Password  string
-    // CacheTTL sets default ttl for ICache entries
-    CacheTTL  time.Duration
-    // KeyPrefix applied to cache keys in redis
-    KeyPrefix string
+	CacheHost string
+	CacheProt int
+	CacheType string
+	CacheDB   int64
+	UserName  string
+	Password  string
+	// CacheTTL sets default ttl for ICache entries
+	CacheTTL time.Duration
+	// KeyPrefix applied to cache keys in redis
+	KeyPrefix string
 }
 
 // MessagingConfig holds pub/sub configuration
 type MessagingConfig struct {
-    Type          string // noop|redis|kafka
-    ChannelPrefix string
-    // RedisStreamMaxLen sets XADD MAXLEN to cap stream length (<=0 disables).
-    RedisStreamMaxLen int64
+	Type          string // noop|redis|kafka
+	ChannelPrefix string
+	// RedisStreamMaxLen sets XADD MAXLEN to cap stream length (<=0 disables).
+	RedisStreamMaxLen int64
 }
 
 func NewConfig() *Config {
-    return &Config{
+	return &Config{
 		BindAddr: "0.0.0.0:8000",
 		LeaderConfig: leaderConfig{
 			ID:        uuid.New().String(),
@@ -92,20 +92,24 @@ func NewConfig() *Config {
 			Namespace: NAMESPACE,
 		},
 		Datastore: datastore.Config{
-			Type:     MYSQL,
-			Database: DBNAME_KUBEMINCLI,
-			URL:      fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
+			Type:            MYSQL,
+			Database:        DBNAME_KUBEMINCLI,
+			URL:             fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
+			MaxIdleConns:    10,
+			MaxOpenConns:    100,
+			ConnMaxLifetime: 30 * time.Minute,
+			ConnMaxIdleTime: 10 * time.Minute,
 		},
-        Cache: RedisCacheConfig{
-            CacheHost: "localhost",
-            CacheProt: 6379,
-            CacheType: "redis",
-            UserName:  "",
-            Password:  "",
-            CacheDB:   0,
-            CacheTTL:  24 * time.Hour,
-            KeyPrefix: "kubemin:cache:",
-        },
+		Cache: RedisCacheConfig{
+			CacheHost: "localhost",
+			CacheProt: 6379,
+			CacheType: "redis",
+			UserName:  "",
+			Password:  "",
+			CacheDB:   0,
+			CacheTTL:  24 * time.Hour,
+			KeyPrefix: "kubemin:cache:",
+		},
 		KubeQPS:          100,
 		KubeBurst:        300,
 		AddonCacheTime:   time.Minute * 10,
@@ -116,8 +120,8 @@ func NewConfig() *Config {
 		AutoTracing:      false,
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
-        Messaging: MessagingConfig{Type: "redis", RedisStreamMaxLen: 50000},
-    }
+		Messaging: MessagingConfig{Type: "redis", RedisStreamMaxLen: 50000},
+	}
 }
 
 func (c *Config) Validate() []error {
@@ -135,16 +139,20 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.Float64Var(&c.KubeQPS, "kube-api-qps", configParameter.KubeQPS, "the qps for kube clients. Low qps may lead to low throughput. High qps may give stress to api-server.")
 	fs.IntVar(&c.KubeBurst, "kube-api-burst", configParameter.KubeBurst, "the burst for kube clients. Recommend setting it qps*3.")
 	fs.BoolVar(&c.ExitOnLostLeader, "exit-on-lost-leader", configParameter.ExitOnLostLeader, "exit the process if this server lost the leader election")
+	fs.IntVar(&c.Datastore.MaxIdleConns, "mysql-max-idle-conns", configParameter.Datastore.MaxIdleConns, "maximum number of idle MySQL connections to retain in the pool")
+	fs.IntVar(&c.Datastore.MaxOpenConns, "mysql-max-open-conns", configParameter.Datastore.MaxOpenConns, "maximum number of open MySQL connections (<=0 means unlimited)")
+	fs.DurationVar(&c.Datastore.ConnMaxLifetime, "mysql-conn-max-lifetime", configParameter.Datastore.ConnMaxLifetime, "maximum amount of time a MySQL connection may be reused (<=0 disables)")
+	fs.DurationVar(&c.Datastore.ConnMaxIdleTime, "mysql-conn-max-idle-time", configParameter.Datastore.ConnMaxIdleTime, "maximum amount of time a MySQL connection may remain idle (<=0 disables)")
 	fs.BoolVar(&c.EnableTracing, "enable-tracing", configParameter.EnableTracing, "Enable distributed tracing.")
 	fs.BoolVar(&c.AutoTracing, "auto-tracing", configParameter.AutoTracing, "Auto-enable tracing when Jaeger is configured or messaging is redis (effective only if --enable-tracing=false).")
 	fs.StringVar(&c.JaegerEndpoint, "jaeger-endpoint", configParameter.JaegerEndpoint, "The endpoint of the Jaeger collector.")
-    // messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
-    fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
-    fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
-    fs.Int64Var(&c.Messaging.RedisStreamMaxLen, "msg-redis-maxlen", configParameter.Messaging.RedisStreamMaxLen, "redis streams XADD MAXLEN cap (<=0 to disable)")
-    // cache-specific flags
-    fs.DurationVar(&c.Cache.CacheTTL, "cache-ttl", configParameter.Cache.CacheTTL, "default TTL for redis cache entries (e.g. 24h)")
-    fs.StringVar(&c.Cache.KeyPrefix, "cache-prefix", configParameter.Cache.KeyPrefix, "key prefix for redis cache entries")
+	// messaging basic flags (broker type & channel prefix). Redis connection will reuse RedisCacheConfig.
+	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
+	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
+	fs.Int64Var(&c.Messaging.RedisStreamMaxLen, "msg-redis-maxlen", configParameter.Messaging.RedisStreamMaxLen, "redis streams XADD MAXLEN cap (<=0 to disable)")
+	// cache-specific flags
+	fs.DurationVar(&c.Cache.CacheTTL, "cache-ttl", configParameter.Cache.CacheTTL, "default TTL for redis cache entries (e.g. 24h)")
+	fs.StringVar(&c.Cache.KeyPrefix, "cache-prefix", configParameter.Cache.KeyPrefix, "key prefix for redis cache entries")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

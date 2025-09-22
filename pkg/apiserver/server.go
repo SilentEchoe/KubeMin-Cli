@@ -27,8 +27,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
-    "KubeMin-Cli/pkg/apiserver/utils/kube"
-    "os"
+	"KubeMin-Cli/pkg/apiserver/utils/kube"
+	"os"
 )
 
 // APIServer interface for call api server
@@ -104,21 +104,21 @@ func (s *restServer) buildIoCContainer() error {
 	}
 	s.dataStore = ds
 
-    // Initialize cache implementation. Prefer redis if configured; fallback to memory.
-    var iCache cache.ICache
-    switch strings.ToLower(s.cfg.Cache.CacheType) {
-    case string(cache.CacheTypeRedis):
-        rcli, err := clients.EnsureRedis(s.cfg.Cache)
-        if err != nil {
-            klog.Warningf("init redis cache client failed, fallback to memory: %v", err)
-            iCache = cache.New(false, cache.CacheTypeMem)
-        } else {
-            cache.SetGlobalRedisClient(rcli)
-            iCache = cache.NewRedisICache(rcli, false, s.cfg.Cache.CacheTTL, s.cfg.Cache.KeyPrefix)
-        }
-    default:
-        iCache = cache.New(false, cache.CacheTypeMem)
-    }
+	// Initialize cache implementation. Prefer redis if configured; fallback to memory.
+	var iCache cache.ICache
+	switch strings.ToLower(s.cfg.Cache.CacheType) {
+	case string(cache.CacheTypeRedis):
+		rcli, err := clients.EnsureRedis(s.cfg.Cache)
+		if err != nil {
+			klog.ErrorS(err, "init redis cache client failed; falling back to in-memory cache")
+			iCache = cache.New(false, cache.CacheTypeMem)
+		} else {
+			cache.SetGlobalRedisClient(rcli)
+			iCache = cache.NewRedisICache(rcli, false, s.cfg.Cache.CacheTTL, s.cfg.Cache.KeyPrefix)
+		}
+	default:
+		iCache = cache.New(false, cache.CacheTypeMem)
+	}
 
 	// 将db 注入到IOC中
 	if err := s.beanContainer.ProvideWithName("datastore", s.dataStore); err != nil {
@@ -177,36 +177,36 @@ func (s *restServer) buildIoCContainer() error {
 
 // dispatchTopic 计算用于工作流分发的Redis Streams键
 func (s *restServer) dispatchTopic() string {
-    prefix := s.cfg.Messaging.ChannelPrefix
-    if prefix == "" {
-        prefix = "kubemin"
-    }
-    return fmt.Sprintf("%s.workflow.dispatch", prefix)
+	prefix := s.cfg.Messaging.ChannelPrefix
+	if prefix == "" {
+		prefix = "kubemin"
+	}
+	return fmt.Sprintf("%s.workflow.dispatch", prefix)
 }
 
 // buildQueue constructs the messaging queue based on config.
 // It returns a usable Queue in all cases, falling back to NoopQueue on failures.
 func (s *restServer) buildQueue(streamKey string) msg.Queue {
-    if strings.ToLower(s.cfg.Messaging.Type) != "redis" {
-        return &msg.NoopQueue{}
-    }
+	if strings.ToLower(s.cfg.Messaging.Type) != "redis" {
+		return &msg.NoopQueue{}
+	}
 
-    // Reuse shared redis client from factory
-    rcli, err := clients.EnsureRedis(s.cfg.Cache)
-    if err != nil {
-        klog.Warningf("init redis client failed, falling back to noop: %v", err)
-        return &msg.NoopQueue{}
-    }
-    if cache.GetGlobalRedisClient() == nil {
-        cache.SetGlobalRedisClient(rcli)
-    }
+	// Reuse shared redis client from factory
+	rcli, err := clients.EnsureRedis(s.cfg.Cache)
+	if err != nil {
+		klog.Warningf("init redis client failed, falling back to noop: %v", err)
+		return &msg.NoopQueue{}
+	}
+	if cache.GetGlobalRedisClient() == nil {
+		cache.SetGlobalRedisClient(rcli)
+	}
 
-    rq, err := msg.NewRedisStreamsWithClient(rcli, streamKey, s.cfg.Messaging.RedisStreamMaxLen)
-    if err != nil {
-        klog.Warningf("init redis streams with client failed, falling back to noop: %v", err)
-        return &msg.NoopQueue{}
-    }
-    return rq
+	rq, err := msg.NewRedisStreamsWithClient(rcli, streamKey, s.cfg.Messaging.RedisStreamMaxLen)
+	if err != nil {
+		klog.Warningf("init redis streams with client failed, falling back to noop: %v", err)
+		return &msg.NoopQueue{}
+	}
+	return rq
 }
 
 func (s *restServer) RegisterAPIRoute() {

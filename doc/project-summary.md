@@ -19,9 +19,8 @@
 ## 运行时特性
 - 通过 `leaderelection` + Lease 实现主选举，启动时若检测到偶数副本会主动退出以保持奇数副本数。
 - `pkg/apiserver/utils` 提供缓存、日志清理、PVC 工具、随机字符串生成等辅助能力。
-- 支持 Jaeger 分布式追踪初始化（`pkg/tracing`），并在 HTTP 层注入 `otelgin` 中间件。
+- 支持 Jaeger 分布式追踪初始化（`pkg/apiserver/infrastructure/observability`），并在 HTTP 层注入 `otelgin` 中间件。
 
 ## 开发与测试
 - 常用命令：`go run ./cmd/main.go` 启动本地服务；`make build-apiserver` 交叉编译；`go test ./... -race -cover` 运行测试。
 - 项目内已有针对 Redis 队列、Trait 处理、Job 生成等模块的单元测试，遵循标准 `testing` + `testify` 组合。
-
