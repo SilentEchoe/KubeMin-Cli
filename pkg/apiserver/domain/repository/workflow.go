@@ -2,7 +2,8 @@ package repository
 
 import (
 	"context"
-	
+	"errors"
+
 	"k8s.io/klog/v2"
 
 	"KubeMin-Cli/pkg/apiserver/config"
@@ -104,4 +105,22 @@ func TaskById(ctx context.Context, store datastore.DataStore, taskId string) (*m
 		return nil, err
 	}
 	return task, nil
+}
+
+func UpdateTaskStatus(ctx context.Context, store datastore.DataStore, taskID string, from, to config.Status) (bool, error) {
+	task := &model.WorkflowQueue{TaskID: taskID}
+	if err := store.Get(ctx, task); err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return false, nil
+		}
+		return false, err
+	}
+	if from != "" && task.Status != from {
+		return false, nil
+	}
+	task.Status = to
+	if err := store.Put(ctx, task); err != nil {
+		return false, err
+	}
+	return true, nil
 }

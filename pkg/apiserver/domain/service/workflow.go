@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -26,6 +27,7 @@ type WorkflowService interface {
 	UpdateTask(ctx context.Context, queue *model.WorkflowQueue) bool
 	TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
 	CancelWorkflowTask(ctx context.Context, userName, workId string) error
+	MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
 }
 
 type workflowServiceImpl struct {
@@ -90,10 +92,10 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 	return &model.Workflow{
 		ID:          utils.RandStringByNumLowercase(24),
-		Name:        req.Name,
+		Name:        strings.ToLower(req.Name),
 		Alias:       req.Alias,
 		Disabled:    true,
-		ProjectId:   req.Project,
+		ProjectId:   strings.ToLower(req.Project),
 		Description: req.Description,
 	}
 }
@@ -166,6 +168,10 @@ func (w *workflowServiceImpl) UpdateTask(ctx context.Context, task *model.Workfl
 		return false
 	}
 	return true
+}
+
+func (w *workflowServiceImpl) MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error) {
+	return repository.UpdateTaskStatus(ctx, w.Store, taskID, from, to)
 }
 
 // TaskRunning 所有正在运行的Task

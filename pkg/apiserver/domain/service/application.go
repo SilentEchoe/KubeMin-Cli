@@ -56,7 +56,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	if exist {
 		return nil, bcode.ErrApplicationExist
 	}
-	if application.Namespace != "" {
+	if application.Namespace == "" {
 		application.Namespace = config.DefaultNamespace
 	}
 

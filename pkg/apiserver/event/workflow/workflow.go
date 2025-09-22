@@ -24,7 +24,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-    msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 )
 
 type Workflow struct {
@@ -32,7 +32,7 @@ type Workflow struct {
 	KubeConfig      *rest.Config            `inject:"kubeConfig"`
 	Store           datastore.DataStore     `inject:"datastore"`
 	WorkflowService service.WorkflowService `inject:""`
-    Queue           msg.Queue               `inject:"queue"`
+	Queue           msg.Queue               `inject:"queue"`
 	Cfg             *config.Config          `inject:""`
 }
 
@@ -54,10 +54,10 @@ func UnmarshalTaskDispatch(b []byte) (TaskDispatch, error) {
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 	w.InitQueue(ctx)
 	// If queue is noop (local mode), fall back to direct DB scan executor for functionality.
-    if _, ok := w.Queue.(*msg.NoopQueue); ok {
-        go w.WorkflowTaskSender()
-        return
-    }
+	if _, ok := w.Queue.(*msg.NoopQueue); ok {
+		go w.WorkflowTaskSender()
+		return
+	}
 	// Redis Streams path: leader runs dispatcher; workers managed by server callbacks.
 	go w.Dispatcher()
 }
@@ -82,6 +82,7 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 		}
 		klog.Infof("cancel task: %s", task.TaskID)
 	}
+
 }
 
 // WorkflowTaskSender is the original local executor scanning DB and running tasks.
@@ -95,8 +96,22 @@ func (w *Workflow) WorkflowTaskSender() {
 			continue
 		}
 		for _, task := range waitingTasks {
+			claimed, err := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
+			if err != nil {
+				klog.Errorf("mark task queued failed: %v", err)
+				continue
+			}
+			if !claimed {
+				continue
+			}
 			// TODO jobConcurrency 默认为1，表示串行执行
 			if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+				klog.Errorf("run task %s failed after mark queued: %v", task.TaskID, err)
+				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
+				} else if !reverted {
+					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
+				}
 				continue
 			}
 		}
@@ -114,14 +129,32 @@ func (w *Workflow) Dispatcher() {
 			continue
 		}
 		for _, task := range waitingTasks {
+			claimed, err := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
+			if err != nil {
+				klog.Errorf("mark task queued failed: %v", err)
+				continue
+			}
+			if !claimed {
+				continue
+			}
 			payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
 			b, err := MarshalTaskDispatch(payload)
 			if err != nil {
 				klog.Errorf("marshal task dispatch failed: %v", err)
+				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
+				} else if !reverted {
+					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
+				}
 				continue
 			}
 			if id, err := w.Queue.Enqueue(ctx, b); err != nil {
 				klog.Errorf("enqueue task dispatch failed: %v", err)
+				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
+				} else if !reverted {
+					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
+				}
 				continue
 			} else {
 				klog.Infof("dispatched task: %s, streamID: %s", task.TaskID, id)
@@ -132,16 +165,16 @@ func (w *Workflow) Dispatcher() {
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
-    group := w.consumerGroup()
-    consumer := w.consumerName()
-    klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
-    // Ensure consumer group exists once on worker start to avoid per-read overhead.
-    if err := w.Queue.EnsureGroup(ctx, group); err != nil {
-        klog.V(4).Infof("ensure group error: %v", err)
-    }
-    staleTicker := time.NewTicker(15 * time.Second)
-    defer staleTicker.Stop()
-    for {
+	group := w.consumerGroup()
+	consumer := w.consumerName()
+	klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
+	// Ensure consumer group exists once on worker start to avoid per-read overhead.
+	if err := w.Queue.EnsureGroup(ctx, group); err != nil {
+		klog.V(4).Infof("ensure group error: %v", err)
+	}
+	staleTicker := time.NewTicker(15 * time.Second)
+	defer staleTicker.Stop()
+	for {
 		select {
 		case <-ctx.Done():
 			return
