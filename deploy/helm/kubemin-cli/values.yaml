@@ -1,0 +1,36 @@
+image:
+  repository: kubemin/kubemin-cli
+  tag: latest
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+resources: {}
+
+mysql:
+  image: mysql:8.0.37
+  rootPassword: changeme
+  database: kubemincli
+  storage: 10Gi
+  servicePort: 3306
+  resources: {}
+
+redis:
+  image: redis:7.2.4
+  storage: 2Gi
+  servicePort: 6379
+  resources: {}
+
+replicaCount: 1
+
+env:
+  # Example extra environment variables for the application
+  # - name: SOME_ENV
+  #   value: some-value
+  []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

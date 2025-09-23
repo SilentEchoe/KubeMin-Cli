@@ -1,0 +1,6 @@
+apiVersion: v2
+name: kubemin-cli
+description: Helm chart for deploying the KubeMin-Cli API server and dependencies
+version: 0.1.0
+appVersion: "0.1.0"
+type: application
