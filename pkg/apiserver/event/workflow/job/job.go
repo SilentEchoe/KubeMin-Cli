@@ -81,7 +81,7 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 		}
 		return
 	}
-	jobPool := NewPool(ctx, jobs, concurrency, client, ack)
+	jobPool := NewPool(ctx, jobs, concurrency, client, store, ack)
 	jobPool.Run()
 }
 
@@ -198,10 +198,11 @@ func (p *Pool) work() {
 
 // NewPool initializes a new pool with the given tasks and
 // at the given concurrency.
-func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, ack func()) *Pool {
+func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *Pool {
 	return &Pool{
 		Jobs:        jobs,
 		client:      client,
+		store:       store,
 		concurrency: concurrency,
 		jobsChan:    make(chan *model.JobTask),
 		ack:         ack,

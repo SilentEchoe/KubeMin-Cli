@@ -82,7 +82,6 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 		}
 		klog.Infof("cancel task: %s", task.TaskID)
 	}
-
 }
 
 // WorkflowTaskSender is the original local executor scanning DB and running tasks.
@@ -180,12 +179,12 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			return
 		case <-staleTicker.C:
 			// periodically claim stale pending messages
-			msgs, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
+			mags, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
 			if err != nil {
 				klog.V(4).Infof("auto-claim error: %v", err)
 				continue
 			}
-			for _, m := range msgs {
+			for _, m := range mags {
 				td, err := UnmarshalTaskDispatch(m.Payload)
 				if err != nil {
 					klog.Errorf("decode dispatch (claim) failed: %v", err)

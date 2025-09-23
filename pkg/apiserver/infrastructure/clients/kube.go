@@ -3,7 +3,7 @@ package clients
 import (
 	"flag"
 	"fmt"
-	
+
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -50,7 +50,7 @@ func SetKubeConfig(c apiConfig.Config) error {
 	return setKubeConfig(kubeConfig)
 }
 
-// GetKubeClient create and return kube runtime client
+// GetKubeClient create and return kube runtime rClient
 func GetKubeClient() (*kubernetes.Clientset, error) {
 	if kubeClient != nil {
 		return kubeClient, nil
