@@ -53,12 +53,12 @@ func NewResponseCapture(w http.ResponseWriter) *ResponseCapture {
 }
 
 // Header return response writer header
-func (c ResponseCapture) Header() http.Header {
+func (c *ResponseCapture) Header() http.Header {
 	return c.ResponseWriter.Header()
 }
 
 // Write data to response writer and body
-func (c ResponseCapture) Write(data []byte) (int, error) {
+func (c *ResponseCapture) Write(data []byte) (int, error) {
 	if !c.wroteHeader {
 		c.WriteHeader(http.StatusOK)
 	}
@@ -74,12 +74,12 @@ func (c *ResponseCapture) WriteHeader(statusCode int) {
 }
 
 // Bytes return response body bytes
-func (c ResponseCapture) Bytes() []byte {
+func (c *ResponseCapture) Bytes() []byte {
 	return c.body.Bytes()
 }
 
 // StatusCode return status code
-func (c ResponseCapture) StatusCode() int {
+func (c *ResponseCapture) StatusCode() int {
 	return c.status
 }
 
