@@ -10,6 +10,7 @@ func init() {
 type Workflow struct {
 	ID           string                  `json:"id" gorm:"primaryKey"`
 	Name         string                  `json:"name" `
+	Namespace    string                  `json:"namespace"`
 	Alias        string                  `json:"alias"`    //别名
 	Disabled     bool                    `json:"disabled"` //是否关闭，创建时默认为false
 	ProjectId    string                  `json:"project_id"`

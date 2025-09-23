@@ -72,18 +72,28 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		nComponent := ConvertComponent(&component, workflow.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
+			dErr := repository.DelWorkflow(ctx, w.Store, workflow)
+			if dErr != nil {
+				klog.Errorf("del workflow failure,%s", dErr.Error())
+				return nil, bcode.ErrInvalidProperties
+			}
 			klog.Errorf("new trait failure,%s", err.Error())
 			return nil, bcode.ErrInvalidProperties
 		}
+
 		nComponent.Properties = properties
 
 		err = repository.CreateComponents(ctx, w.Store, nComponent)
 		if err != nil {
+			dErr := repository.DelWorkflow(ctx, w.Store, workflow)
+			if dErr != nil {
+				klog.Errorf("Create Components err: %s", err)
+				return nil, err
+			}
 			klog.Errorf("Create Components err: %s", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}
-
 	return &apis.CreateWorkflowResponse{
 		WorkflowId: workflow.ID,
 	}, nil
@@ -109,7 +119,7 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 		Name:          req.Name,
 		AppId:         appID,
 		Namespace:     req.NameSpace,
-		Image:         req.Properties.Image,
+		Image:         req.Image,
 		Replicas:      req.Replicas,
 		ComponentType: req.ComponentType,
 	}
@@ -144,7 +154,7 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	}
 
 	return &apis.ExecWorkflowResponse{
-		WorkflowId: workflowTask.TaskID,
+		TaskId: workflowTask.TaskID,
 	}, nil
 }
 

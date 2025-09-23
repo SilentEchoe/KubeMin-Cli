@@ -101,11 +101,6 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	)
 	ctx = klog.NewContext(ctx, logger)
 
-	if job == nil {
-		klog.Error("runJob received nil job") // This log cannot have context
-		return
-	}
-
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		logger.Info("Job skipped", "status", job.Status)
 		return

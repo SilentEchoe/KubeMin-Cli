@@ -68,7 +68,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 	// create app component
 	for _, component := range req.Component {
-		if component.Properties.Image == "" {
+		if component.Image == "" {
 			return nil, bcode.ErrComponentNotImageSet
 		}
 		component.NameSpace = application.Namespace
@@ -97,10 +97,10 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	//If the workflow is not defined, it will automatically deploy according to the sequence of components and operation characteristics arrays
 	//and use the current cluster where the PaaS service is located as the target cluster.
 	workflowName := ""
-	workflowAlias := fmt.Sprintf("%s-%s", req.Alias, "default-workflow")
+	workflowAlias := fmt.Sprintf("%s-%s", req.Alias, "workflow")
 	var workflowStep *model.JSONStruct
 	if len(req.WorkflowSteps) == 0 {
-		workflowName = fmt.Sprintf("%s-%s", req.Name, "default-workflow")
+		workflowName = fmt.Sprintf("%s-%s", req.Name, "workflow")
 		step := ConvertWorkflowStepByComponent(req.Component)
 		workflowStep, err = model.NewJSONStructByStruct(step)
 		if err != nil {
@@ -127,6 +127,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	workflow := &model.Workflow{
 		ID:           utils.RandStringByNumLowercase(24),
 		Name:         workflowName,
+		Namespace:    application.Namespace,
 		AppID:        application.ID,
 		Alias:        workflowAlias,
 		Disabled:     false,

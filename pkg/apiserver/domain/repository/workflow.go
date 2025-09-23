@@ -31,6 +31,14 @@ func CreateWorkflow(ctx context.Context, store datastore.DataStore, workflow *mo
 	return nil
 }
 
+func DelWorkflow(ctx context.Context, store datastore.DataStore, workflow *model.Workflow) error {
+	err := store.Delete(ctx, workflow)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *model.ApplicationComponent) error {
 	err := store.Add(ctx, workflow)
 	if err != nil {

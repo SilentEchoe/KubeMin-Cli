@@ -44,6 +44,7 @@ type NameAlias struct {
 type CreateApplicationsRequest struct {
 	Name          string                      `json:"name" validate:"checkname"`
 	NameSpace     string                      `json:"namespace" validate:"checkname"`
+	Image         string                      `json:"image"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
 	Project       string                      `json:"project"`
@@ -56,7 +57,7 @@ type CreateApplicationsRequest struct {
 type CreateComponentRequest struct {
 	Name          string         `json:"name"`
 	ComponentType config.JobType `json:"type"`
-	Image         string         `json:"image,omitempty"` // Deprecated: use properties.image
+	Image         string         `json:"image,omitempty"`
 	NameSpace     string         `json:"nameSpace"`
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
@@ -81,12 +82,13 @@ type ApplicationsDeployRequest struct {
 
 type CreateWorkflowRequest struct {
 	Name        string                       `json:"name" validate:"checkname"`
-	Alias       string                       `json:"alias"`
 	Project     string                       `json:"project" validate:"checkname"`
+	Alias       string                       `json:"alias"`
 	Description string                       `json:"description" optional:"true"`
 	Labels      map[string]string            `json:"labels,omitempty"`
 	Component   []CreateComponentRequest     `json:"component"`
 	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
+	TryRun      bool                         `json:"tryRun"`
 }
 
 type Properties = spec.Properties
@@ -149,5 +151,5 @@ type ExecWorkflowRequest struct {
 }
 
 type ExecWorkflowResponse struct {
-	WorkflowId string `json:"workflowId"`
+	TaskId string `json:"taskId"`
 }

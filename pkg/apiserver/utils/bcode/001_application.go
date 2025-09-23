@@ -5,7 +5,7 @@ var ErrApplicationConfig = NewBcode(400, 10000, "application config does not com
 
 var ErrComponentNotImageSet = NewBcode(400, 10001, "the image of the component has not been set..")
 
-// ErrApplicationExist application is exist
+// ErrApplicationExist application is existed
 var ErrApplicationExist = NewBcode(400, 10002, "application name is exist")
 
 // ErrInvalidProperties properties(trait or component or others) is invalid
