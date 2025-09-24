@@ -3,7 +3,7 @@ package job
 import (
 	"context"
 	"fmt"
-	
+
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -58,17 +58,20 @@ func (c *DeployConfigMapJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployConfigMapJobCtl) Run(ctx context.Context) {
+func (c *DeployConfigMapJobCtl) Run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployConfigMapJob run error")
 		c.job.Status = config.StatusFailed
-		c.ack()
-		return
+		c.job.Error = err.Error()
+		return err
 	}
-	c.wait(ctx)
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {

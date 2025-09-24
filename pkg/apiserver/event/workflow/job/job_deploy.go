@@ -65,14 +65,26 @@ func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployJobCtl) Run(ctx context.Context) {
+func (c *DeployJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
+
 	if err := c.run(ctx); err != nil {
-		return
+		c.job.Status = config.StatusFailed
+		c.job.Error = err.Error()
+		return err
 	}
-	//这里是部署完毕后，将状态进行同步
-	c.wait(ctx)
+
+	if err := c.wait(ctx); err != nil {
+		c.job.Status = config.StatusFailed
+		c.job.Error = err.Error()
+		return err
+	}
+
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeployJobCtl) run(ctx context.Context) error {
@@ -116,8 +128,6 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
 
-	c.job.Status = config.StatusCompleted
-	c.ack()
 	return nil
 }
 
@@ -127,30 +137,28 @@ func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployJobCtl) wait(ctx context.Context) {
+func (c *DeployJobCtl) wait(ctx context.Context) error {
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
+
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-timeout:
 			klog.Infof("timeout waiting for job %s", c.job.Name)
-			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
-			if err != nil || newResources == nil {
-				klog.Errorf("get resource owner info error: %v", err)
-				c.job.Status = config.StatusFailed
-			}
-		default:
-			time.Sleep(2 * time.Second)
+			return fmt.Errorf("wait deployment %s timeout", c.job.Name)
+		case <-ticker.C:
 			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
-				c.job.Status = config.StatusFailed
-				return
+				return fmt.Errorf("wait deployment %s error: %w", c.job.Name, err)
 			}
 			if newResources != nil {
 				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
 				if newResources.Ready {
-					c.job.Status = config.StatusCompleted
-					return
+					return nil
 				}
 			}
 		}

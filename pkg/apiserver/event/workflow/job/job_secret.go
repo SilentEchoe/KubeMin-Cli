@@ -59,18 +59,20 @@ func (c *DeploySecretJobCtl) SaveInfo(ctx context.Context) error {
 	return c.store.Add(ctx, &jobInfo)
 }
 
-func (c *DeploySecretJobCtl) Run(ctx context.Context) {
+func (c *DeploySecretJobCtl) Run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack()
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeploySecretJob run error")
 		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
-		c.ack()
-		return
+		return err
 	}
-	c.wait(ctx)
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeploySecretJobCtl) run(ctx context.Context) error {

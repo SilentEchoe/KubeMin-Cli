@@ -21,7 +21,7 @@ import (
 )
 
 type JobCtl interface {
-	Run(ctx context.Context)
+	Run(ctx context.Context) error
 	Clean(ctx context.Context)
 	SaveInfo(ctx context.Context) error
 }
@@ -106,6 +106,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		return
 	}
 	job.Status = config.StatusPrepare
+	job.Error = ""
 	job.StartTime = time.Now().Unix()
 	ack()
 
@@ -149,7 +150,18 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		}
 	}()
 	// 执行对应的JOb任务
-	jobCtl.Run(ctx)
+	if err := jobCtl.Run(ctx); err != nil {
+		span.SetStatus(codes.Error, "Job execution failed")
+		span.RecordError(err)
+		if job.Error == "" {
+			job.Error = err.Error()
+		}
+		if job.Status != config.StatusFailed && job.Status != config.StatusCancelled && job.Status != config.StatusTimeout {
+			job.Status = config.StatusFailed
+		}
+	} else if job.Status == config.StatusPrepare || job.Status == config.StatusRunning {
+		job.Status = config.StatusCompleted
+	}
 }
 
 func jobStatusFailed(status config.Status) bool {
