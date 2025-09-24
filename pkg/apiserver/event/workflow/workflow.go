@@ -73,14 +73,18 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 		klog.Errorf("find task running error: %v", err)
 		return
 	}
-	// 如果重启Queue，则取消所有正在运行的tasks
+	// 如果重启Queue，则取消所有正在运行的tasks（尽最大努力取消并收集错误）
+	var cancelErrs []error
 	for _, task := range tasks {
-		err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID)
-		if err != nil {
-			klog.Errorf("cancel task error: %v", err)
-			return
+		if err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID); err != nil {
+			klog.Errorf("cancel task %s error: %v", task.TaskID, err)
+			cancelErrs = append(cancelErrs, err)
+			continue
 		}
 		klog.Infof("cancel task: %s", task.TaskID)
+	}
+	if len(cancelErrs) > 0 {
+		klog.Warningf("cancel running tasks finished with errors: failed=%d total=%d", len(cancelErrs), len(tasks))
 	}
 }
 
@@ -334,15 +338,6 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
 
 	stagedTasks := GenerateJobTasks(ctx, w.workflowTask, w.Store)
 

@@ -3,9 +3,10 @@ package job
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/fatih/color"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -229,14 +230,18 @@ func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, na
 		}
 		return nil, err
 	}
-	klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas)
+	klog.Infof("newResources: %s, Replicas: %v, ReadyReplicas: %d", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas)
 	isOk := false
-	if *statefulSet.Spec.Replicas == statefulSet.Status.ReadyReplicas {
-		isOk = true
+	var replicas int32
+	if statefulSet.Spec.Replicas != nil {
+		replicas = *statefulSet.Spec.Replicas
+		if replicas == statefulSet.Status.ReadyReplicas {
+			isOk = true
+		}
 	}
 	return &model.JobDeployInfo{
 		Name:          statefulSet.Name,
-		Replicas:      *statefulSet.Spec.Replicas,
+		Replicas:      replicas,
 		ReadyReplicas: statefulSet.Status.ReadyReplicas,
 		Ready:         isOk,
 	}, nil

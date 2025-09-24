@@ -176,14 +176,18 @@ func getDeploymentStatus(kubeClient *kubernetes.Clientset, namespace string, nam
 		}
 		return nil, err
 	}
-	klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", deploy.Name, deploy.Spec.Replicas, deploy.Status.ReadyReplicas)
+	klog.Infof("newResources: %s, Replicas: %v, ReadyReplicas: %d", deploy.Name, deploy.Spec.Replicas, deploy.Status.ReadyReplicas)
 	isOk := false
-	if *deploy.Spec.Replicas == deploy.Status.ReadyReplicas {
-		isOk = true
+	var replicas int32
+	if deploy.Spec.Replicas != nil {
+		replicas = *deploy.Spec.Replicas
+		if replicas == deploy.Status.ReadyReplicas {
+			isOk = true
+		}
 	}
 	return &model.JobDeployInfo{
 		Name:          deploy.Name,
-		Replicas:      *deploy.Spec.Replicas,
+		Replicas:      replicas,
 		ReadyReplicas: deploy.Status.ReadyReplicas,
 		Ready:         isOk}, nil
 }

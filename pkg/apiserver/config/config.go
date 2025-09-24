@@ -126,6 +126,24 @@ func NewConfig() *Config {
 
 func (c *Config) Validate() []error {
 	var errs []error
+	if strings.TrimSpace(c.BindAddr) == "" {
+		errs = append(errs, fmt.Errorf("bind address cannot be empty"))
+	}
+	if c.Datastore.Type == MYSQL && strings.TrimSpace(c.Datastore.URL) == "" {
+		errs = append(errs, fmt.Errorf("mysql url cannot be empty"))
+	}
+	if c.Cache.CacheType == string("redis") {
+		if strings.TrimSpace(c.Cache.CacheHost) == "" || c.Cache.CacheProt <= 0 {
+			errs = append(errs, fmt.Errorf("redis cache host/port is invalid"))
+		}
+	}
+	// messaging basic checks
+	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
+	case "", "noop", "redis", "kafka":
+		// ok
+	default:
+		errs = append(errs, fmt.Errorf("unsupported messaging type: %s", c.Messaging.Type))
+	}
 	return errs
 }
 

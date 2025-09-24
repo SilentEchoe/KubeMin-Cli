@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 const (
@@ -101,7 +102,8 @@ func CleanRelativePath(path string) (string, error) {
 
 // 工具：简化版给 ConfigMapSpec 复用
 func ReadFileFromURLSimple(url string) ([]byte, error) {
-	resp, err := http.Get(url)
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(url)
 	if err != nil {
 		return nil, err
 	}

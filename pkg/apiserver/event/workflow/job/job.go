@@ -183,10 +183,10 @@ type Pool struct {
 }
 
 func (p *Pool) Run() {
+	p.wg.Add(len(p.Jobs))
 	for i := 0; i < p.concurrency; i++ {
 		go p.work()
 	}
-	p.wg.Add(len(p.Jobs))
 	for _, task := range p.Jobs {
 		p.jobsChan <- task
 	}
