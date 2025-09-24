@@ -70,17 +70,24 @@ func (c *DeployStatefulSetJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) {
+func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
 		c.job.Status = config.StatusFailed
-		c.ack()
-		return
+		c.job.Error = err.Error()
+		return err
 	}
-	//after the deployment is completed, synchronize the status.
-	c.wait(ctx)
+	if err := c.wait(ctx); err != nil {
+		c.job.Status = config.StatusFailed
+		c.job.Error = err.Error()
+		return err
+	}
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
@@ -104,42 +111,35 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return err
 	}
 	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
-
-	c.job.Status = config.StatusCompleted
-	c.ack()
 	return nil
 }
 
-func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) {
+func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+	ticker := time.NewTicker(2 * time.Second)
+	defer ticker.Stop()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-timeout:
 			klog.Infof("timeout waiting for job %s", c.job.Name)
-			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
-			if err != nil || newResources == nil {
-				klog.Errorf("get resource owner info error: %v", err)
-				c.job.Status = config.StatusFailed
-			}
-		default:
-			time.Sleep(2 * time.Second)
+			return fmt.Errorf("wait statefulset %s timeout", c.job.Name)
+		case <-ticker.C:
 			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
-				c.job.Status = config.StatusFailed
-				return
+				return fmt.Errorf("wait statefulset %s error: %w", c.job.Name, err)
 			}
 			if newResources != nil {
 				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
 				if newResources.Ready {
-					c.job.Status = config.StatusCompleted
-					return
+					return nil
 				}
 			}
 		}
 	}
-
 }
 
 func (c *DeployStatefulSetJobCtl) timeout() int64 {

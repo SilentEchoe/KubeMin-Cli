@@ -64,17 +64,27 @@ func (c *DeployServiceJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployServiceJobCtl) Run(ctx context.Context) {
+func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
+
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
 		c.job.Status = config.StatusFailed
-		c.ack()
-		return
+		c.job.Error = err.Error()
+		return err
 	}
-	//这里是部署完毕后，将状态进行同步
-	c.wait(ctx)
+
+	if err := c.wait(ctx); err != nil {
+		c.job.Status = config.StatusFailed
+		c.job.Error = err.Error()
+		return err
+	}
+
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeployServiceJobCtl) run(ctx context.Context) error {
@@ -100,9 +110,6 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	}
 	klog.Infof("Service %q applied successfully.", updated.Name)
 
-	// 任务完成
-	c.job.Status = config.StatusCompleted
-	c.ack()
 	return nil
 }
 
@@ -119,27 +126,26 @@ func (c *DeployServiceJobCtl) timeout() int {
 	return int(c.job.Timeout)
 }
 
-func (c *DeployServiceJobCtl) wait(ctx context.Context) {
+func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-timeout:
 			klog.Warningf("timed out waiting for service: %s", c.job.Name)
-			c.job.Status = config.StatusFailed
-			return
+			return fmt.Errorf("wait service %s timeout", c.job.Name)
 		case <-ticker.C:
 			isExist, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
 				klog.Errorf("error checking service status: %v", err)
-				c.job.Status = config.StatusFailed
-				return
+				return fmt.Errorf("wait service %s error: %w", c.job.Name, err)
 			}
 			if isExist {
-				c.job.Status = config.StatusCompleted
-				return
+				return nil
 			}
 		}
 	}

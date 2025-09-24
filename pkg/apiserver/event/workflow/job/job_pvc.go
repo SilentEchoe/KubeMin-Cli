@@ -59,20 +59,29 @@ func (c *DeployPVCJobCtl) SaveInfo(ctx context.Context) error {
 	return nil
 }
 
-func (c *DeployPVCJobCtl) Run(ctx context.Context) {
+func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
+	c.job.Error = ""
 	c.ack()
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployPVCJob run error")
 		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
-		c.ack()
-		return
+		return err
 	}
 
-	c.wait(ctx)
+	if err := c.wait(ctx); err != nil {
+		logger.Error(err, "DeployPVC wait error")
+		c.job.Status = config.StatusFailed
+		c.job.Error = err.Error()
+		return err
+	}
+
+	c.job.Status = config.StatusCompleted
+	c.job.Error = ""
+	return nil
 }
 
 func (c *DeployPVCJobCtl) run(ctx context.Context) error {
@@ -113,8 +122,6 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("failed to check PVC existence: %w", err)
 	}
 
-	c.job.Status = config.StatusCompleted
-	c.ack()
 	return nil
 }
 
@@ -137,7 +144,7 @@ func (c *DeployPVCJobCtl) shouldUpdatePVC(existing, desired *corev1.PersistentVo
 	return false
 }
 
-func (c *DeployPVCJobCtl) wait(ctx context.Context) {
+func (c *DeployPVCJobCtl) wait(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	var pvcName string
 	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
@@ -152,21 +159,20 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) {
 
 	for {
 		select {
+		case <-ctx.Done():
+			return ctx.Err()
 		case <-timeout:
 			logger.Info("Timed out waiting for PVC", "pvcName", pvcName)
-			c.job.Status = config.StatusFailed
-			return
+			return fmt.Errorf("wait pvc %s timeout", pvcName)
 		case <-ticker.C:
 			isReady, err := c.getPVCStatus(ctx)
 			if err != nil {
 				logger.Error(err, "Error checking PVC status", "pvcName", pvcName)
-				c.job.Status = config.StatusFailed
-				return
+				return fmt.Errorf("wait pvc %s error: %w", pvcName, err)
 			}
 			if isReady {
 				logger.Info("PVC is ready", "pvcName", pvcName)
-				c.job.Status = config.StatusCompleted
-				return
+				return nil
 			}
 		}
 	}
