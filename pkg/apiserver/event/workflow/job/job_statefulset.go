@@ -116,7 +116,7 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 }
 
 func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
-	timeout := time.After(time.Duration(c.timeout()) * time.Second)
+	timeout := time.After(config.DeployTimeout * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 

@@ -32,7 +32,7 @@ const (
 	DefaultStorageMode = 420
 	DefaultTaskRevoker = "system"
 	DefaultNamespace   = "default"
-	DeployTimeout      = 60 * 10 // 10 minutes
+	DeployTimeout      = 60 * 20 // 20 minutes
 
 	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
 	WorkflowRegx = "^[a-zA-Z0-9-]+$"
