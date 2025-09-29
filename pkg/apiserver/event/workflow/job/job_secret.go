@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -22,12 +23,12 @@ import (
 type DeploySecretJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeploySecretJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeploySecretJobCtl {
+func NewDeploySecretJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeploySecretJobCtl {
 	if job == nil {
 		klog.Errorf("NewDeploySecretJobCtl: job is nil")
 		return nil
@@ -41,7 +42,33 @@ func NewDeploySecretJobCtl(job *model.JobTask, client *kubernetes.Clientset, sto
 	}
 }
 
-func (c *DeploySecretJobCtl) Clean(ctx context.Context) {}
+func (c *DeploySecretJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourceSecret)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.namespace
+		}
+		if err := c.client.CoreV1().Secrets(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				klog.Errorf("failed to delete secret %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted secret %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 // SaveInfo persists job execution metadata.
 func (c *DeploySecretJobCtl) SaveInfo(ctx context.Context) error {
@@ -145,11 +172,13 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 			}
 			logger.Info("Secret updated", "secretName", secret.Name, "namespace", secret.Namespace)
 		}
+		markResourceObserved(ctx, config.ResourceSecret, secret.Namespace, secret.Name)
 	} else if k8serrors.IsNotFound(err) {
 		if _, err := cli.Create(ctx, secret, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("create secret %q failed: %w", secret.Name, err)
 		}
 		logger.Info("Secret created", "secretName", secret.Name, "namespace", secret.Namespace)
+		MarkResourceCreated(ctx, config.ResourceSecret, secret.Namespace, secret.Name)
 	} else if err != nil {
 		return fmt.Errorf("get secret %q failed: %w", secret.Name, err)
 	}

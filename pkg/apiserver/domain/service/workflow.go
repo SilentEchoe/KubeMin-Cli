@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"k8s.io/client-go/kubernetes"
@@ -17,6 +18,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	wf "KubeMin-Cli/pkg/apiserver/workflow"
+	"KubeMin-Cli/pkg/apiserver/workflow/signal"
 )
 
 type WorkflowService interface {
@@ -26,15 +28,15 @@ type WorkflowService interface {
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
 	UpdateTask(ctx context.Context, queue *model.WorkflowQueue) bool
 	TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
-	CancelWorkflowTask(ctx context.Context, userName, workId string) error
+	CancelWorkflowTask(ctx context.Context, userName, workId, reason string) error
 	MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
 }
 
 type workflowServiceImpl struct {
-	Store      datastore.DataStore   `inject:"datastore"`
-	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
-	KubeConfig *rest.Config          `inject:"kubeConfig"`
-	Cache      cache.ICache          `inject:"cache"`
+	Store      datastore.DataStore  `inject:"datastore"`
+	KubeClient kubernetes.Interface `inject:"kubeClient"`
+	KubeConfig *rest.Config         `inject:"kubeConfig"`
+	Cache      cache.ICache         `inject:"cache"`
 }
 
 // NewWorkflowService new workflow service
@@ -193,7 +195,7 @@ func (w *workflowServiceImpl) TaskRunning(ctx context.Context) ([]*model.Workflo
 	return list, err
 }
 
-func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, taskId string) error {
+func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, taskId, reason string) error {
 	task, err := repository.TaskById(ctx, w.Store, taskId)
 	if err != nil {
 		return err
@@ -204,6 +206,12 @@ func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, 
 
 	err = repository.UpdateTask(ctx, w.Store, task)
 	if err != nil {
+		return err
+	}
+	if reason == "" {
+		reason = fmt.Sprintf("cancelled by %s", userName)
+	}
+	if err := signal.Cancel(ctx, taskId, reason); err != nil {
 		return err
 	}
 	return nil

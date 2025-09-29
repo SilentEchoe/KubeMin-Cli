@@ -27,8 +27,8 @@ type ApplicationsService interface {
 }
 
 type applicationsServiceImpl struct {
-	Store      datastore.DataStore   `inject:"datastore"`
-	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
+	Store      datastore.DataStore  `inject:"datastore"`
+	KubeClient kubernetes.Interface `inject:"kubeClient"`
 }
 
 func NewApplicationService() ApplicationsService {

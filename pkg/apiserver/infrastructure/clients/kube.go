@@ -18,11 +18,11 @@ import (
 这里没有遵从 kubevela的做法,而是直接使用k8s的Clients,初期版本迭代先使用k8s内置的基础资源，所以先使用Clientset
 */
 
-var kubeClient *kubernetes.Clientset
+var kubeClient kubernetes.Interface
 var kubeConfig *rest.Config
 
 // SetKubeClient for test
-func SetKubeClient(c *kubernetes.Clientset) {
+func SetKubeClient(c kubernetes.Interface) {
 	kubeClient = c
 }
 
@@ -51,7 +51,7 @@ func SetKubeConfig(c apiConfig.Config) error {
 }
 
 // GetKubeClient create and return kube runtime rClient
-func GetKubeClient() (*kubernetes.Clientset, error) {
+func GetKubeClient() (kubernetes.Interface, error) {
 	if kubeClient != nil {
 		return kubeClient, nil
 	}

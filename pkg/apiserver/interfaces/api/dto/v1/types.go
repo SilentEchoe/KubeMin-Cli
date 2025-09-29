@@ -43,7 +43,7 @@ type NameAlias struct {
 
 type CreateApplicationsRequest struct {
 	Name          string                      `json:"name" validate:"checkname"`
-	NameSpace     string                      `json:"namespace" validate:"checkname"`
+	NameSpace     string                      `json:"namespace"`
 	Image         string                      `json:"image"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
@@ -165,4 +165,15 @@ type ExecWorkflowRequest struct {
 
 type ExecWorkflowResponse struct {
 	TaskId string `json:"taskId"`
+}
+
+type CancelWorkflowRequest struct {
+	TaskId string `json:"taskId" validate:"required"`
+	User   string `json:"user,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+type CancelWorkflowResponse struct {
+	TaskId string `json:"taskId"`
+	Status string `json:"status"`
 }

@@ -19,12 +19,12 @@ import (
 type DeployPVCJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeployPVCJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployPVCJobCtl {
+func NewDeployPVCJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployPVCJobCtl {
 	if job == nil {
 		klog.Errorf("NewDeployPVCJobCtl: job is nil")
 		return nil
@@ -38,7 +38,33 @@ func NewDeployPVCJobCtl(job *model.JobTask, client *kubernetes.Clientset, store 
 	}
 }
 
-func (c *DeployPVCJobCtl) Clean(ctx context.Context) {}
+func (c *DeployPVCJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourcePVC)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.job.Namespace
+		}
+		if err := c.client.CoreV1().PersistentVolumeClaims(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				klog.Errorf("failed to delete pvc %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted pvc %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 func (c *DeployPVCJobCtl) SaveInfo(ctx context.Context) error {
 	jobInfo := model.JobInfo{
@@ -67,15 +93,23 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployPVCJob run error")
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
 	if err := c.wait(ctx); err != nil {
 		logger.Error(err, "DeployPVC wait error")
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
@@ -111,12 +145,14 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 		} else {
 			logger.Info("PVC is up-to-date, skipping update", "pvcName", pvc.Name)
 		}
+		markResourceObserved(ctx, config.ResourcePVC, pvc.Namespace, pvc.Name)
 	} else if k8serrors.IsNotFound(err) {
 		// PVC不存在，创建新的
 		_, err = c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(ctx, pvc, metav1.CreateOptions{})
 		if err != nil {
 			return fmt.Errorf("failed to create PVC %q: %w", pvc.Name, err)
 		}
+		MarkResourceCreated(ctx, config.ResourcePVC, pvc.Namespace, pvc.Name)
 		logger.Info("PVC created successfully", "pvcName", pvc.Name)
 	} else {
 		return fmt.Errorf("failed to check PVC existence: %w", err)
@@ -160,10 +196,10 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("pvc %s cancelled: %w", pvcName, ctx.Err()))
 		case <-timeout:
 			logger.Info("Timed out waiting for PVC", "pvcName", pvcName)
-			return fmt.Errorf("wait pvc %s timeout", pvcName)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait pvc %s timeout", pvcName))
 		case <-ticker.C:
 			isReady, err := c.getPVCStatus(ctx)
 			if err != nil {

@@ -23,12 +23,12 @@ import (
 type DeployServiceJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeployServiceJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployServiceJobCtl {
+func NewDeployServiceJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployServiceJobCtl {
 	if job == nil {
 		klog.Errorf("NewDeployServiceJobCtl: job is nil")
 		return nil
@@ -42,7 +42,33 @@ func NewDeployServiceJobCtl(job *model.JobTask, client *kubernetes.Clientset, st
 	}
 }
 
-func (c *DeployServiceJobCtl) Clean(ctx context.Context) {}
+func (c *DeployServiceJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourceService)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.namespace
+		}
+		if err := c.client.CoreV1().Services(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				klog.Errorf("failed to delete service %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted service %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 // SaveInfo  创建Job的详情信息
 func (c *DeployServiceJobCtl) SaveInfo(ctx context.Context) error {
@@ -71,14 +97,22 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
 	if err := c.wait(ctx); err != nil {
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
@@ -100,6 +134,18 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	// 必要字段检查
 	if service.Name == nil || service.Namespace == nil {
 		return fmt.Errorf("service name or namespace is nil")
+	}
+	name := *service.Name
+	namespace := *service.Namespace
+
+	if _, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+		if k8serrors.IsNotFound(err) {
+			MarkResourceCreated(ctx, config.ResourceService, namespace, name)
+		} else {
+			return fmt.Errorf("check service existence failed: %w", err)
+		}
+	} else {
+		markResourceObserved(ctx, config.ResourceService, namespace, name)
 	}
 
 	// 直接使用 ApplyService 处理创建或更新
@@ -134,10 +180,10 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("service %s cancelled: %w", c.job.Name, ctx.Err()))
 		case <-timeout:
 			klog.Warningf("timed out waiting for service: %s", c.job.Name)
-			return fmt.Errorf("wait service %s timeout", c.job.Name)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait service %s timeout", c.job.Name))
 		case <-ticker.C:
 			isExist, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
@@ -151,7 +197,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	}
 }
 
-func getServiceStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (bool, error) {
+func getServiceStatus(kubeClient kubernetes.Interface, namespace string, name string) (bool, error) {
 	klog.Infof("Checking service: %s/%s", namespace, name)
 
 	_, err := kubeClient.CoreV1().Services(namespace).Get(context.TODO(), name, metav1.GetOptions{})

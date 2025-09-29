@@ -25,7 +25,7 @@ import (
 type DeployStatefulSetJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
@@ -35,7 +35,7 @@ type StoreServiceResult struct {
 	AdditionalObjects []client.Object
 }
 
-func NewDeployStatefulSetJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployStatefulSetJobCtl {
+func NewDeployStatefulSetJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployStatefulSetJobCtl {
 	if job == nil {
 		klog.Errorf("DeployStatefulSetJobCtl: job is nil")
 		return nil
@@ -49,7 +49,33 @@ func NewDeployStatefulSetJobCtl(job *model.JobTask, client *kubernetes.Clientset
 	}
 }
 
-func (c *DeployStatefulSetJobCtl) Clean(ctx context.Context) {}
+func (c *DeployStatefulSetJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourceStatefulSet)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.namespace
+		}
+		if err := c.client.AppsV1().StatefulSets(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				klog.Errorf("failed to delete statefulset %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted statefulset %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 // SaveInfo  创建Job的详情信息
 func (c *DeployStatefulSetJobCtl) SaveInfo(ctx context.Context) error {
@@ -77,13 +103,21 @@ func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) error {
 	c.ack() // 通知工作流开始运行
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 	if err := c.wait(ctx); err != nil {
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 	c.job.Status = config.StatusCompleted
@@ -111,6 +145,7 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		klog.Errorf("failed to create statefulSet %q namespace: %q : %v", statefulSet.Name, statefulSet.Namespace, err)
 		return err
 	}
+	MarkResourceCreated(ctx, config.ResourceStatefulSet, statefulSet.Namespace, statefulSet.Name)
 	klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 	return nil
 }
@@ -123,10 +158,10 @@ func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("statefulset %s cancelled: %w", c.job.Name, ctx.Err()))
 		case <-timeout:
 			klog.Infof("timeout waiting for job %s", c.job.Name)
-			return fmt.Errorf("wait statefulset %s timeout", c.job.Name)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait statefulset %s timeout", c.job.Name))
 		case <-ticker.C:
 			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
@@ -220,7 +255,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceRe
 	}
 }
 
-func getStatefulSetStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
+func getStatefulSetStatus(kubeClient kubernetes.Interface, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
 	statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {

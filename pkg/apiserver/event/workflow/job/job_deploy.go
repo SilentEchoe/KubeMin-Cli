@@ -26,12 +26,12 @@ import (
 type DeployJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployJobCtl {
+func NewDeployJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployJobCtl {
 	if client == nil || store == nil {
 		return nil
 	}
@@ -43,7 +43,33 @@ func NewDeployJobCtl(job *model.JobTask, client *kubernetes.Clientset, store dat
 	}
 }
 
-func (c *DeployJobCtl) Clean(ctx context.Context) {}
+func (c *DeployJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourceDeployment)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.job.Namespace
+		}
+		if err := c.client.AppsV1().Deployments(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !errors.IsNotFound(err) {
+				klog.Errorf("failed to delete deployment %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted deployment %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 // SaveInfo  创建Job的详情信息
 func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
@@ -71,14 +97,22 @@ func (c *DeployJobCtl) Run(ctx context.Context) error {
 	c.ack() // 通知工作流开始运行
 
 	if err := c.run(ctx); err != nil {
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
 	if err := c.wait(ctx); err != nil {
-		c.job.Status = config.StatusFailed
 		c.job.Error = err.Error()
+		if statusErr, ok := ExtractStatusError(err); ok {
+			c.job.Status = statusErr.Status
+		} else {
+			c.job.Status = config.StatusFailed
+		}
 		return err
 	}
 
@@ -119,12 +153,14 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		} else {
 			klog.Infof("Deployment %q is up-to-date, skip apply.", deploy.Name)
 		}
+		markResourceObserved(ctx, config.ResourceDeployment, deploy.Namespace, deploy.Name)
 	} else {
 		result, err := c.client.AppsV1().Deployments(deploy.Namespace).Create(ctx, deploy, metav1.CreateOptions{})
 		if err != nil {
 			klog.Errorf("failed to create deployment %q namespace: %q : %v", deploy.Name, deploy.Namespace, err)
 			return err
 		}
+		MarkResourceCreated(ctx, config.ResourceDeployment, deploy.Namespace, deploy.Name)
 		klog.Infof("JobTask Deploy Successfully %q.\n", result.GetObjectMeta().GetName())
 	}
 
@@ -145,10 +181,10 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("deployment %s cancelled: %w", c.job.Name, ctx.Err()))
 		case <-timeout:
 			klog.Infof("timeout waiting for job %s", c.job.Name)
-			return fmt.Errorf("wait deployment %s timeout", c.job.Name)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait deployment %s timeout", c.job.Name))
 		case <-ticker.C:
 			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
 			if err != nil {
@@ -165,7 +201,7 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 	}
 }
 
-func getDeploymentStatus(kubeClient *kubernetes.Clientset, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
+func getDeploymentStatus(kubeClient kubernetes.Interface, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
 	klog.Infof("%s-%s", namespace, name)
 	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {

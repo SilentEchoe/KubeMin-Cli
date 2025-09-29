@@ -28,7 +28,7 @@ import (
 )
 
 type Workflow struct {
-	KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
+	KubeClient      kubernetes.Interface    `inject:"kubeClient"`
 	KubeConfig      *rest.Config            `inject:"kubeConfig"`
 	Store           datastore.DataStore     `inject:"datastore"`
 	WorkflowService service.WorkflowService `inject:""`
@@ -76,7 +76,7 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 	// 如果重启Queue，则取消所有正在运行的tasks（尽最大努力取消并收集错误）
 	var cancelErrs []error
 	for _, task := range tasks {
-		if err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID); err != nil {
+		if err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID, ""); err != nil {
 			klog.Errorf("cancel task %s error: %v", task.TaskID, err)
 			cancelErrs = append(cancelErrs, err)
 			continue
@@ -282,7 +282,7 @@ func (w *Workflow) consumerName() string {
 type WorkflowCtl struct {
 	workflowTask      *model.WorkflowQueue
 	workflowTaskMutex sync.RWMutex
-	Client            *kubernetes.Clientset
+	Client            kubernetes.Interface
 	Store             datastore.DataStore
 	prefix            string
 	ack               func()
@@ -294,7 +294,7 @@ type StepExecution struct {
 	Jobs map[int][]*model.JobTask
 }
 
-func NewWorkflowController(workflowTask *model.WorkflowQueue, client *kubernetes.Clientset, store datastore.DataStore) *WorkflowCtl {
+func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.Interface, store datastore.DataStore) *WorkflowCtl {
 	ctl := &WorkflowCtl{
 		workflowTask: workflowTask,
 		Store:        store,
@@ -330,6 +330,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	// 2. Create a logger with the traceID and put it in the context
 	logger := klog.FromContext(ctx).WithValues("traceID", span.SpanContext().TraceID().String())
 	ctx = klog.NewContext(ctx, logger)
+	ctx = job.WithTaskMetadata(ctx, w.workflowTask.TaskID)
 
 	// 将工作流的状态更改为运行中
 	w.workflowTask.Status = config.StatusRunning
