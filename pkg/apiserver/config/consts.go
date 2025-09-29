@@ -21,6 +21,7 @@ type JobRunPolicy string
 type JobType string
 type JobErrorPolicy string
 type WorkflowTaskType string
+type WorkflowMode string
 type Status string
 
 func (s Status) ToLower() Status {
@@ -59,6 +60,9 @@ const (
 	WorkflowTaskTypeTesting  WorkflowTaskType = "test"
 	WorkflowTaskTypeScanning WorkflowTaskType = "scan"
 	WorkflowTaskTypeDelivery WorkflowTaskType = "delivery"
+
+	WorkflowModeStepByStep WorkflowMode = "StepByStep"
+	WorkflowModeDAG        WorkflowMode = "DAG"
 )
 
 const (
@@ -96,6 +100,23 @@ const (
 	// JobPriorityLow defines the low priority level, for cleanup or notification jobs.
 	JobPriorityLow = 20
 )
+
+// ParseWorkflowMode normalizes workflow mode values, defaulting to StepByStep when empty or unknown.
+func ParseWorkflowMode(mode string) WorkflowMode {
+	switch WorkflowMode(mode) {
+	case WorkflowModeDAG:
+		return WorkflowModeDAG
+	case WorkflowModeStepByStep:
+		return WorkflowModeStepByStep
+	default:
+		return WorkflowModeStepByStep
+	}
+}
+
+// IsParallel reports whether the workflow mode permits parallel execution.
+func (m WorkflowMode) IsParallel() bool {
+	return m == WorkflowModeDAG
+}
 
 // 用户侧声明的存储类型（API 入参）
 const (

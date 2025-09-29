@@ -28,10 +28,53 @@ type WorkflowSteps struct {
 }
 
 type WorkflowStep struct {
+	Name         string              `json:"name"`
+	Level        int                 `json:"level,omitempty"`
+	WorkflowType config.JobType      `json:"workflowType,omitempty"`
+	Mode         config.WorkflowMode `json:"mode,omitempty"`
+	Properties   []Policies          `json:"properties,omitempty"`
+	SubSteps     []*WorkflowSubStep  `json:"subSteps,omitempty"`
+}
+
+type WorkflowSubStep struct {
 	Name         string         `json:"name"`
-	Level        int            `json:"level,omitempty"`
-	WorkflowType config.JobType `json:"workflowType"`
-	Properties   []Policies     `json:"properties"`
+	WorkflowType config.JobType `json:"workflowType,omitempty"`
+	Properties   []Policies     `json:"properties,omitempty"`
+}
+
+// ComponentNames returns referenced component names for a workflow step.
+func (w *WorkflowStep) ComponentNames() []string {
+	if w == nil {
+		return nil
+	}
+	names := extractPolicyNames(w.Properties)
+	if len(names) == 0 && w.Name != "" {
+		names = append(names, w.Name)
+	}
+	return names
+}
+
+// ComponentNames returns referenced component names for a workflow sub-step.
+func (w *WorkflowSubStep) ComponentNames() []string {
+	if w == nil {
+		return nil
+	}
+	names := extractPolicyNames(w.Properties)
+	if len(names) == 0 && w.Name != "" {
+		names = append(names, w.Name)
+	}
+	return names
+}
+
+func extractPolicyNames(policies []Policies) []string {
+	if len(policies) == 0 {
+		return nil
+	}
+	var names []string
+	for _, policy := range policies {
+		names = append(names, policy.Policies...)
+	}
+	return names
 }
 
 type Policies struct {
