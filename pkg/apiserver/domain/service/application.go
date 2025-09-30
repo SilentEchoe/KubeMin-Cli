@@ -52,6 +52,12 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		if err != nil {
 			return nil, bcode.ErrComponentBuild
 		}
+
+		err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID)
+		if err != nil {
+			return nil, bcode.ErrComponentBuild
+		}
+
 	} else {
 		application = model.NewApplications(utils.RandStringByNumLowercase(24), req.Name, req.NameSpace, req.Version, req.Alias, req.Project, req.Description, req.Icon)
 	}

@@ -39,6 +39,42 @@ func DelWorkflow(ctx context.Context, store datastore.DataStore, workflow *model
 	return nil
 }
 
+func DelWorkflowsByAppId(ctx context.Context, store datastore.DataStore, appId string) error {
+	workflows, err := FindWorkflowsByAppId(ctx, store, appId)
+	if err != nil {
+		return err
+	}
+	for _, w := range workflows {
+		if w == nil {
+			continue
+		}
+		if err := store.Delete(ctx, w); err != nil {
+			if errors.Is(err, datastore.ErrRecordNotExist) {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func FindWorkflowsByAppId(ctx context.Context, store datastore.DataStore, appId string) ([]*model.Workflow, error) {
+	entities, err := store.List(ctx, &model.Workflow{AppID: appId}, &datastore.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	var workflows []*model.Workflow
+	for _, entity := range entities {
+		component, ok := entity.(*model.Workflow)
+		if !ok {
+			klog.Warningf("unexpected component entity type: %T", entity)
+			continue
+		}
+		workflows = append(workflows, component)
+	}
+	return workflows, nil
+}
+
 func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *model.ApplicationComponent) error {
 	err := store.Add(ctx, workflow)
 	if err != nil {

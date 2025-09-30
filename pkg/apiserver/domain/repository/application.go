@@ -4,25 +4,9 @@ import (
 	"context"
 	"errors"
 
-	"k8s.io/klog/v2"
-
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 )
-
-func IsExist(ctx context.Context, store datastore.DataStore, Id, version string) (bool, error) {
-	application := model.Applications{
-		ID:      Id,
-		Version: version,
-	}
-	exist, err := store.IsExist(ctx, &application)
-	if err != nil {
-		klog.Errorf("check application name is exist failure %s", err.Error())
-		return false, bcode.ErrApplicationExist
-	}
-	return exist, nil
-}
 
 func ApplicationById(ctx context.Context, store datastore.DataStore, Id string) (*model.Applications, error) {
 	app := model.Applications{
