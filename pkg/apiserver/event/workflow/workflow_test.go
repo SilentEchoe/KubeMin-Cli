@@ -29,6 +29,9 @@ func (f *fakeDataStore) Put(context.Context, datastore.Entity) error {
 func (f *fakeDataStore) Delete(context.Context, datastore.Entity) error {
 	return fmt.Errorf("not implemented")
 }
+func (f *fakeDataStore) DeleteByFilter(context.Context, datastore.Entity, *datastore.FilterOptions) error {
+	return fmt.Errorf("not implemented")
+}
 
 func (f *fakeDataStore) Get(ctx context.Context, entity datastore.Entity) error {
 	switch e := entity.(type) {

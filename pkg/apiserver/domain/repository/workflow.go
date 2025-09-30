@@ -47,6 +47,42 @@ func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *
 	return nil
 }
 
+func DelComponentsByAppId(ctx context.Context, store datastore.DataStore, appId string) error {
+	components, err := FindComponentsByAppId(ctx, store, appId)
+	if err != nil {
+		return err
+	}
+	for _, component := range components {
+		if component == nil {
+			continue
+		}
+		if err := store.Delete(ctx, component); err != nil {
+			if errors.Is(err, datastore.ErrRecordNotExist) {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
+}
+
+func FindComponentsByAppId(ctx context.Context, store datastore.DataStore, appId string) ([]*model.ApplicationComponent, error) {
+	entities, err := store.List(ctx, &model.ApplicationComponent{AppId: appId}, &datastore.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+	var components []*model.ApplicationComponent
+	for _, entity := range entities {
+		component, ok := entity.(*model.ApplicationComponent)
+		if !ok {
+			klog.Warningf("unexpected component entity type: %T", entity)
+			continue
+		}
+		components = append(components, component)
+	}
+	return components, nil
+}
+
 func CreateWorkflowQueue(ctx context.Context, store datastore.DataStore, queue *model.WorkflowQueue) error {
 	err := store.Add(ctx, queue)
 	if err != nil {
@@ -90,7 +126,8 @@ func TaskRunning(ctx context.Context, store datastore.DataStore) (list []*model.
 				string(config.QueueItemPending),
 				string(config.StatusPrepare),
 				string(config.StatusWaitingApprove),
-				""},
+				"",
+			},
 		},
 	}}})
 

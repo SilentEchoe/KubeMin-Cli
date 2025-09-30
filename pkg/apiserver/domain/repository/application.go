@@ -10,9 +10,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 )
 
-func IsExist(ctx context.Context, store datastore.DataStore, appName, version string) (bool, error) {
+func IsExist(ctx context.Context, store datastore.DataStore, Id, version string) (bool, error) {
 	application := model.Applications{
-		Name:    appName,
+		ID:      Id,
 		Version: version,
 	}
 	exist, err := store.IsExist(ctx, &application)
@@ -21,6 +21,17 @@ func IsExist(ctx context.Context, store datastore.DataStore, appName, version st
 		return false, bcode.ErrApplicationExist
 	}
 	return exist, nil
+}
+
+func ApplicationById(ctx context.Context, store datastore.DataStore, Id string) (*model.Applications, error) {
+	app := model.Applications{
+		ID: Id,
+	}
+	err := store.Get(ctx, &app)
+	if err != nil {
+		return nil, err
+	}
+	return &app, nil
 }
 
 func CreateApplications(ctx context.Context, store datastore.DataStore, app *model.Applications) error {
@@ -32,7 +43,7 @@ func CreateApplications(ctx context.Context, store datastore.DataStore, app *mod
 
 // ListApplications query the application policies
 func ListApplications(ctx context.Context, store datastore.DataStore, listOptions datastore.ListOptions) (list []*model.Applications, err error) {
-	var app = model.Applications{}
+	var app model.Applications
 	entities, err := store.List(ctx, &app, &listOptions)
 	if err != nil {
 		return nil, err

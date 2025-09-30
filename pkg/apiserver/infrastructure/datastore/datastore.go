@@ -164,6 +164,9 @@ type DataStore interface {
 	// Delete entity from database, Name() and TableName() can't return zero value.
 	Delete(ctx context.Context, entity Entity) error
 
+	// DeleteByFilter deletes entities matching the provided index fields and optional filters.
+	DeleteByFilter(ctx context.Context, entity Entity, options *FilterOptions) error
+
 	// Get entity from database, Name() and TableName() can't return zero value.
 	Get(ctx context.Context, entity Entity) error
 

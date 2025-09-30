@@ -42,6 +42,7 @@ type NameAlias struct {
 }
 
 type CreateApplicationsRequest struct {
+	ID            string                      `json:"ID"`
 	Name          string                      `json:"name" validate:"checkname"`
 	NameSpace     string                      `json:"namespace"`
 	Image         string                      `json:"image"`
