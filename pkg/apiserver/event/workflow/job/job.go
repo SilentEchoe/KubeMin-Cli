@@ -18,6 +18,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/workflow/signal"
 )
 
 type JobCtl interface {
@@ -26,7 +27,53 @@ type JobCtl interface {
 	SaveInfo(ctx context.Context) error
 }
 
-func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) JobCtl {
+type taskIDKey struct{}
+
+// StatusError wraps an error with an explicit job status for persistence.
+type StatusError struct {
+	Status config.Status
+	Err    error
+}
+
+func (s *StatusError) Error() string { return s.Err.Error() }
+
+func (s *StatusError) Unwrap() error { return s.Err }
+
+// NewStatusError constructs a StatusError with the provided status and error.
+func NewStatusError(status config.Status, err error) error {
+	if err == nil {
+		return nil
+	}
+	return &StatusError{Status: status, Err: err}
+}
+
+// ExtractStatusError attempts to retrieve a StatusError from err.
+func ExtractStatusError(err error) (*StatusError, bool) {
+	if err == nil {
+		return nil, false
+	}
+	var se *StatusError
+	if errors.As(err, &se) {
+		return se, true
+	}
+	return nil, false
+}
+
+// WithTaskMetadata injects workflow identifiers into context so job controllers
+// can derive cancellation signals when needed.
+func WithTaskMetadata(ctx context.Context, taskID string) context.Context {
+	return context.WithValue(ctx, taskIDKey{}, taskID)
+}
+
+// TaskIDFromContext extracts the workflow task identifier from context.
+func TaskIDFromContext(ctx context.Context) string {
+	if v, ok := ctx.Value(taskIDKey{}).(string); ok {
+		return v
+	}
+	return ""
+}
+
+func initJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) JobCtl {
 	if store == nil {
 		klog.Errorf("initJobCtl store is nil")
 		return nil
@@ -61,7 +108,7 @@ func initJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastor
 	return jobCtl
 }
 
-func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
+func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func()) {
 	logger := klog.FromContext(ctx)
 	if len(jobs) == 0 {
 		logger.Info("no jobs to run")
@@ -85,8 +132,7 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 	jobPool.Run()
 }
 
-func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) {
-	// Start a new span for this specific job, it will be a child of the workflow span
+func runJob(ctx context.Context, job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) {
 	tracer := otel.Tracer("job-runner")
 	ctx, span := tracer.Start(ctx, job.Name, trace.WithAttributes(
 		attribute.String("job.name", job.Name),
@@ -94,12 +140,38 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	))
 	defer span.End()
 
-	// Create a logger with both workflow traceID and the new job spanID
 	logger := klog.FromContext(ctx).WithValues(
 		"spanID", span.SpanContext().SpanID().String(),
 		"jobName", job.Name,
 	)
 	ctx = klog.NewContext(ctx, logger)
+	ctx = WithCleanupTracker(ctx)
+
+	var (
+		watcher  *signal.CancelWatcher
+		cancelFn context.CancelFunc = func() {}
+		jobCtx                      = ctx
+	)
+
+	if taskID := TaskIDFromContext(ctx); taskID != "" {
+		var err error
+		watcher, jobCtx, cancelFn, err = signal.Watch(ctx, taskID)
+		if err != nil {
+			logger.Error(err, "Failed to activate cancellation watcher", "taskID", taskID)
+			watcher = nil
+			jobCtx = ctx
+			cancelFn = func() {}
+		}
+	}
+
+	defer cancelFn()
+	defer func() {
+		releaseCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		if watcher != nil {
+			watcher.Stop(releaseCtx)
+		}
+	}()
 
 	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
 		logger.Info("Job skipped", "status", job.Status)
@@ -111,7 +183,7 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 	ack()
 
 	if store == nil {
-		klog.Error("start job store is nil") // This log cannot have context
+		klog.Error("start job store is nil")
 		return
 	}
 	logger.Info("Starting job", "jobType", job.JobType, "status", job.Status)
@@ -128,8 +200,14 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		return
 	}
 
+	cleaned := false
+
 	defer func() {
 		if r := recover(); r != nil {
+			if !cleaned {
+				jobCtl.Clean(jobCtx)
+				cleaned = true
+			}
 			errMsg := fmt.Sprintf("job panic: %v", r)
 			logger.Error(errors.New(errMsg), "Panic recovered in job execution")
 			job.Status = config.StatusFailed
@@ -145,22 +223,38 @@ func runJob(ctx context.Context, job *model.JobTask, client *kubernetes.Clientse
 		}
 		ack()
 		logger.Info("Updating job info in db...")
-		if err := jobCtl.SaveInfo(ctx); err != nil {
+		if err := jobCtl.SaveInfo(jobCtx); err != nil {
 			logger.Error(err, "Failed to update job info in db")
 		}
 	}()
-	// 执行对应的JOb任务
-	if err := jobCtl.Run(ctx); err != nil {
+
+	if err := jobCtl.Run(jobCtx); err != nil {
+		if !cleaned {
+			jobCtl.Clean(jobCtx)
+			cleaned = true
+		}
 		span.SetStatus(codes.Error, "Job execution failed")
 		span.RecordError(err)
 		if job.Error == "" {
 			job.Error = err.Error()
 		}
-		if job.Status != config.StatusFailed && job.Status != config.StatusCancelled && job.Status != config.StatusTimeout {
+		if statusErr, ok := ExtractStatusError(err); ok {
+			job.Status = statusErr.Status
+		} else if errors.Is(err, context.Canceled) {
+			reason := signal.ReasonFromContext(jobCtx)
+			if reason != "" {
+				job.Error = reason
+			}
+			job.Status = config.StatusCancelled
+		} else if job.Status != config.StatusFailed && job.Status != config.StatusCancelled && job.Status != config.StatusTimeout {
 			job.Status = config.StatusFailed
 		}
 	} else if job.Status == config.StatusPrepare || job.Status == config.StatusRunning {
 		job.Status = config.StatusCompleted
+	}
+
+	if !cleaned && jobStatusFailed(job.Status) {
+		jobCtl.Clean(jobCtx)
 	}
 }
 
@@ -174,7 +268,7 @@ func jobStatusFailed(status config.Status) bool {
 type Pool struct {
 	Jobs        []*model.JobTask
 	concurrency int
-	client      *kubernetes.Clientset
+	client      kubernetes.Interface
 	store       datastore.DataStore
 	jobsChan    chan *model.JobTask
 	ack         func()
@@ -183,10 +277,10 @@ type Pool struct {
 }
 
 func (p *Pool) Run() {
+	p.wg.Add(len(p.Jobs))
 	for i := 0; i < p.concurrency; i++ {
 		go p.work()
 	}
-	p.wg.Add(len(p.Jobs))
 	for _, task := range p.Jobs {
 		p.jobsChan <- task
 	}
@@ -205,7 +299,7 @@ func (p *Pool) work() {
 
 // NewPool initializes a new pool with the given tasks and
 // at the given concurrency.
-func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *Pool {
+func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func()) *Pool {
 	return &Pool{
 		Jobs:        jobs,
 		client:      client,

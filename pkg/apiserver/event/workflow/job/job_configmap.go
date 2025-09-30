@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -18,12 +19,12 @@ import (
 type DeployConfigMapJobCtl struct {
 	namespace string
 	job       *model.JobTask
-	client    *kubernetes.Clientset
+	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
 }
 
-func NewDeployConfigMapJobCtl(job *model.JobTask, client *kubernetes.Clientset, store datastore.DataStore, ack func()) *DeployConfigMapJobCtl {
+func NewDeployConfigMapJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployConfigMapJobCtl {
 	if job == nil {
 		klog.Errorf("DeployConfigMapJobCtl: job is nil")
 		return nil
@@ -37,7 +38,33 @@ func NewDeployConfigMapJobCtl(job *model.JobTask, client *kubernetes.Clientset, 
 	}
 }
 
-func (c *DeployConfigMapJobCtl) Clean(ctx context.Context) {}
+func (c *DeployConfigMapJobCtl) Clean(ctx context.Context) {
+	if c.client == nil {
+		return
+	}
+	refs := resourcesForCleanup(ctx, config.ResourceConfigMap)
+	if len(refs) == 0 {
+		return
+	}
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for _, ref := range refs {
+		if !ref.Created {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = c.namespace
+		}
+		if err := c.client.CoreV1().ConfigMaps(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				klog.Errorf("failed to delete configmap %s/%s during cleanup: %v", ns, ref.Name, err)
+			}
+		} else {
+			klog.Infof("deleted configmap %s/%s after job failure", ns, ref.Name)
+		}
+	}
+}
 
 func (c *DeployConfigMapJobCtl) SaveInfo(ctx context.Context) error {
 	jobInfo := model.JobInfo{
@@ -125,11 +152,13 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 			return fmt.Errorf("update configmap %q failed: %w", cm.Name, err)
 		}
 		logger.Info("ConfigMap updated", "namespace", cm.Namespace, "name", cm.Name)
+		markResourceObserved(ctx, config.ResourceConfigMap, cm.Namespace, cm.Name)
 	} else if k8serrors.IsNotFound(err) {
 		if _, err := cli.Create(ctx, cm, metav1.CreateOptions{}); err != nil {
 			return fmt.Errorf("create configmap %q failed: %w", cm.Name, err)
 		}
 		logger.Info("ConfigMap created", "namespace", cm.Namespace, "name", cm.Name)
+		MarkResourceCreated(ctx, config.ResourceConfigMap, cm.Namespace, cm.Name)
 	} else if err != nil {
 		return fmt.Errorf("get configmap %q failed: %w", cm.Name, err)
 	}

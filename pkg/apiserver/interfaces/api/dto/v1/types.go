@@ -43,7 +43,7 @@ type NameAlias struct {
 
 type CreateApplicationsRequest struct {
 	Name          string                      `json:"name" validate:"checkname"`
-	NameSpace     string                      `json:"namespace" validate:"checkname"`
+	NameSpace     string                      `json:"namespace"`
 	Image         string                      `json:"image"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
@@ -65,9 +65,12 @@ type CreateComponentRequest struct {
 }
 
 type CreateWorkflowStepRequest struct {
-	Name         string             `json:"name"`
-	WorkflowType config.JobType     `json:"jobType"`
-	Properties   WorkflowProperties `json:"properties"`
+	Name         string                         `json:"name"`
+	WorkflowType config.JobType                 `json:"jobType,omitempty"`
+	Properties   WorkflowProperties             `json:"properties,omitempty"`
+	Components   []string                       `json:"components,omitempty"`
+	Mode         string                         `json:"mode,omitempty"`
+	SubSteps     []CreateWorkflowSubStepRequest `json:"subSteps,omitempty"`
 }
 
 // ListApplicationResponse list applications by query params
@@ -105,9 +108,19 @@ type WorkflowTraits struct {
 }
 
 type CreateWorkflowStepsRequest struct {
-	Name               string           `json:"name"`
-	ComponentType      config.JobType   `json:"jobType"`
-	WorkflowProperties WorkflowPolicies `json:"properties"`
+	Name               string                         `json:"name"`
+	ComponentType      config.JobType                 `json:"jobType,omitempty"`
+	WorkflowProperties WorkflowPolicies               `json:"properties,omitempty"`
+	Components         []string                       `json:"components,omitempty"`
+	Mode               string                         `json:"mode,omitempty"`
+	SubSteps           []CreateWorkflowSubStepRequest `json:"subSteps,omitempty"`
+}
+
+type CreateWorkflowSubStepRequest struct {
+	Name         string             `json:"name"`
+	WorkflowType config.JobType     `json:"jobType,omitempty"`
+	Properties   WorkflowProperties `json:"properties,omitempty"`
+	Components   []string           `json:"components,omitempty"`
 }
 
 // ConfigMap相关API类型
@@ -152,4 +165,15 @@ type ExecWorkflowRequest struct {
 
 type ExecWorkflowResponse struct {
 	TaskId string `json:"taskId"`
+}
+
+type CancelWorkflowRequest struct {
+	TaskId string `json:"taskId" validate:"required"`
+	User   string `json:"user,omitempty"`
+	Reason string `json:"reason,omitempty"`
+}
+
+type CancelWorkflowResponse struct {
+	TaskId string `json:"taskId"`
+	Status string `json:"status"`
 }

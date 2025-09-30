@@ -1,39 +1,33 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-- Source: `cmd/` (entrypoints), `pkg/apiserver/` (domain, interfaces, infrastructure, utils, workflow), reusable libs in `pkg/`.
-- Configuration & assets: `configs/`, `deploy/` (manifests), `docs/` and `doc/` (design notes), `examples/` (usage), `scripts/` (ops/dev helpers).
-- Tests live next to code as `*_test.go` (e.g., `pkg/apiserver/workflow/...`).
+Source entrypoints live in `cmd/` (primary CLI in `cmd/main.go`). Core services run under `pkg/apiserver/` across domain, interfaces, infrastructure, utilities, and workflow layers. Shared libraries belong in `pkg/`. Configuration, manifests, docs, examples, and scripts reside in `configs/`, `deploy/`, `docs/` or `doc/`, `examples/`, and `scripts/`. Tests sit beside their targets as `*_test.go`.
 
 ## Build, Test, and Development Commands
-- Run locally: `go run ./cmd/main.go`
-- Build CLI: `go build -o kubemin-cli cmd/main.go`
-- Make target: `make build-apiserver` (builds `pkg/apiserver/server.go` for Linux/amd64)
-- Tests: `go test ./... -race -cover`
-- Distributed demo: `scripts/start-distributed.sh` (uses Redis; see env below)
+- `go run ./cmd/main.go` – run the CLI/apiserver locally using default settings.
+- `go build -o kubemin-cli cmd/main.go` – compile the CLI binary for your OS.
+- `make build-apiserver` – cross-build the apiserver for Linux/amd64 deployments.
+- `go test ./... -race -cover` – execute all unit tests with race detection and coverage.
+- `scripts/start-distributed.sh` – launch the distributed demo; ensure Redis env vars are set.
 
 ## Coding Style & Naming Conventions
-- Language: Go 1.24. Format with `go fmt ./...`; validate with `go vet ./...`.
-- Logging: use `k8s.io/klog/v2` (no `fmt.Println`).
-- Errors: wrap with context, e.g., `fmt.Errorf("create pvc: %w", err)`.
-- Concurrency: pass `context.Context` to goroutines; prefer `errgroup`/`sync.WaitGroup`.
-- Packages/paths: lower-case package names; place new modules under `pkg/...` with cohesive boundaries.
+- Target Go 1.24; format with `go fmt ./...` and lint with `go vet ./...`.
+- Keep package paths lowercase and add new modules under cohesive `pkg/...` boundaries.
+- Use `k8s.io/klog/v2` for logging; wrap errors as `fmt.Errorf("create pvc: %w", err)`.
+- Pass `context.Context` into goroutines, preferring `errgroup` or `sync.WaitGroup` for coordination.
 
 ## Testing Guidelines
-- Frameworks: standard `testing` + `testify` assertions.
-- Location: keep tests beside implementation; name `*_test.go`.
-- Style: prefer table-driven tests; cover error paths and edge cases.
-- Run: `go test ./... -race -cover` before pushing; add minimal fixtures under the package, not global temp dirs.
+- Co-locate tests as `*_test.go`; favor table-driven cases and testify assertions.
+- Cover edge and error paths, adding minimal fixtures near the package when needed.
+- Run `go test ./... -race -cover` before committing and note coverage deltas in PRs.
+- Mock Redis-aware components when isolation is required; use the distributed script for integration checks.
 
 ## Commit & Pull Request Guidelines
-- Commit style: `type: short description` (e.g., `feat: enable tracing`, `fix: configmap input`). Optional scope allowed.
-- Keep commits focused and descriptive; include rationale in body when non-obvious.
-- PRs must include: what/why, notable risks, test evidence (output or `go test` summary), and linked issues.
-- For API/behavior changes, include examples (flags, curl, or CLI usage) and update docs under `docs/` if needed.
+- Follow `type: short description` commits, e.g., `fix: reconcile worker locks`; keep each change focused.
+- PRs must state what/why, call out risks, attach test evidence, and link issues. Include CLI or curl examples for behavior shifts.
+- Update docs under `docs/` or `doc/` for API or workflow changes; keep manifests in `deploy/` with explicit images.
 
 ## Security & Configuration Tips
-- Do not hardcode secrets; use environment or config and mask in logs.
-- Common flags: `--bind-addr`, `--max-workers`, `--id`, `--lock-name`.
-- Distributed queue config: prefer `Cache.CacheHost` (e.g., `redis:6379`) in config over CLI flags; env `REDIS_ADDR` is a fallback.
-- Distributed script env: `REDIS_HOST`, `REDIS_PORT`, `MAX_WORKERS`, `NODE_ID`, `BIND_ADDR`.
-- Manifests belong in `deploy/`; avoid `:latest` images and always set requests/limits.
+- Avoid hardcoded secrets; rely on config files or environment variables like `REDIS_ADDR`.
+- Prefer `Cache.CacheHost` over CLI flags for distributed queue targets.
+- Set resource requests/limits for new manifests and mask sensitive data in logs.

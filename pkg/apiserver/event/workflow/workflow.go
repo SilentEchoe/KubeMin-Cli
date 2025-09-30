@@ -28,7 +28,7 @@ import (
 )
 
 type Workflow struct {
-	KubeClient      *kubernetes.Clientset   `inject:"kubeClient"`
+	KubeClient      kubernetes.Interface    `inject:"kubeClient"`
 	KubeConfig      *rest.Config            `inject:"kubeConfig"`
 	Store           datastore.DataStore     `inject:"datastore"`
 	WorkflowService service.WorkflowService `inject:""`
@@ -73,14 +73,18 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 		klog.Errorf("find task running error: %v", err)
 		return
 	}
-	// 如果重启Queue，则取消所有正在运行的tasks
+	// 如果重启Queue，则取消所有正在运行的tasks（尽最大努力取消并收集错误）
+	var cancelErrs []error
 	for _, task := range tasks {
-		err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID)
-		if err != nil {
-			klog.Errorf("cancel task error: %v", err)
-			return
+		if err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID, ""); err != nil {
+			klog.Errorf("cancel task %s error: %v", task.TaskID, err)
+			cancelErrs = append(cancelErrs, err)
+			continue
 		}
 		klog.Infof("cancel task: %s", task.TaskID)
+	}
+	if len(cancelErrs) > 0 {
+		klog.Warningf("cancel running tasks finished with errors: failed=%d total=%d", len(cancelErrs), len(tasks))
 	}
 }
 
@@ -278,13 +282,19 @@ func (w *Workflow) consumerName() string {
 type WorkflowCtl struct {
 	workflowTask      *model.WorkflowQueue
 	workflowTaskMutex sync.RWMutex
-	Client            *kubernetes.Clientset
+	Client            kubernetes.Interface
 	Store             datastore.DataStore
 	prefix            string
 	ack               func()
 }
 
-func NewWorkflowController(workflowTask *model.WorkflowQueue, client *kubernetes.Clientset, store datastore.DataStore) *WorkflowCtl {
+type StepExecution struct {
+	Name string
+	Mode config.WorkflowMode
+	Jobs map[int][]*model.JobTask
+}
+
+func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.Interface, store datastore.DataStore) *WorkflowCtl {
 	ctl := &WorkflowCtl{
 		workflowTask: workflowTask,
 		Store:        store,
@@ -320,6 +330,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	// 2. Create a logger with the traceID and put it in the context
 	logger := klog.FromContext(ctx).WithValues("traceID", span.SpanContext().TraceID().String())
 	ctx = klog.NewContext(ctx, logger)
+	ctx = job.WithTaskMetadata(ctx, w.workflowTask.TaskID)
 
 	// 将工作流的状态更改为运行中
 	w.workflowTask.Status = config.StatusRunning
@@ -335,152 +346,151 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
+	stepExecutions := GenerateJobTasks(ctx, w.workflowTask, w.Store)
 
-	stagedTasks := GenerateJobTasks(ctx, w.workflowTask, w.Store)
-
-	var levels []int
-	for level := range stagedTasks {
-		levels = append(levels, level)
-	}
-	sort.Ints(levels)
-
-	for _, level := range levels {
-		tasksInLevel := stagedTasks[level]
-		if len(tasksInLevel) == 0 {
+	for _, stepExec := range stepExecutions {
+		if stepExec.Jobs == nil {
 			continue
 		}
-		logger.Info("Executing workflow level", "workflowName", w.workflowTask.WorkflowName, "level", level, "jobCount", len(tasksInLevel))
+		priorities := sortedPriorities(stepExec.Jobs)
+		for _, priority := range priorities {
+			tasksInPriority := stepExec.Jobs[priority]
+			if len(tasksInPriority) == 0 {
+				continue
+			}
+			stepConcurrency := 1
+			if stepExec.Mode.IsParallel() {
+				stepConcurrency = len(tasksInPriority)
+			}
+			logger.Info("Executing workflow step", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
 
-		job.RunJobs(ctx, tasksInLevel, concurrency, w.Client, w.Store, w.ack)
+			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack)
 
-		for _, task := range tasksInLevel {
-			if task.Status != config.StatusCompleted {
-				logger.Error(nil, "Workflow failed at job, aborting.", "workflowName", w.workflowTask.WorkflowName, "level", level, "jobName", task.Name, "jobStatus", task.Status)
-				w.workflowTask.Status = config.StatusFailed
-				span.SetStatus(codes.Error, "Workflow failed")
-				span.RecordError(fmt.Errorf("job %s failed with status %s", task.Name, task.Status))
-				return
+			for _, task := range tasksInPriority {
+				if task.Status != config.StatusCompleted {
+					logger.Error(nil, "Workflow failed at job, aborting.", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
+					w.workflowTask.Status = config.StatusFailed
+					span.SetStatus(codes.Error, "Workflow failed")
+					span.RecordError(fmt.Errorf("job %s failed with status %s", task.Name, task.Status))
+					return
+				}
 			}
 		}
-		logger.Info("Workflow level completed successfully", "workflowName", w.workflowTask.WorkflowName, "level", level)
+		logger.Info("Workflow step completed successfully", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name)
 	}
 
 	span.SetStatus(codes.Ok, "Workflow completed successfully")
 	w.updateWorkflowStatus(ctx)
 }
 
-func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) map[int][]*model.JobTask {
+func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []StepExecution {
 	logger := klog.FromContext(ctx)
-	// Step1.根据 appId 查询所有组件
-	workflow := model.Workflow{
-		ID: task.WorkflowId,
-	}
-	err := ds.Get(ctx, &workflow)
-	if err != nil {
+	workflow := model.Workflow{ID: task.WorkflowId}
+	if err := ds.Get(ctx, &workflow); err != nil {
 		logger.Error(err, "Failed to get workflow for generating job tasks", "workflowID", task.WorkflowId)
 		return nil
 	}
 
-	// 将 JSONStruct 序列化为字节切片
-	steps, err := json.Marshal(workflow.Steps)
+	stepsBytes, err := json.Marshal(workflow.Steps)
 	if err != nil {
 		logger.Error(err, "Failed to marshal workflow steps")
 		return nil
 	}
 
-	// Step2.对阶段进行反序列化
-	var workflowStep model.WorkflowSteps
-	err = json.Unmarshal(steps, &workflowStep)
-	if err != nil {
+	var workflowSteps model.WorkflowSteps
+	if err := json.Unmarshal(stepsBytes, &workflowSteps); err != nil {
 		logger.Error(err, "Failed to unmarshal workflow steps")
 		return nil
 	}
 
-	// Step3.根据 appId 查询所有组件信息
-	component, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
-
+	componentEntities, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
 	if err != nil {
 		logger.Error(err, "Failed to list application components", "appID", task.AppID)
 		return nil
 	}
-	var ComponentList []*model.ApplicationComponent
-	for _, v := range component {
-		ac := v.(*model.ApplicationComponent)
-		ComponentList = append(ComponentList, ac)
+	componentMap := make(map[string]*model.ApplicationComponent)
+	for _, entity := range componentEntities {
+		if component, ok := entity.(*model.ApplicationComponent); ok {
+			componentMap[component.Name] = component
+		}
 	}
 
-	// 构建Jobs
-	stagedJobs := make(map[int][]*model.JobTask)
-	stagedJobs[config.JobPriorityHigh] = []*model.JobTask{}
-	stagedJobs[config.JobPriorityNormal] = []*model.JobTask{}
-	stagedJobs[config.JobPriorityLow] = []*model.JobTask{}
+	var executions []StepExecution
+	totalJobs := 0
 
-	for _, step := range workflowStep.Steps {
-		componentSteps := FindComponents(ComponentList, step.Name)
-		if componentSteps == nil {
+	for _, step := range workflowSteps.Steps {
+		mode := step.Mode
+		if mode == "" {
+			mode = config.WorkflowModeStepByStep
+		}
+		if len(step.SubSteps) > 0 {
+			if mode.IsParallel() {
+				buckets := newJobBuckets()
+				for _, sub := range step.SubSteps {
+					subComponents := sub.ComponentNames()
+					appendComponentGroup(ctx, buckets, subComponents, componentMap, task)
+				}
+				if !bucketsEmpty(buckets) {
+					totalJobs += countJobs(buckets)
+					stepName := step.Name
+					if stepName == "" {
+						stepName = "parallel-group"
+					}
+					executions = append(executions, StepExecution{Name: stepName, Mode: mode, Jobs: buckets})
+					logGeneratedJobs(logger, task.WorkflowName, stepName, mode, buckets)
+				}
+			} else {
+				for _, sub := range step.SubSteps {
+					buckets := newJobBuckets()
+					subComponents := sub.ComponentNames()
+					appendComponentGroup(ctx, buckets, subComponents, componentMap, task)
+					if bucketsEmpty(buckets) {
+						continue
+					}
+					totalJobs += countJobs(buckets)
+					displayName := sub.Name
+					if displayName == "" && len(subComponents) == 1 {
+						displayName = subComponents[0]
+					}
+					executions = append(executions, StepExecution{Name: displayName, Mode: config.WorkflowModeStepByStep, Jobs: buckets})
+					logGeneratedJobs(logger, task.WorkflowName, displayName, config.WorkflowModeStepByStep, buckets)
+				}
+			}
 			continue
 		}
-		jobTask := NewJobTask(componentSteps.Name, componentSteps.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
-		properties := ParseProperties(ctx, componentSteps.Properties)
 
-		switch componentSteps.ComponentType {
-		case config.ServerJob:
-			jobTask.JobType = string(config.JobDeploy)
-			jobTask.JobInfo = job.GenerateWebService(componentSteps, &properties)
-			stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTask)
-
-		case config.StoreJob:
-			jobTask.JobType = string(config.JobDeployStore)
-			storeJobs := job.GenerateStoreService(componentSteps)
-			if storeJobs != nil {
-				jobTask.JobInfo = storeJobs.StatefulSet
-				stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTask)
-
-				var pvcJobs []*model.JobTask
-				pvcJobs, err = CreatePVCJobsFromResult(storeJobs.AdditionalObjects, componentSteps, task, pvcJobs)
-				if err != nil {
-					logger.Error(err, "Failed to create PVC jobs", "componentName", componentSteps.Name)
+		componentNames := step.ComponentNames()
+		if len(componentNames) == 0 {
+			continue
+		}
+		if mode.IsParallel() && len(componentNames) > 1 {
+			buckets := newJobBuckets()
+			appendComponentGroup(ctx, buckets, componentNames, componentMap, task)
+			if !bucketsEmpty(buckets) {
+				totalJobs += countJobs(buckets)
+				stepName := step.Name
+				if stepName == "" && len(componentNames) > 1 {
+					stepName = "parallel-group"
 				}
-				stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], pvcJobs...)
+				executions = append(executions, StepExecution{Name: stepName, Mode: mode, Jobs: buckets})
+				logGeneratedJobs(logger, task.WorkflowName, stepName, mode, buckets)
 			}
-		case config.ConfJob:
-			jobTask.JobType = string(config.JobDeployConfigMap)
-			jobTask.JobInfo = job.GenerateConfigMap(componentSteps, &properties)
-			stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], jobTask)
-		case config.SecretJob:
-			jobTask.JobType = string(config.JobDeploySecret)
-			jobTask.JobInfo = job.GenerateSecret(componentSteps, &properties)
-			stagedJobs[config.JobPriorityHigh] = append(stagedJobs[config.JobPriorityHigh], jobTask)
+			continue
 		}
+		for _, name := range componentNames {
+			buckets := newJobBuckets()
+			appendComponentGroup(ctx, buckets, []string{name}, componentMap, task)
+			if bucketsEmpty(buckets) {
+				continue
+			}
+			totalJobs += countJobs(buckets)
+			executions = append(executions, StepExecution{Name: name, Mode: config.WorkflowModeStepByStep, Jobs: buckets})
+			logGeneratedJobs(logger, task.WorkflowName, name, config.WorkflowModeStepByStep, buckets)
+		}
+	}
 
-		// 创建Service
-		if len(properties.Ports) > 0 {
-			jobTaskService := NewJobTask(fmt.Sprintf("%s", componentSteps.Name), "default", task.WorkflowId, task.ProjectId, task.AppID)
-			jobTaskService.JobType = string(config.JobDeployService)
-			jobTaskService.JobInfo = job.GenerateService(fmt.Sprintf("%s", componentSteps.Name), "default", nil, properties.Ports)
-			stagedJobs[config.JobPriorityNormal] = append(stagedJobs[config.JobPriorityNormal], jobTaskService)
-		}
-	}
-	totalJobs := 0
-	for level, jobs := range stagedJobs {
-		if len(jobs) > 0 {
-			logger.Info("Generated jobs for workflow level", "jobCount", len(jobs), "workflowName", task.WorkflowName, "level", level)
-			totalJobs += len(jobs)
-			for _, j := range jobs {
-				logger.Info("Generated job details", "jobName", j.Name, "jobType", j.JobType, "level", level)
-			}
-		}
-	}
 	logger.Info("Generated total jobs for workflow", "totalJobs", totalJobs, "workflowName", task.WorkflowName)
-	return stagedJobs
+	return executions
 }
 
 func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.JobTask {
@@ -493,15 +503,6 @@ func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.Job
 		Status:     config.StatusQueued,
 		Timeout:    60,
 	}
-}
-
-func FindComponents(components []*model.ApplicationComponent, name string) *model.ApplicationComponent {
-	for _, v := range components {
-		if v.Name == name {
-			return v
-		}
-	}
-	return nil
 }
 
 // 更改工作流队列的状态，并运行它
@@ -566,4 +567,126 @@ func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model
 		}
 	}
 	return jobs, nil
+}
+
+func appendComponentGroup(ctx context.Context, buckets map[int][]*model.JobTask, componentNames []string, componentMap map[string]*model.ApplicationComponent, task *model.WorkflowQueue) {
+	logger := klog.FromContext(ctx)
+	for _, name := range componentNames {
+		component, ok := componentMap[name]
+		if !ok {
+			logger.Info("Component referenced in workflow step not found", "componentName", name)
+			continue
+		}
+		componentBuckets := buildJobsForComponent(ctx, component, task)
+		mergeJobBuckets(buckets, componentBuckets)
+	}
+}
+
+func buildJobsForComponent(ctx context.Context, component *model.ApplicationComponent, task *model.WorkflowQueue) map[int][]*model.JobTask {
+	logger := klog.FromContext(ctx)
+	buckets := newJobBuckets()
+	if component == nil {
+		return buckets
+	}
+	properties := ParseProperties(ctx, component.Properties)
+
+	switch component.ComponentType {
+	case config.ServerJob:
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask.JobType = string(config.JobDeploy)
+		jobTask.JobInfo = job.GenerateWebService(component, &properties)
+		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+
+	case config.StoreJob:
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask.JobType = string(config.JobDeployStore)
+		storeJobs := job.GenerateStoreService(component)
+		if storeJobs != nil {
+			jobTask.JobInfo = storeJobs.StatefulSet
+			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+
+			pvcJobs, err := CreatePVCJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
+			if err != nil {
+				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
+			} else if len(pvcJobs) > 0 {
+				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], pvcJobs...)
+			}
+		}
+
+	case config.ConfJob:
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask.JobType = string(config.JobDeployConfigMap)
+		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
+		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
+
+	case config.SecretJob:
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask.JobType = string(config.JobDeploySecret)
+		jobTask.JobInfo = job.GenerateSecret(component, &properties)
+		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
+	}
+
+	if len(properties.Ports) > 0 {
+		svcJob := NewJobTask(component.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
+		svcJob.JobType = string(config.JobDeployService)
+		svcJob.JobInfo = job.GenerateService(component.Name, "default", nil, properties.Ports)
+		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
+	}
+
+	return buckets
+}
+
+func newJobBuckets() map[int][]*model.JobTask {
+	return map[int][]*model.JobTask{
+		config.JobPriorityHigh:   {},
+		config.JobPriorityNormal: {},
+		config.JobPriorityLow:    {},
+	}
+}
+
+func mergeJobBuckets(dst, src map[int][]*model.JobTask) {
+	for priority, jobs := range src {
+		if len(jobs) == 0 {
+			continue
+		}
+		dst[priority] = append(dst[priority], jobs...)
+	}
+}
+
+func bucketsEmpty(buckets map[int][]*model.JobTask) bool {
+	for _, jobs := range buckets {
+		if len(jobs) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
+func countJobs(buckets map[int][]*model.JobTask) int {
+	count := 0
+	for _, jobs := range buckets {
+		count += len(jobs)
+	}
+	return count
+}
+
+func logGeneratedJobs(logger klog.Logger, workflowName, stepName string, mode config.WorkflowMode, buckets map[int][]*model.JobTask) {
+	for priority, jobs := range buckets {
+		if len(jobs) == 0 {
+			continue
+		}
+		logger.Info("Generated jobs for workflow step", "workflowName", workflowName, "step", stepName, "mode", mode, "priority", priority, "jobCount", len(jobs))
+		for _, j := range jobs {
+			logger.Info("Generated job details", "workflowName", workflowName, "step", stepName, "jobName", j.Name, "jobType", j.JobType, "priority", priority)
+		}
+	}
+}
+
+func sortedPriorities(jobs map[int][]*model.JobTask) []int {
+	var priorities []int
+	for priority := range jobs {
+		priorities = append(priorities, priority)
+	}
+	sort.Ints(priorities)
+	return priorities
 }

@@ -27,8 +27,8 @@ type ApplicationsService interface {
 }
 
 type applicationsServiceImpl struct {
-	Store      datastore.DataStore   `inject:"datastore"`
-	KubeClient *kubernetes.Clientset `inject:"kubeClient"`
+	Store      datastore.DataStore  `inject:"datastore"`
+	KubeClient kubernetes.Interface `inject:"kubeClient"`
 }
 
 func NewApplicationService() ApplicationsService {
@@ -68,9 +68,13 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 	// create app component
 	for _, component := range req.Component {
-		if component.Image == "" {
-			return nil, bcode.ErrComponentNotImageSet
+
+		if component.ComponentType == config.ServerJob || component.ComponentType == config.StoreJob {
+			if component.Image == "" {
+				return nil, bcode.ErrComponentNotImageSet
+			}
 		}
+
 		component.NameSpace = application.Namespace
 		nComponent := ConvertComponent(&component, application.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
@@ -108,17 +112,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		}
 	} else {
 		workflowName = fmt.Sprintf("%s-%s", req.Name, utils.RandStringByNumLowercase(16))
-		workflowSteps := new(model.WorkflowSteps)
-		for _, steps := range req.WorkflowSteps {
-			step := &model.WorkflowStep{
-				Name:         steps.Name,
-				WorkflowType: steps.WorkflowType,
-				Properties: []model.Policies{
-					{Policies: steps.Properties.Policies},
-				},
-			}
-			workflowSteps.Steps = append(workflowSteps.Steps, step)
-		}
+		workflowSteps := convertWorkflowStepsFromRequest(req.WorkflowSteps)
 		workflowStep, err = model.NewJSONStructByStruct(workflowSteps)
 		if err != nil {
 			return nil, bcode.ErrCreateWorkflow
@@ -153,6 +147,7 @@ func ConvertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) 
 		step := &model.WorkflowStep{
 			Name:         component.Name,
 			WorkflowType: config.JobDeploy,
+			Mode:         config.WorkflowModeStepByStep,
 			Properties: []model.Policies{{
 				Policies: []string{component.Name},
 			}},
@@ -160,6 +155,59 @@ func ConvertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) 
 		workflowSteps.Steps = append(workflowSteps.Steps, step)
 	}
 	return workflowSteps
+}
+
+func convertWorkflowStepsFromRequest(steps []apisv1.CreateWorkflowStepRequest) *model.WorkflowSteps {
+	workflowSteps := new(model.WorkflowSteps)
+	for _, reqStep := range steps {
+		step := &model.WorkflowStep{
+			Name:         reqStep.Name,
+			WorkflowType: reqStep.WorkflowType,
+			Mode:         config.ParseWorkflowMode(reqStep.Mode),
+		}
+		componentNames := mergeWorkflowComponents(reqStep.Components, reqStep.Properties.Policies)
+		if len(componentNames) > 0 {
+			step.Properties = []model.Policies{{Policies: componentNames}}
+		}
+		for _, subReq := range reqStep.SubSteps {
+			subStep := &model.WorkflowSubStep{
+				Name:         subReq.Name,
+				WorkflowType: subReq.WorkflowType,
+			}
+			subComponents := mergeWorkflowComponents(subReq.Components, subReq.Properties.Policies)
+			if len(subComponents) > 0 {
+				subStep.Properties = []model.Policies{{Policies: subComponents}}
+			}
+			step.SubSteps = append(step.SubSteps, subStep)
+		}
+		workflowSteps.Steps = append(workflowSteps.Steps, step)
+	}
+	return workflowSteps
+}
+
+func mergeWorkflowComponents(explicit []string, policies []string) []string {
+	combined := append([]string{}, explicit...)
+	combined = append(combined, policies...)
+	return dedupeStrings(combined)
+}
+
+func dedupeStrings(values []string) []string {
+	if len(values) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(values))
+	var result []string
+	for _, v := range values {
+		if v == "" {
+			continue
+		}
+		if _, exists := seen[v]; exists {
+			continue
+		}
+		seen[v] = struct{}{}
+		result = append(result, v)
+	}
+	return result
 }
 
 // ListApplications list applications

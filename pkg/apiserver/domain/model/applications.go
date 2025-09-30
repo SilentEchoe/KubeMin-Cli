@@ -1,8 +1,8 @@
 package model
 
 import (
-    "KubeMin-Cli/pkg/apiserver/config"
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/config"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 func init() {

@@ -43,9 +43,9 @@ type restServer struct {
 	cfg            config.Config
 	dataStore      datastore.DataStore
 	cache          cache.ICache
-	KubeClient     *kubernetes.Clientset `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-	KubeConfig     *rest.Config          `inject:"kubeConfig"`
-	Queue          msg.Queue             `inject:"queue"`
+	KubeClient     kubernetes.Interface `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig     *rest.Config         `inject:"kubeConfig"`
+	Queue          msg.Queue            `inject:"queue"`
 	workersStarted bool
 	workersCancel  context.CancelFunc
 }
