@@ -35,7 +35,7 @@ func NewApplications(id, name, namespace, version, alias, project, description, 
 }
 
 func (a *Applications) PrimaryKey() string {
-	return a.Name
+	return a.ID
 }
 
 func (a *Applications) TableName() string {

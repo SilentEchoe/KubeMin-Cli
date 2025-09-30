@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 
 	"k8s.io/klog/v2"
 
@@ -36,6 +37,9 @@ func ApplicationById(ctx context.Context, store datastore.DataStore, Id string) 
 
 func CreateApplications(ctx context.Context, store datastore.DataStore, app *model.Applications) error {
 	if err := store.Add(ctx, app); err != nil {
+		if errors.Is(err, datastore.ErrRecordExist) {
+			return store.Put(ctx, app)
+		}
 		return err
 	}
 	return nil
