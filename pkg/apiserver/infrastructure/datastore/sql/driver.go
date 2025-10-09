@@ -172,6 +172,42 @@ func (m *Driver) Delete(ctx context.Context, entity datastore.Entity) error {
 	return nil
 }
 
+// DeleteByFilter deletes entities matching the provided index fields and filter options.
+func (m *Driver) DeleteByFilter(ctx context.Context, entity datastore.Entity, options *datastore.FilterOptions) error {
+	if entity == nil {
+		return datastore.ErrNilEntity
+	}
+	table := entity.TableName()
+	if table == "" {
+		return datastore.ErrTableNameEmpty
+	}
+
+	var exprs []clause.Expression
+	for k, v := range entity.Index() {
+		exprs = append(exprs, clause.Eq{
+			Column: strings.ToLower(k),
+			Value:  v,
+		})
+	}
+	if options != nil {
+		exprs = _applyFilterOptions(exprs, *options)
+	}
+	if len(exprs) == 0 {
+		return datastore.NewDBError(fmt.Errorf("delete by filter requires at least one condition"))
+	}
+
+	clauses := []clause.Expression{clause.Where{Exprs: exprs}}
+	target, err := datastore.NewEntity(entity)
+	if err != nil {
+		return err
+	}
+	if dbDelete := m.Client.WithContext(ctx).Table(table).Clauses(clauses...).Delete(target); dbDelete.Error != nil {
+		klog.Errorf("delete by filter failure %v", dbDelete.Error)
+		return datastore.NewDBError(dbDelete.Error)
+	}
+	return nil
+}
+
 // _toColumnName converts keys of the models to lowercase as the column name are in lowercase in the database
 func _toColumnName(columnName string) string {
 	return strings.ToLower(columnName)
@@ -203,7 +239,7 @@ func _applyFilterOptions(clauses []clause.Expression, filterOptions datastore.Fi
 	return clauses
 }
 
-// List list entity function
+// List entity function
 func (m *Driver) List(ctx context.Context, entity datastore.Entity, op *datastore.ListOptions) ([]datastore.Entity, error) {
 	if entity == nil {
 		return nil, datastore.ErrNilEntity

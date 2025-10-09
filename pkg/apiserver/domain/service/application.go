@@ -36,39 +36,45 @@ func NewApplicationService() ApplicationsService {
 }
 
 func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error) {
+	var application *model.Applications
+	var err error
+
 	if req.Version == "" {
 		req.Version = "1.0.0"
 	}
-	application := model.Applications{
-		ID:          utils.RandStringByNumLowercase(24),
-		Name:        req.Name,
-		Namespace:   req.NameSpace,
-		Alias:       req.Alias,
-		Project:     req.Project,
-		Version:     req.Version,
-		Description: req.Description,
-		Icon:        req.Icon,
+
+	if req.ID != "" {
+		application, err = repository.ApplicationById(ctx, c.Store, req.ID)
+		if err != nil {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		err = repository.DelComponentsByAppId(ctx, c.Store, req.ID)
+		if err != nil {
+			return nil, bcode.ErrComponentBuild
+		}
+
+		err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID)
+		if err != nil {
+			return nil, bcode.ErrComponentBuild
+		}
+
+	} else {
+		application = model.NewApplications(utils.RandStringByNumLowercase(24), req.Name, req.NameSpace, req.Version, req.Alias, req.Project, req.Description, req.Icon)
 	}
-	exist, err := repository.IsExist(ctx, c.Store, req.Name, req.Version)
-	if err != nil {
-		return nil, bcode.ErrApplicationExist
-	}
-	if exist {
-		return nil, bcode.ErrApplicationExist
-	}
+
 	if application.Namespace == "" {
 		application.Namespace = config.DefaultNamespace
 	}
 
-	if err := repository.CreateApplications(ctx, c.Store, &application); err != nil {
+	if err := repository.CreateApplications(ctx, c.Store, application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist
 		}
 		return nil, err
 	}
+
 	// create app component
 	for _, component := range req.Component {
-
 		if component.ComponentType == config.ServerJob || component.ComponentType == config.StoreJob {
 			if component.Image == "" {
 				return nil, bcode.ErrComponentNotImageSet
@@ -137,7 +143,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		klog.Errorf("Create workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
-	base := assembler.ConvertAppModelToBase(&application, workflow.ID)
+	base := assembler.ConvertAppModelToBase(application, workflow.ID)
 	return base, nil
 }
 

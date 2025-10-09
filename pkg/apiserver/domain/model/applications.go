@@ -10,20 +10,32 @@ func init() {
 }
 
 type Applications struct {
-	ID          string            `json:"id" gorm:"primaryKey"`
-	Name        string            `json:"name"`        //应用名称
-	Namespace   string            `json:"-"`           //命名空间，但是不对外暴露
-	Version     string            `json:"version"`     //版本，如果为空则默认为1.0.0
-	Alias       string            `json:"alias"`       //别名
-	Project     string            `json:"project"`     //项目
-	Description string            `json:"description"` //详情
-	Icon        string            `json:"icon"`        //图标
-	Labels      map[string]string `json:"labels,omitempty" gorm:"serializer:json"`
+	ID          string `json:"id" gorm:"primaryKey"`
+	Name        string `json:"name"`        //应用名称
+	Namespace   string `json:"-"`           //命名空间，但是不对外暴露
+	Version     string `json:"version"`     //版本，如果为空则默认为1.0.0
+	Alias       string `json:"alias"`       //别名
+	Project     string `json:"project"`     //项目
+	Description string `json:"description"` //详情
+	Icon        string `json:"icon"`        //图标
 	BaseModel
 }
 
+func NewApplications(id, name, namespace, version, alias, project, description, icon string) *Applications {
+	return &Applications{
+		ID:          id,
+		Name:        name,
+		Namespace:   namespace,
+		Version:     version,
+		Alias:       alias,
+		Project:     project,
+		Description: description,
+		Icon:        icon,
+	}
+}
+
 func (a *Applications) PrimaryKey() string {
-	return a.Name
+	return a.ID
 }
 
 func (a *Applications) TableName() string {
