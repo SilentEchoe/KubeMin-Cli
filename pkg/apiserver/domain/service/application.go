@@ -36,94 +36,88 @@ func NewApplicationService() ApplicationsService {
 }
 
 func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error) {
-	var application *model.Applications
-	var err error
-
 	if req.Version == "" {
 		req.Version = "1.0.0"
 	}
+
+	var (
+		application *model.Applications
+		err         error
+	)
 
 	if req.ID != "" {
 		application, err = repository.ApplicationById(ctx, c.Store, req.ID)
 		if err != nil {
 			return nil, bcode.ErrApplicationNotExist
 		}
-		err = repository.DelComponentsByAppId(ctx, c.Store, req.ID)
-		if err != nil {
+		application.Name = req.Name
+		application.Version = req.Version
+		application.Alias = req.Alias
+		application.Project = req.Project
+		application.Description = req.Description
+		application.Icon = req.Icon
+		if req.NameSpace != "" {
+			application.Namespace = req.NameSpace
+		}
+		if err = repository.DelComponentsByAppId(ctx, c.Store, req.ID); err != nil {
 			return nil, bcode.ErrComponentBuild
 		}
-
-		err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID)
-		if err != nil {
+		if err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID); err != nil {
 			return nil, bcode.ErrComponentBuild
 		}
-
 	} else {
-		application = model.NewApplications(utils.RandStringByNumLowercase(24), req.Name, req.NameSpace, req.Version, req.Alias, req.Project, req.Description, req.Icon)
+		application = model.NewApplications(
+			utils.RandStringByNumLowercase(24),
+			req.Name,
+			req.NameSpace,
+			req.Version,
+			req.Alias,
+			req.Project,
+			req.Description,
+			req.Icon,
+		)
 	}
-
 	if application.Namespace == "" {
 		application.Namespace = config.DefaultNamespace
 	}
-
-	if err := repository.CreateApplications(ctx, c.Store, application); err != nil {
+	if err = repository.CreateApplications(ctx, c.Store, application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist
 		}
 		return nil, err
 	}
 
-	// create app component
-	for _, component := range req.Component {
-		if component.ComponentType == config.ServerJob || component.ComponentType == config.StoreJob {
-			if component.Image == "" {
-				return nil, bcode.ErrComponentNotImageSet
-			}
-		}
+	components, err := prepareComponents(application.ID, application.Namespace, req.Component)
+	if err != nil {
+		return nil, err
+	}
 
-		component.NameSpace = application.Namespace
-		nComponent := ConvertComponent(&component, application.ID)
-		properties, err := model.NewJSONStructByStruct(component.Properties)
-		if err != nil {
-			klog.Errorf("new properties failure,%s", err.Error())
-			return nil, bcode.ErrInvalidProperties
-		}
-		nComponent.Properties = properties
-
-		traits, err := model.NewJSONStructByStruct(component.Traits)
-		if err != nil {
-			klog.Errorf("new trait failure,%s", err.Error())
-			return nil, bcode.ErrInvalidProperties
-		}
-
-		nComponent.Traits = traits
-		err = repository.CreateComponents(ctx, c.Store, nComponent)
-		if err != nil {
+	for _, component := range components {
+		if err = repository.CreateComponents(ctx, c.Store, component); err != nil {
 			klog.Errorf("Create Components err:%s", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}
 
-	//If the workflow is not defined, it will automatically deploy according to the sequence of components and operation characteristics arrays
-	//and use the current cluster where the PaaS service is located as the target cluster.
-	workflowName := ""
-	workflowAlias := fmt.Sprintf("%s-%s", req.Alias, "workflow")
-	var workflowStep *model.JSONStruct
+	workflowAliasBase := req.Alias
+	if workflowAliasBase == "" {
+		workflowAliasBase = req.Name
+	}
+	workflowAlias := fmt.Sprintf("%s-%s", workflowAliasBase, "workflow")
+	workflowName := fmt.Sprintf("%s-%s", req.Name, "workflow")
+	var workflowBody interface{}
 	if len(req.WorkflowSteps) == 0 {
-		workflowName = fmt.Sprintf("%s-%s", req.Name, "workflow")
-		step := ConvertWorkflowStepByComponent(req.Component)
-		workflowStep, err = model.NewJSONStructByStruct(step)
-		if err != nil {
-			return nil, bcode.ErrCreateWorkflow
-		}
+		workflowBody = convertWorkflowStepByComponent(req.Component)
 	} else {
 		workflowName = fmt.Sprintf("%s-%s", req.Name, utils.RandStringByNumLowercase(16))
-		workflowSteps := convertWorkflowStepsFromRequest(req.WorkflowSteps)
-		workflowStep, err = model.NewJSONStructByStruct(workflowSteps)
-		if err != nil {
-			return nil, bcode.ErrCreateWorkflow
-		}
+		workflowBody = convertWorkflowStepsFromRequest(req.WorkflowSteps)
 	}
+
+	workflowStep, stepErr := model.NewJSONStructByStruct(workflowBody)
+	if stepErr != nil {
+		return nil, bcode.ErrCreateWorkflow
+	}
+
 	workflow := &model.Workflow{
 		ID:           utils.RandStringByNumLowercase(24),
 		Name:         workflowName,
@@ -138,16 +132,45 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		Steps:        workflowStep,
 	}
 
-	err = repository.CreateWorkflow(ctx, c.Store, workflow)
-	if err != nil {
+	if err = repository.CreateWorkflow(ctx, c.Store, workflow); err != nil {
 		klog.Errorf("Create workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
+
 	base := assembler.ConvertAppModelToBase(application, workflow.ID)
 	return base, nil
 }
 
-func ConvertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) *model.WorkflowSteps {
+func prepareComponents(appID, namespace string, reqComponents []apisv1.CreateComponentRequest) ([]*model.ApplicationComponent, error) {
+	components := make([]*model.ApplicationComponent, 0, len(reqComponents))
+	for _, reqComponent := range reqComponents {
+		if (reqComponent.ComponentType == config.ServerJob || reqComponent.ComponentType == config.StoreJob) && reqComponent.Image == "" {
+			return nil, bcode.ErrComponentNotImageSet
+		}
+
+		reqComponent.NameSpace = namespace
+		component := ConvertComponent(&reqComponent, appID)
+
+		properties, err := model.NewJSONStructByStruct(reqComponent.Properties)
+		if err != nil {
+			klog.Errorf("new properties failure,%s", err.Error())
+			return nil, bcode.ErrInvalidProperties
+		}
+		component.Properties = properties
+
+		traits, err := model.NewJSONStructByStruct(reqComponent.Traits)
+		if err != nil {
+			klog.Errorf("new trait failure,%s", err.Error())
+			return nil, bcode.ErrInvalidProperties
+		}
+		component.Traits = traits
+
+		components = append(components, component)
+	}
+	return components, nil
+}
+
+func convertWorkflowStepByComponent(components []apisv1.CreateComponentRequest) *model.WorkflowSteps {
 	workflowSteps := new(model.WorkflowSteps)
 	for _, component := range components {
 		step := &model.WorkflowStep{
