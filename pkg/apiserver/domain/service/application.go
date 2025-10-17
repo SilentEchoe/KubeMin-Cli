@@ -46,24 +46,9 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	)
 
 	if req.ID != "" {
-		application, err = repository.ApplicationByID(ctx, c.Store, req.ID)
+		application, err = refreshExistingApplication(ctx, c.Store, req)
 		if err != nil {
-			return nil, bcode.ErrApplicationNotExist
-		}
-		application.Name = req.Name
-		application.Version = req.Version
-		application.Alias = req.Alias
-		application.Project = req.Project
-		application.Description = req.Description
-		application.Icon = req.Icon
-		if req.NameSpace != "" {
-			application.Namespace = req.NameSpace
-		}
-		if err = repository.DelComponentsByAppID(ctx, c.Store, req.ID); err != nil {
-			return nil, bcode.ErrComponentBuild
-		}
-		if err = repository.DelWorkflowsByAppID(ctx, c.Store, req.ID); err != nil {
-			return nil, bcode.ErrWorkflowBuild
+			return nil, err
 		}
 	} else {
 		application = model.NewApplications(
@@ -140,6 +125,31 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 
 	base := assembler.ConvertAppModelToBase(application, workflow.ID)
 	return base, nil
+}
+
+func refreshExistingApplication(ctx context.Context, store datastore.DataStore, req apisv1.CreateApplicationsRequest) (*model.Applications, error) {
+	application, err := repository.ApplicationByID(ctx, store, req.ID)
+	if err != nil {
+		return nil, bcode.ErrApplicationNotExist
+	}
+
+	application.Name = req.Name
+	application.Version = req.Version
+	application.Alias = req.Alias
+	application.Project = req.Project
+	application.Description = req.Description
+	application.Icon = req.Icon
+	if req.NameSpace != "" {
+		application.Namespace = req.NameSpace
+	}
+
+	if err = repository.DelComponentsByAppID(ctx, store, req.ID); err != nil {
+		return nil, bcode.ErrComponentBuild
+	}
+	if err = repository.DelWorkflowsByAppID(ctx, store, req.ID); err != nil {
+		return nil, bcode.ErrWorkflowBuild
+	}
+	return application, nil
 }
 
 func prepareComponents(appID, namespace string, reqComponents []apisv1.CreateComponentRequest) ([]*model.ApplicationComponent, error) {
