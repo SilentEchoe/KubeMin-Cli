@@ -1,4 +1,3 @@
-
 package job
 
 import (
@@ -14,7 +13,7 @@ func TestGenerateSecret(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "my-secret",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        1,
 		}
 		properties := &model.Properties{
@@ -26,7 +25,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "my-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-my-secret", config.LabelAppId: "test-app", config.LabelComponentId: "1"},
+			Labels:    map[string]string{config.LabelCli: "test-app-my-secret", config.LabelAppID: "test-app", config.LabelComponentID: "1"},
 			Data: map[string]string{
 				"username": "admin",
 				"password": "password123",
@@ -43,7 +42,7 @@ func TestGenerateSecret(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "my-secret-from-url",
 			Namespace: "kube-system",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        2,
 		}
 		properties := &model.Properties{
@@ -70,13 +69,13 @@ func TestGenerateSecret(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "nil-props-secret",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        3,
 		}
 		expected := &model.SecretInput{
 			Name:      "nil-props-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-secret", config.LabelAppId: "test-app", config.LabelComponentId: "3"},
+			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-secret", config.LabelAppID: "test-app", config.LabelComponentID: "3"},
 			Data:      nil,
 		}
 		actual := GenerateSecret(component, nil)
@@ -90,7 +89,7 @@ func TestGenerateSecret(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "empty-secret",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        4,
 		}
 		properties := &model.Properties{
@@ -99,7 +98,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "empty-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-empty-secret", config.LabelAppId: "test-app", config.LabelComponentId: "4"},
+			Labels:    map[string]string{config.LabelCli: "test-app-empty-secret", config.LabelAppID: "test-app", config.LabelComponentID: "4"},
 			Data:      map[string]string{},
 		}
 		actual := GenerateSecret(component, properties)
@@ -112,7 +111,7 @@ func TestGenerateSecret(t *testing.T) {
 	t.Run("NoNamespace", func(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:  "no-namespace-secret",
-			AppId: "test-app",
+			AppID: "test-app",
 			ID:    5,
 		}
 		properties := &model.Properties{
@@ -121,7 +120,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "no-namespace-secret",
 			Namespace: config.DefaultNamespace,
-			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-secret", config.LabelAppId: "test-app", config.LabelComponentId: "5"},
+			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-secret", config.LabelAppID: "test-app", config.LabelComponentID: "5"},
 			Data:      map[string]string{"key": "value"},
 		}
 		actual := GenerateSecret(component, properties)

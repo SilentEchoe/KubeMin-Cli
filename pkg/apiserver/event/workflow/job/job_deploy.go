@@ -75,9 +75,9 @@ func (c *DeployJobCtl) Clean(ctx context.Context) {
 func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
 	jobInfo := model.JobInfo{
 		Type:        c.job.JobType,
-		WorkflowId:  c.job.WorkflowId,
-		ProductId:   c.job.ProjectId,
-		AppId:       c.job.AppId,
+		WorkflowID:  c.job.WorkflowID,
+		ProductID:   c.job.ProjectID,
+		AppID:       c.job.AppID,
 		Status:      string(c.job.Status),
 		StartTime:   c.job.StartTime,
 		EndTime:     c.job.EndTime,
@@ -249,8 +249,8 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	serviceName := component.Name
 	labels := make(map[string]string)
-	labels[config.LabelCli] = fmt.Sprintf("%s-%s", component.AppId, component.Name)
-	labels[config.LabelAppId] = component.AppId
+	labels[config.LabelCli] = fmt.Sprintf("%s-%s", component.AppID, component.Name)
+	labels[config.LabelAppID] = component.AppID
 
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {

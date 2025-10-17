@@ -44,16 +44,16 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 
 	if req.ID != "" {
-		application, err = repository.ApplicationById(ctx, c.Store, req.ID)
+		application, err = repository.ApplicationByID(ctx, c.Store, req.ID)
 		if err != nil {
 			return nil, bcode.ErrApplicationNotExist
 		}
-		err = repository.DelComponentsByAppId(ctx, c.Store, req.ID)
+		err = repository.DelComponentsByAppID(ctx, c.Store, req.ID)
 		if err != nil {
 			return nil, bcode.ErrComponentBuild
 		}
 
-		err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID)
+		err = repository.DelWorkflowsByAppID(ctx, c.Store, req.ID)
 		if err != nil {
 			return nil, bcode.ErrComponentBuild
 		}
@@ -131,7 +131,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		AppID:        application.ID,
 		Alias:        workflowAlias,
 		Disabled:     false,
-		ProjectId:    application.Project,
+		ProjectID:    application.Project,
 		Description:  application.Description,
 		WorkflowType: config.WorkflowTaskTypeWorkflow,
 		Status:       config.StatusCreated,
@@ -229,7 +229,7 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apis
 	}
 	var list []*apisv1.ApplicationBase
 	for _, app := range apps {
-		// 这里应该是个WorkflowIds
+		// 这里应该是个WorkflowIDs
 		appBase := assembler.ConvertAppModelToBase(app, "")
 		list = append(list, appBase)
 	}

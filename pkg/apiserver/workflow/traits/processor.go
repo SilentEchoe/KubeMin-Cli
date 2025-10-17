@@ -1,10 +1,10 @@
 package traits
 
 import (
-    "encoding/json"
-    "fmt"
-    "reflect"
-    "strings"
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strings"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -12,9 +12,9 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-    "KubeMin-Cli/pkg/apiserver/config"
-    "KubeMin-Cli/pkg/apiserver/domain/model"
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 // TraitContext provides the inputs a Processor needs to render its changes.

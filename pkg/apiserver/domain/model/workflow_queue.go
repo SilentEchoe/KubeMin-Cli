@@ -10,10 +10,10 @@ func init() {
 
 type WorkflowQueue struct {
 	TaskID              string                  `gorm:"primaryKey;type:varchar(255)" json:"task_id"` //任务ID，自生成
-	ProjectId           string                  `json:"projectId"`                                   //所属项目
+	ProjectID           string                  `json:"projectId"`                                   //所属项目
 	WorkflowName        string                  `json:"workflow_name"`                               //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
-	WorkflowId          string                  `gorm:"column:workflowId" json:"workflow_id"`
+	WorkflowID          string                  `gorm:"column:workflowId" json:"workflow_id"`
 	WorkflowDisplayName string                  `json:"workflow_display_name"`                 //工作流显示名称
 	Status              config.Status           `gorm:"column:status" json:"status,omitempty"` //当前状态
 	TaskCreator         string                  `json:"task_creator,omitempty"`                //任务创建者

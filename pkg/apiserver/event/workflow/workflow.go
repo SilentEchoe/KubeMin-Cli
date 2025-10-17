@@ -160,7 +160,7 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 			if !claimed {
 				continue
 			}
-			payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowId, ProjectID: task.ProjectId, AppID: task.AppID}
+			payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowID, ProjectID: task.ProjectID, AppID: task.AppID}
 			b, err := MarshalTaskDispatch(payload)
 			if err != nil {
 				klog.Errorf("marshal task dispatch failed: %v", err)
@@ -215,7 +215,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 					_ = w.Queue.Ack(ctx, group, m.ID)
 					continue
 				}
-				task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+				task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
 				if err != nil {
 					klog.Errorf("load task %s failed: %v", td.TaskID, err)
 					_ = w.Queue.Ack(ctx, group, m.ID)
@@ -242,7 +242,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 					_ = w.Queue.Ack(ctx, group, m.ID)
 					continue
 				}
-				task, err := repository.TaskById(ctx, w.Store, td.TaskID)
+				task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
 				if err != nil {
 					klog.Errorf("load task %s failed: %v", td.TaskID, err)
 					_ = w.Queue.Ack(ctx, group, m.ID)
@@ -385,9 +385,9 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []StepExecution {
 	logger := klog.FromContext(ctx)
-	workflow := model.Workflow{ID: task.WorkflowId}
+	workflow := model.Workflow{ID: task.WorkflowID}
 	if err := ds.Get(ctx, &workflow); err != nil {
-		logger.Error(err, "Failed to get workflow for generating job tasks", "workflowID", task.WorkflowId)
+		logger.Error(err, "Failed to get workflow for generating job tasks", "workflowID", task.WorkflowID)
 		return nil
 	}
 
@@ -403,7 +403,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 		return nil
 	}
 
-	componentEntities, err := ds.List(ctx, &model.ApplicationComponent{AppId: task.AppID}, &datastore.ListOptions{})
+	componentEntities, err := ds.List(ctx, &model.ApplicationComponent{AppID: task.AppID}, &datastore.ListOptions{})
 	if err != nil {
 		logger.Error(err, "Failed to list application components", "appID", task.AppID)
 		return nil
@@ -493,13 +493,13 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	return executions
 }
 
-func NewJobTask(name, namespace, workflowId, projectId, appId string) *model.JobTask {
+func NewJobTask(name, namespace, workflowID, projectID, appID string) *model.JobTask {
 	return &model.JobTask{
 		Name:       name,
 		Namespace:  namespace,
-		WorkflowId: workflowId,
-		ProjectId:  projectId,
-		AppId:      appId,
+		WorkflowID: workflowID,
+		ProjectID:  projectID,
+		AppID:      appID,
 		Status:     config.StatusQueued,
 		Timeout:    60,
 	}
@@ -554,8 +554,8 @@ func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model
 			pvcJob := NewJobTask(
 				fmt.Sprintf("%s-pvc-%s", component.Name, pvc.Name),
 				component.Namespace,
-				task.WorkflowId,
-				task.ProjectId,
+				task.WorkflowID,
+				task.ProjectID,
 				task.AppID,
 			)
 			pvcJob.JobType = string(config.JobDeployPVC)
@@ -592,13 +592,13 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 
 	switch component.ComponentType {
 	case config.ServerJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploy)
 		jobTask.JobInfo = job.GenerateWebService(component, &properties)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
 
 	case config.StoreJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployStore)
 		storeJobs := job.GenerateStoreService(component)
 		if storeJobs != nil {
@@ -614,20 +614,20 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		}
 
 	case config.ConfJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
 
 	case config.SecretJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowId, task.ProjectId, task.AppID)
+		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
 	}
 
 	if len(properties.Ports) > 0 {
-		svcJob := NewJobTask(component.Name, "default", task.WorkflowId, task.ProjectId, task.AppID)
+		svcJob := NewJobTask(component.Name, "default", task.WorkflowID, task.ProjectID, task.AppID)
 		svcJob.JobType = string(config.JobDeployService)
 		svcJob.JobInfo = job.GenerateService(component.Name, "default", nil, properties.Ports)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)

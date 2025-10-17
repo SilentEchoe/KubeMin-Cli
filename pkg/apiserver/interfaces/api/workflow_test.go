@@ -79,8 +79,8 @@ func TestCancelWorkflowEndpoint(t *testing.T) {
 		t.Fatalf("decode response: %v", err)
 	}
 
-	if payload.TaskId != "demo-task" {
-		t.Fatalf("expected taskId demo-task, got %s", payload.TaskId)
+	if payload.TaskID != "demo-task" {
+		t.Fatalf("expected taskId demo-task, got %s", payload.TaskID)
 	}
 	if payload.Status != string(config.StatusCancelled) {
 		t.Fatalf("expected status cancelled, got %s", payload.Status)

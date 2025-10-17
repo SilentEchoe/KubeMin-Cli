@@ -13,7 +13,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "my-configmap",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        1,
 		}
 		properties := &model.Properties{
@@ -25,7 +25,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "my-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-my-configmap", config.LabelAppId: "test-app", config.LabelComponentId: "1"},
+			Labels:    map[string]string{config.LabelCli: "test-app-my-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "1"},
 			Data: map[string]string{
 				"key1": "value1",
 				"key2": "value2",
@@ -42,7 +42,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "my-configmap-from-url",
 			Namespace: "kube-system",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        2,
 		}
 		properties := &model.Properties{
@@ -68,13 +68,13 @@ func TestGenerateConfigMap(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "nil-props-configmap",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        3,
 		}
 		expected := &model.ConfigMapInput{
 			Name:      "nil-props-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-configmap", config.LabelAppId: "test-app", config.LabelComponentId: "3"},
+			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "3"},
 			Data:      nil,
 		}
 		actual := GenerateConfigMap(component, nil)
@@ -88,7 +88,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:      "empty-configmap",
 			Namespace: "default",
-			AppId:     "test-app",
+			AppID:     "test-app",
 			ID:        4,
 		}
 		properties := &model.Properties{
@@ -97,7 +97,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "empty-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-empty-configmap", config.LabelAppId: "test-app", config.LabelComponentId: "4"},
+			Labels:    map[string]string{config.LabelCli: "test-app-empty-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "4"},
 			Data:      map[string]string{},
 		}
 		actual := GenerateConfigMap(component, properties)
@@ -110,7 +110,7 @@ func TestGenerateConfigMap(t *testing.T) {
 	t.Run("NoNamespace", func(t *testing.T) {
 		component := &model.ApplicationComponent{
 			Name:  "no-namespace-configmap",
-			AppId: "test-app",
+			AppID: "test-app",
 			ID:    5,
 		}
 		properties := &model.Properties{
@@ -119,7 +119,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "no-namespace-configmap",
 			Namespace: config.DefaultNamespace,
-			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-configmap", config.LabelAppId: "test-app", config.LabelComponentId: "5"},
+			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "5"},
 			Data:      map[string]string{"key": "value"},
 		}
 		actual := GenerateConfigMap(component, properties)

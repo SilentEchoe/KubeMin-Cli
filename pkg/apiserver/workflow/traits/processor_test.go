@@ -23,23 +23,23 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 					Env:     map[string]string{"MYSQL_DATABASE": "test"},
 				},
 				Traits: model.Traits{
-						Storage: []model.StorageTrait{
-							{
-								Name:      "conf",
-								Type:      "config",
-								MountPath: "/mnt/conf.d",
-							},
-							{
-								Name:      "config-map",
-								Type:      "config",
-								MountPath: "/mnt/config-map",
-							},
-							{
-								Name:      "init-scripts",
-								Type:      "config",
-								MountPath: "/docker-entrypoint-initdb.d",
-							},
+					Storage: []model.StorageTrait{
+						{
+							Name:      "conf",
+							Type:      "config",
+							MountPath: "/mnt/conf.d",
 						},
+						{
+							Name:      "config-map",
+							Type:      "config",
+							MountPath: "/mnt/config-map",
+						},
+						{
+							Name:      "init-scripts",
+							Type:      "config",
+							MountPath: "/docker-entrypoint-initdb.d",
+						},
+					},
 				},
 			},
 			{
@@ -49,19 +49,19 @@ func TestApplyTraits_InitTrait_WithNestedTraits(t *testing.T) {
 					Command: []string{"bash", "-c"},
 				},
 				Traits: model.Traits{
-						Storage: []model.StorageTrait{
-							{ //使用稳定存储进行挂载
-								Name:      "data",
-								Type:      "persistent",
-								MountPath: "/var/lib/mysql",
-								SubPath:   "mysql",
-							},
-							{
-								Name:      "conf",
-								Type:      "config",
-								MountPath: "/etc/mysql/conf.d",
-							},
+					Storage: []model.StorageTrait{
+						{ //使用稳定存储进行挂载
+							Name:      "data",
+							Type:      "persistent",
+							MountPath: "/var/lib/mysql",
+							SubPath:   "mysql",
 						},
+						{
+							Name:      "conf",
+							Type:      "config",
+							MountPath: "/etc/mysql/conf.d",
+						},
+					},
 				},
 			},
 		},

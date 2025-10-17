@@ -13,7 +13,7 @@ type Workflow struct {
 	Namespace    string                  `json:"namespace"`
 	Alias        string                  `json:"alias"`    //别名
 	Disabled     bool                    `json:"disabled"` //是否关闭，创建时默认为false
-	ProjectId    string                  `json:"project_id"`
+	ProjectID    string                  `json:"project_id"`
 	AppID        string                  `gorm:"column:appid" json:"app_id"`
 	UserID       string                  `json:"user_id"`
 	Description  string                  `json:"description"`

@@ -13,9 +13,9 @@ func init() {
 type JobInfo struct {
 	ID          int    `json:"id" gorm:"primaryKey"`
 	Type        string `json:"type"`
-	WorkflowId  string `json:"workflow_id"`
-	ProductId   string `json:"product_Id"`
-	AppId       string `json:"app_id"`
+	WorkflowID  string `json:"workflow_id"`
+	ProductID   string `json:"product_Id"`
+	AppID       string `json:"app_id"`
 	Status      string `bson:"status" json:"status"`
 	StartTime   int64  `bson:"start_time" json:"start_time"`
 	EndTime     int64  `bson:"end_time" json:"end_time"`
@@ -31,9 +31,9 @@ type JobInfo struct {
 type JobTask struct {
 	Name       string `json:"name"`
 	Namespace  string `json:"namespace"`
-	WorkflowId string `json:"workflow_id"`
-	ProjectId  string `json:"project_id"`
-	AppId      string `json:"app_id"`
+	WorkflowID string `json:"workflow_id"`
+	ProjectID  string `json:"project_id"`
+	AppID      string `json:"app_id"`
 	JobInfo    interface{}
 	JobType    string
 	Status     config.Status

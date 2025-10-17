@@ -24,11 +24,11 @@ import (
 type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
-	ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error)
+	ExecWorkflowTask(ctx context.Context, workflowID string) (*apis.ExecWorkflowResponse, error)
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
 	UpdateTask(ctx context.Context, queue *model.WorkflowQueue) bool
 	TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
-	CancelWorkflowTask(ctx context.Context, userName, workId, reason string) error
+	CancelWorkflowTask(ctx context.Context, userName, taskID, reason string) error
 	MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
 }
 
@@ -97,7 +97,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		}
 	}
 	return &apis.CreateWorkflowResponse{
-		WorkflowId: workflow.ID,
+		WorkflowID: workflow.ID,
 	}, nil
 }
 
@@ -107,7 +107,7 @@ func ConvertWorkflow(req *apis.CreateWorkflowRequest) *model.Workflow {
 		Name:        strings.ToLower(req.Name),
 		Alias:       req.Alias,
 		Disabled:    true,
-		ProjectId:   strings.ToLower(req.Project),
+		ProjectID:   strings.ToLower(req.Project),
 		Description: req.Description,
 	}
 }
@@ -119,7 +119,7 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 
 	return &model.ApplicationComponent{
 		Name:          req.Name,
-		AppId:         appID,
+		AppID:         appID,
 		Namespace:     req.NameSpace,
 		Image:         req.Image,
 		Replicas:      req.Replicas,
@@ -128,9 +128,9 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 }
 
 // ExecWorkflowTask 执行工作流的任务
-func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId string) (*apis.ExecWorkflowResponse, error) {
+func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowID string) (*apis.ExecWorkflowResponse, error) {
 	//查询该工作流是否存在
-	workflow, err := repository.WorkflowById(ctx, w.Store, workflowId)
+	workflow, err := repository.WorkflowByID(ctx, w.Store, workflowID)
 	if err != nil {
 		return nil, err
 	}
@@ -142,8 +142,8 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	workflowTask := &model.WorkflowQueue{
 		TaskID:              utils.RandStringByNumLowercase(24),
 		AppID:               workflow.AppID,
-		WorkflowId:          workflowId,
-		ProjectId:           workflow.ProjectId,
+		WorkflowID:          workflowID,
+		ProjectID:           workflow.ProjectID,
 		WorkflowName:        workflow.Name,
 		WorkflowDisplayName: workflow.Alias,
 		Type:                workflow.WorkflowType,
@@ -156,7 +156,7 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowId s
 	}
 
 	return &apis.ExecWorkflowResponse{
-		TaskId: workflowTask.TaskID,
+		TaskID: workflowTask.TaskID,
 	}, nil
 }
 
@@ -195,8 +195,8 @@ func (w *workflowServiceImpl) TaskRunning(ctx context.Context) ([]*model.Workflo
 	return list, err
 }
 
-func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, taskId, reason string) error {
-	task, err := repository.TaskById(ctx, w.Store, taskId)
+func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, taskID, reason string) error {
+	task, err := repository.TaskByID(ctx, w.Store, taskID)
 	if err != nil {
 		return err
 	}
@@ -211,7 +211,7 @@ func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, 
 	if reason == "" {
 		reason = fmt.Sprintf("cancelled by %s", userName)
 	}
-	if err := signal.Cancel(ctx, taskId, reason); err != nil {
+	if err := signal.Cancel(ctx, taskID, reason); err != nil {
 		return err
 	}
 	return nil

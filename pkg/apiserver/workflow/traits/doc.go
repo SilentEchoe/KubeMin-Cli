@@ -10,5 +10,3 @@
 //   - Nested traits (e.g., on sidecar/init) are recursively applied with exclusions to avoid loops.
 //   - Aggregation merges results and de-duplicates volumes/objects while allowing "last-wins" for probes/resources.
 package traits
-
-

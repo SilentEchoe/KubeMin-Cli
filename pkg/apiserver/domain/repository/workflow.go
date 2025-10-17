@@ -11,9 +11,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
-func WorkflowById(ctx context.Context, store datastore.DataStore, workflowId string) (*model.Workflow, error) {
+func WorkflowByID(ctx context.Context, store datastore.DataStore, workflowID string) (*model.Workflow, error) {
 	var workflow = &model.Workflow{
-		ID: workflowId,
+		ID: workflowID,
 	}
 	err := store.Get(ctx, workflow)
 	if err != nil {
@@ -39,8 +39,8 @@ func DelWorkflow(ctx context.Context, store datastore.DataStore, workflow *model
 	return nil
 }
 
-func DelWorkflowsByAppId(ctx context.Context, store datastore.DataStore, appId string) error {
-	workflows, err := FindWorkflowsByAppId(ctx, store, appId)
+func DelWorkflowsByAppID(ctx context.Context, store datastore.DataStore, appID string) error {
+	workflows, err := FindWorkflowsByAppID(ctx, store, appID)
 	if err != nil {
 		return err
 	}
@@ -58,8 +58,8 @@ func DelWorkflowsByAppId(ctx context.Context, store datastore.DataStore, appId s
 	return nil
 }
 
-func FindWorkflowsByAppId(ctx context.Context, store datastore.DataStore, appId string) ([]*model.Workflow, error) {
-	entities, err := store.List(ctx, &model.Workflow{AppID: appId}, &datastore.ListOptions{})
+func FindWorkflowsByAppID(ctx context.Context, store datastore.DataStore, appID string) ([]*model.Workflow, error) {
+	entities, err := store.List(ctx, &model.Workflow{AppID: appID}, &datastore.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -83,8 +83,8 @@ func CreateComponents(ctx context.Context, store datastore.DataStore, workflow *
 	return nil
 }
 
-func DelComponentsByAppId(ctx context.Context, store datastore.DataStore, appId string) error {
-	components, err := FindComponentsByAppId(ctx, store, appId)
+func DelComponentsByAppID(ctx context.Context, store datastore.DataStore, appID string) error {
+	components, err := FindComponentsByAppID(ctx, store, appID)
 	if err != nil {
 		return err
 	}
@@ -102,8 +102,8 @@ func DelComponentsByAppId(ctx context.Context, store datastore.DataStore, appId 
 	return nil
 }
 
-func FindComponentsByAppId(ctx context.Context, store datastore.DataStore, appId string) ([]*model.ApplicationComponent, error) {
-	entities, err := store.List(ctx, &model.ApplicationComponent{AppId: appId}, &datastore.ListOptions{})
+func FindComponentsByAppID(ctx context.Context, store datastore.DataStore, appID string) ([]*model.ApplicationComponent, error) {
+	entities, err := store.List(ctx, &model.ApplicationComponent{AppID: appID}, &datastore.ListOptions{})
 	if err != nil {
 		return nil, err
 	}
@@ -177,9 +177,9 @@ func TaskRunning(ctx context.Context, store datastore.DataStore) (list []*model.
 	return
 }
 
-func TaskById(ctx context.Context, store datastore.DataStore, taskId string) (*model.WorkflowQueue, error) {
+func TaskByID(ctx context.Context, store datastore.DataStore, taskID string) (*model.WorkflowQueue, error) {
 	var task = &model.WorkflowQueue{
-		TaskID: taskId,
+		TaskID: taskID,
 	}
 	err := store.Get(ctx, task)
 	if err != nil {

@@ -14,7 +14,7 @@ import (
 // LintWorkflow 验证工作流是否符合标准
 func LintWorkflow(workflow *model.Workflow) error {
 	workflow.Name = strings.ToLower(workflow.Name)
-	if workflow.ProjectId == "" {
+	if workflow.ProjectID == "" {
 		err := fmt.Errorf("project should not be empty")
 		klog.Errorf("%v", err)
 		return err

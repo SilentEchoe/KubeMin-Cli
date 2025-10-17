@@ -12,8 +12,8 @@ const (
 
 const (
 	LabelCli         = "kube-min-cli"
-	LabelAppId       = "kube-min-cli-appId"
-	LabelComponentId = "kube-min-cli-componentId"
+	LabelAppID       = "kube-min-cli-appId"
+	LabelComponentID = "kube-min-cli-componentId"
 	LabelStorageRole = "storage.kubemin.cli/pvc-role"
 )
 

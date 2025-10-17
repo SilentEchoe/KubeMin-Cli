@@ -21,7 +21,7 @@ type ApplicationBase struct {
 	CreateTime  time.Time `json:"createTime"`
 	UpdateTime  time.Time `json:"updateTime"`
 	Icon        string    `json:"icon"`
-	WorkflowId  string    `json:"workflow_id"`
+	WorkflowID  string    `json:"workflow_id"`
 }
 
 // ProjectBase project base model
@@ -157,24 +157,24 @@ type WorkflowPolicies struct {
 }
 
 type CreateWorkflowResponse struct {
-	WorkflowId string `json:"workflowId"`
+	WorkflowID string `json:"workflowId"`
 }
 
 type ExecWorkflowRequest struct {
-	WorkflowId string `json:"workflowId" validate:"checkname"`
+	WorkflowID string `json:"workflowId" validate:"checkname"`
 }
 
 type ExecWorkflowResponse struct {
-	TaskId string `json:"taskId"`
+	TaskID string `json:"taskId"`
 }
 
 type CancelWorkflowRequest struct {
-	TaskId string `json:"taskId" validate:"required"`
+	TaskID string `json:"taskId" validate:"required"`
 	User   string `json:"user,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
 
 type CancelWorkflowResponse struct {
-	TaskId string `json:"taskId"`
+	TaskID string `json:"taskId"`
 	Status string `json:"status"`
 }

@@ -74,9 +74,9 @@ func (c *DeploySecretJobCtl) Clean(ctx context.Context) {
 func (c *DeploySecretJobCtl) SaveInfo(ctx context.Context) error {
 	jobInfo := model.JobInfo{
 		Type:        c.job.JobType,
-		WorkflowId:  c.job.WorkflowId,
-		ProductId:   c.job.ProjectId,
-		AppId:       c.job.AppId,
+		WorkflowID:  c.job.WorkflowID,
+		ProductID:   c.job.ProjectID,
+		AppID:       c.job.AppID,
 		Status:      string(c.job.Status),
 		StartTime:   c.job.StartTime,
 		EndTime:     c.job.EndTime,

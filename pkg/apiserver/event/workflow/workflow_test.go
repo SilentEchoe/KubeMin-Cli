@@ -82,7 +82,7 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 
 	serverComponent := &model.ApplicationComponent{
 		Name:          "server",
-		AppId:         "app-1",
+		AppID:         "app-1",
 		Namespace:     "default",
 		Image:         "nginx:1.21",
 		Replicas:      1,
@@ -92,7 +92,7 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 
 	configComponent := &model.ApplicationComponent{
 		Name:          "config",
-		AppId:         "app-1",
+		AppID:         "app-1",
 		Namespace:     "default",
 		ComponentType: config.ConfJob,
 		Properties:    configProps,
@@ -118,9 +118,9 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 	}
 
 	task := &model.WorkflowQueue{
-		WorkflowId:   "wf-1",
+		WorkflowID:   "wf-1",
 		AppID:        "app-1",
-		ProjectId:    "proj-1",
+		ProjectID:    "proj-1",
 		WorkflowName: "test-workflow",
 	}
 
@@ -153,7 +153,7 @@ func TestGenerateJobTasksParallel(t *testing.T) {
 
 	frontend := &model.ApplicationComponent{
 		Name:          "frontend",
-		AppId:         "app-1",
+		AppID:         "app-1",
 		Namespace:     "default",
 		Image:         "nginx:1.21",
 		Replicas:      1,
@@ -163,7 +163,7 @@ func TestGenerateJobTasksParallel(t *testing.T) {
 
 	backend := &model.ApplicationComponent{
 		Name:          "backend",
-		AppId:         "app-1",
+		AppID:         "app-1",
 		Namespace:     "default",
 		Image:         "nginx:1.21",
 		Replicas:      1,
@@ -194,9 +194,9 @@ func TestGenerateJobTasksParallel(t *testing.T) {
 	}
 
 	task := &model.WorkflowQueue{
-		WorkflowId:   "wf-2",
+		WorkflowID:   "wf-2",
 		AppID:        "app-1",
-		ProjectId:    "proj-1",
+		ProjectID:    "proj-1",
 		WorkflowName: "parallel-workflow",
 	}
 

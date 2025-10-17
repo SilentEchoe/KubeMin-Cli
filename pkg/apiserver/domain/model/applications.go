@@ -64,7 +64,7 @@ func (a *Applications) Index() map[string]interface{} {
 // ApplicationComponent delivery database model 组件信息
 type ApplicationComponent struct {
 	ID            int            `json:"id" gorm:"primaryKey"`
-	AppId         string         `json:"appId"`
+	AppID         string         `json:"appId"`
 	Name          string         `json:"name"`
 	Namespace     string         `json:"namespace"`
 	Image         string         `json:"image"`
@@ -92,8 +92,8 @@ func (w *ApplicationComponent) Index() map[string]interface{} {
 	if w.Name != "" {
 		index["name"] = w.Name
 	}
-	if w.AppId != "" {
-		index["appid"] = w.AppId
+	if w.AppID != "" {
+		index["appid"] = w.AppID
 	}
 	return index
 }

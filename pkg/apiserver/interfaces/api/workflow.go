@@ -60,7 +60,7 @@ func (w *workflow) execWorkflowTask(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, err := w.WorkflowService.ExecWorkflowTask(ctx, req.WorkflowId)
+	resp, err := w.WorkflowService.ExecWorkflowTask(ctx, req.WorkflowID)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return
@@ -84,11 +84,11 @@ func (w *workflow) cancelWorkflowTask(c *gin.Context) {
 		user = config.DefaultTaskRevoker
 	}
 	ctx := c.Request.Context()
-	if err := w.WorkflowService.CancelWorkflowTask(ctx, user, req.TaskId, req.Reason); err != nil {
+	if err := w.WorkflowService.CancelWorkflowTask(ctx, user, req.TaskID, req.Reason); err != nil {
 		bcode.ReturnError(c, err)
 		return
 	}
-	c.JSON(http.StatusOK, apis.CancelWorkflowResponse{TaskId: req.TaskId, Status: string(config.StatusCancelled)})
+	c.JSON(http.StatusOK, apis.CancelWorkflowResponse{TaskID: req.TaskID, Status: string(config.StatusCancelled)})
 }
 
 func normalizeWorkflowRequest(req *apis.CreateWorkflowRequest) {

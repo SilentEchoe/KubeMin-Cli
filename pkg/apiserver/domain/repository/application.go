@@ -8,9 +8,9 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
-func ApplicationById(ctx context.Context, store datastore.DataStore, Id string) (*model.Applications, error) {
+func ApplicationByID(ctx context.Context, store datastore.DataStore, id string) (*model.Applications, error) {
 	app := model.Applications{
-		ID: Id,
+		ID: id,
 	}
 	err := store.Get(ctx, &app)
 	if err != nil {

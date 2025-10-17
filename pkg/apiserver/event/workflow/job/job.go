@@ -329,9 +329,9 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 
 func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
 	labels := map[string]string{
-		config.LabelCli:         fmt.Sprintf("%s-%s", c.AppId, c.Name),
-		config.LabelComponentId: fmt.Sprintf("%d", c.ID),
-		config.LabelAppId:       c.AppId,
+		config.LabelCli:         fmt.Sprintf("%s-%s", c.AppID, c.Name),
+		config.LabelComponentID: fmt.Sprintf("%d", c.ID),
+		config.LabelAppID:       c.AppID,
 	}
 	if p != nil {
 		for k, v := range p.Labels {
