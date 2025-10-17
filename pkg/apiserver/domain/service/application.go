@@ -63,7 +63,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 			return nil, bcode.ErrComponentBuild
 		}
 		if err = repository.DelWorkflowsByAppId(ctx, c.Store, req.ID); err != nil {
-			return nil, bcode.ErrComponentBuild
+			return nil, bcode.ErrWorkflowBuild
 		}
 	} else {
 		application = model.NewApplications(
@@ -103,6 +103,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	if workflowAliasBase == "" {
 		workflowAliasBase = req.Name
 	}
+
 	workflowAlias := fmt.Sprintf("%s-%s", workflowAliasBase, "workflow")
 	workflowName := fmt.Sprintf("%s-%s", req.Name, "workflow")
 	var workflowBody interface{}
