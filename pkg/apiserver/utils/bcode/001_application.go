@@ -15,3 +15,5 @@ var ErrInvalidProperties = NewBcode(400, 10004, "properties is invalid")
 
 // ErrApplicationNotExist application is not exist
 var ErrApplicationNotExist = NewBcode(404, 10005, "application name is not exist")
+
+var ErrWorkflowBuild = NewBcode(400, 10006, "application workflow build error")
