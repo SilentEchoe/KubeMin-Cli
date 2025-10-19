@@ -588,17 +588,24 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	if component == nil {
 		return buckets
 	}
+
+	namespace := component.Namespace
+	if namespace == "" {
+		namespace = config.DefaultNamespace
+		component.Namespace = namespace
+	}
+
 	properties := ParseProperties(ctx, component.Properties)
 
 	switch component.ComponentType {
 	case config.ServerJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploy)
 		jobTask.JobInfo = job.GenerateWebService(component, &properties)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
 
 	case config.StoreJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployStore)
 		storeJobs := job.GenerateStoreService(component)
 		if storeJobs != nil {
@@ -614,22 +621,22 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		}
 
 	case config.ConfJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
 
 	case config.SecretJob:
-		jobTask := NewJobTask(component.Name, component.Namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
 	}
 
 	if len(properties.Ports) > 0 {
-		svcJob := NewJobTask(component.Name, "default", task.WorkflowID, task.ProjectID, task.AppID)
+		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		svcJob.JobType = string(config.JobDeployService)
-		svcJob.JobInfo = job.GenerateService(component.Name, "default", nil, properties.Ports)
+		svcJob.JobInfo = job.GenerateService(component.Name, namespace, nil, properties.Ports)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
 	}
 

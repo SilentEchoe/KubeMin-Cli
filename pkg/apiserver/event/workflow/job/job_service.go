@@ -93,7 +93,7 @@ func (c *DeployServiceJobCtl) SaveInfo(ctx context.Context) error {
 func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
-	c.ack() // 通知工作流开始运行
+	c.ack()
 
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
