@@ -93,7 +93,7 @@ func (c *DeployServiceJobCtl) SaveInfo(ctx context.Context) error {
 func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
-	c.ack() // 通知工作流开始运行
+	c.ack()
 
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
@@ -213,11 +213,11 @@ func getServiceStatus(kubeClient kubernetes.Interface, namespace string, name st
 	return true, nil
 }
 
-func GenerateService(name, namespace string, labels map[string]string, ports []model.Ports) *applyv1.ServiceApplyConfiguration {
+func GenerateService(component *model.ApplicationComponent, properties *model.Properties) *applyv1.ServiceApplyConfiguration {
 	var servicePorts []*applyv1.ServicePortApplyConfiguration
-	base := utils.ToRFC1123Name(name)
+	base := utils.ToRFC1123Name(component.Name)
 
-	for _, p := range ports {
+	for _, p := range properties.Ports {
 		// 确保每个端口都有一个有效的名称
 		portName := fmt.Sprintf("%s-%d", base, p.Port)
 		if len(portName) > 15 {
@@ -233,20 +233,20 @@ func GenerateService(name, namespace string, labels map[string]string, ports []m
 		servicePorts = append(servicePorts, port)
 	}
 
-	if len(labels) == 0 {
-		labels = map[string]string{"app": base}
-	}
+	labels := BuildLabels(component, properties)
 
-	svc := applyv1.Service(name, namespace).
+	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
+
+	svc := applyv1.Service(component.Name, component.Namespace).
 		WithLabels(labels).
 		WithSpec(applyv1.ServiceSpec().
-			WithSelector(labels).
+			WithSelector(selectorLabel).
 			WithPorts(servicePorts...).
 			WithType(corev1.ServiceTypeClusterIP)).
 		WithKind("Service").
 		WithAPIVersion("v1").
-		WithName(name).
-		WithNamespace(namespace)
+		WithName(component.Name).
+		WithNamespace(component.Namespace)
 
 	return svc
 }
