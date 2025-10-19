@@ -286,7 +286,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 					Containers: []corev1.Container{
 						{
 							Name:  serviceName,
-							Image: properties.Image,
+							Image: component.Image,
 							Ports: ContainerPort,
 							Env:   envs,
 						},

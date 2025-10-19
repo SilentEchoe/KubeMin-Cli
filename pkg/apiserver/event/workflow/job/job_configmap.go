@@ -89,7 +89,7 @@ func (c *DeployConfigMapJobCtl) Run(ctx context.Context) error {
 	logger := klog.FromContext(ctx)
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
-	c.ack() // 通知工作流开始运行
+	c.ack()
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployConfigMapJob run error")
 		c.job.Status = config.StatusFailed

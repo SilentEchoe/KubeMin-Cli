@@ -636,7 +636,7 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	if len(properties.Ports) > 0 {
 		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		svcJob.JobType = string(config.JobDeployService)
-		svcJob.JobInfo = job.GenerateService(component.Name, namespace, nil, properties.Ports)
+		svcJob.JobInfo = job.GenerateService(component, &properties)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
 	}
 
