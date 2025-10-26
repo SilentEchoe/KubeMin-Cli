@@ -237,7 +237,8 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 
 	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
 
-	svc := applyv1.Service(component.Name, component.Namespace).
+	serviceName := fmt.Sprintf("%s-%s", component.AppID, component.Name)
+	svc := applyv1.Service(serviceName, component.Namespace).
 		WithLabels(labels).
 		WithSpec(applyv1.ServiceSpec().
 			WithSelector(selectorLabel).
@@ -245,14 +246,13 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 			WithType(corev1.ServiceTypeClusterIP)).
 		WithKind("Service").
 		WithAPIVersion("v1").
-		WithName(component.Name).
+		WithName(serviceName).
 		WithNamespace(component.Namespace)
 
 	return svc
 }
 
 func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.ServiceApplyConfiguration) (*corev1.Service, error) {
-	// 转换为 corev1.Service
 	coreService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        *svc.Name,
