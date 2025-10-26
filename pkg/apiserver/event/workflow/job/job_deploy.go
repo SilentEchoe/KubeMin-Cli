@@ -51,7 +51,7 @@ func (c *DeployJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {
@@ -248,9 +248,6 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
 	serviceName := component.Name
-	labels := make(map[string]string)
-	labels[config.LabelCli] = fmt.Sprintf("%s-%s", component.AppID, component.Name)
-	labels[config.LabelAppID] = component.AppID
 
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
@@ -264,9 +261,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 		envs = append(envs, corev1.EnvVar{Name: k, Value: v})
 	}
 
-	for k, v := range properties.Labels {
-		labels[k] = v
-	}
+	labels := BuildLabels(component, properties)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -318,7 +313,7 @@ func (c *DeployJobCtl) ApplyDeployment(ctx context.Context, deploy *appsv1.Deplo
 		types.ApplyPatchType,
 		patchBytes,
 		metav1.PatchOptions{
-			FieldManager: "kubemin-cli",      // 必须有：用于字段归属跟踪
+			FieldManager: config.LabelCli,    // 必须有：用于字段归属跟踪
 			Force:        pointer.Bool(true), // 避免字段冲突阻塞更新
 		})
 

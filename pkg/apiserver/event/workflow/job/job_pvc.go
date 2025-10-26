@@ -92,7 +92,7 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 	c.ack()
 
 	if err := c.run(ctx); err != nil {
-		logger.Error(err, "DeployPVCJob run error")
+		logger.Error(err, "deploy pvc job run error")
 		c.job.Error = err.Error()
 		if statusErr, ok := ExtractStatusError(err); ok {
 			c.job.Status = statusErr.Status
@@ -103,7 +103,7 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 	}
 
 	if err := c.wait(ctx); err != nil {
-		logger.Error(err, "DeployPVC wait error")
+		logger.Error(err, "deploy pvc wait error")
 		c.job.Error = err.Error()
 		if statusErr, ok := ExtractStatusError(err); ok {
 			c.job.Status = statusErr.Status
@@ -128,7 +128,7 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
 		pvc = p
 	} else {
-		return fmt.Errorf("deploy PVC Job Job.Info conversion type failure")
+		return fmt.Errorf("deploy pvc job info conversion type failure")
 	}
 
 	// 检查PVC是否已存在
@@ -141,9 +141,9 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 			if err != nil {
 				return fmt.Errorf("failed to update PVC %q: %w", pvc.Name, err)
 			}
-			logger.Info("PVC updated successfully", "pvcName", pvc.Name)
+			logger.Info("pvc updated successfully", "pvcName", pvc.Name)
 		} else {
-			logger.Info("PVC is up-to-date, skipping update", "pvcName", pvc.Name)
+			logger.Info("pvc is up-to-date, skipping update", "pvcName", pvc.Name)
 		}
 		markResourceObserved(ctx, config.ResourcePVC, pvc.Namespace, pvc.Name)
 	} else if k8serrors.IsNotFound(err) {
@@ -186,7 +186,7 @@ func (c *DeployPVCJobCtl) wait(ctx context.Context) error {
 	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
 		pvcName = p.Name
 	} else {
-		pvcName = c.job.Name // fallback for logging
+		pvcName = c.job.Name
 	}
 
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
@@ -236,7 +236,7 @@ func (c *DeployPVCJobCtl) getPVCStatus(ctx context.Context) (bool, error) {
 
 func (c *DeployPVCJobCtl) timeout() int64 {
 	if c.job.Timeout == 0 {
-		c.job.Timeout = 60 * 5 // 5分钟超时
+		c.job.Timeout = config.DeployTimeout
 	}
 	return c.job.Timeout
 }

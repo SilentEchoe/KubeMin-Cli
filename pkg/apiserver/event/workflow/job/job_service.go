@@ -203,7 +203,7 @@ func getServiceStatus(kubeClient kubernetes.Interface, namespace string, name st
 	_, err := kubeClient.CoreV1().Services(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
-			klog.Infof("service not found: %s/%s", namespace, name)
+			klog.Errorf("service not found: %s/%s", namespace, name)
 			return false, nil
 		}
 		klog.Errorf("check service error:%s", err)

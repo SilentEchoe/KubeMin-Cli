@@ -1,6 +1,9 @@
 package config
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 const (
 	REDIS             = "redis"
@@ -33,9 +36,9 @@ const (
 	DefaultTaskRevoker = "system"
 	DefaultNamespace   = "default"
 	DeployTimeout      = 60 * 20 // 20 minutes
-
-	JobNameRegx  = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
-	WorkflowRegx = "^[a-zA-Z0-9-]+$"
+	DelTimeOut         = 30 * time.Second
+	JobNameRegx        = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
+	WorkflowRegx       = "^[a-zA-Z0-9-]+$"
 
 	// ServerJob JobType 的类型分为几种：1.无状态服务 2.存储服务 3.网络服务
 	ServerJob JobType = "webservice"
