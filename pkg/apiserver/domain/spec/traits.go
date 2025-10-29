@@ -145,3 +145,38 @@ type ResourceTraitsSpec struct {
 	Memory string `json:"memory,omitempty"`
 	GPU    string `json:"gpu,omitempty"`
 }
+
+// IngressTraitsSpec captures the high-level ingress description.
+// All configuration is done through the unified Routes field.
+type IngressTraitsSpec struct {
+	Name      string             `json:"name"`
+	Namespace string             `json:"namespace"`
+	TLS       []IngressTLSConfig `json:"tls,omitempty"`
+	Default   *IngressRoute      `json:"default,omitempty"`
+	Routes    []IngressRoutes    `json:"routes"`
+}
+type IngressTLSConfig struct {
+	SecretName string   `json:"secretName"`
+	Hosts      []string `json:"hosts,omitempty"`
+}
+
+type IngressRoutes struct {
+	Path    string       `json:"path,omitempty"`
+	Host    string       `json:"host,omitempty"`
+	Backend IngressRoute `json:"backend"`
+	// Route-level optional features
+	Rewrite *RewritePolicy `json:"rewrite,omitempty"`
+}
+
+type IngressRoute struct {
+	ServiceName string            `json:"serviceName"`
+	ServicePort int32             `json:"servicePort,omitempty"`
+	Weight      int32             `json:"weight,omitempty"`
+	Headers     map[string]string `json:"headers,omitempty"`
+}
+
+type RewritePolicy struct {
+	Type        string `json:"type"` // e.g. "replace", "regexReplace", "prefix"
+	Match       string `json:"match,omitempty"`
+	Replacement string `json:"replacement,omitempty"`
+}
