@@ -149,12 +149,13 @@ type ResourceTraitsSpec struct {
 // IngressTraitsSpec captures the high-level ingress description.
 // All configuration is done through the unified Routes field.
 type IngressTraitsSpec struct {
-	Name      string             `json:"name"`
-	Namespace string             `json:"namespace"`
-	Hosts     []string           `json:"hosts,omitempty"`
-	Label     map[string]string  `json:"label"`
-	TLS       []IngressTLSConfig `json:"tls,omitempty"`
-	Routes    []IngressRoutes    `json:"routes"`
+	Name        string             `json:"name"`
+	Namespace   string             `json:"namespace"`
+	Hosts       []string           `json:"hosts,omitempty"`
+	Label       map[string]string  `json:"label"`
+	Annotations map[string]string  `json:"annotations,omitempty"`
+	TLS         []IngressTLSConfig `json:"tls,omitempty"`
+	Routes      []IngressRoutes    `json:"routes"`
 }
 type IngressTLSConfig struct {
 	SecretName string   `json:"secretName"`

@@ -3,7 +3,7 @@ package traits
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	
+
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -70,10 +70,11 @@ func BuildIngress(ingressSpec *spec.IngressTraitsSpec) (*networkingv1.Ingress, e
 	}
 
 	return buildIngressFromSpec(&model.IngressTraitsSpec{
-		Name:      ingressSpec.Name,
-		Namespace: ingressSpec.Namespace,
-		TLS:       ingressSpec.TLS,
-		Routes:    ingressSpec.Routes,
+		Name:        ingressSpec.Name,
+		Namespace:   ingressSpec.Namespace,
+		Annotations: ingressSpec.Annotations,
+		TLS:         ingressSpec.TLS,
+		Routes:      ingressSpec.Routes,
 	}), nil
 }
 

@@ -90,8 +90,8 @@ func RegisterAllProcessors() {
 	// 2. Register traits that add containers or recursively process other traits.
 	Register(&InitProcessor{})
 	Register(&SidecarProcessor{})
-
 	// Register other processors here as they are added.
+	Register(&IngressProcessor{})
 }
 
 // ApplyTraits is the public entrypoint. It dispatches traits to processors,

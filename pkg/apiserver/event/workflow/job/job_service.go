@@ -177,6 +177,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	serviceName := BuildSeverName(c.job.Name, c.job.AppID)
 	for {
 		select {
 		case <-ctx.Done():
@@ -185,7 +186,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 			klog.Warningf("timed out waiting for service: %s", c.job.Name)
 			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait service %s timeout", c.job.Name))
 		case <-ticker.C:
-			isExist, err := getServiceStatus(c.client, c.job.Namespace, c.job.Name)
+			isExist, err := getServiceStatus(c.client, c.job.Namespace, serviceName)
 			if err != nil {
 				klog.Errorf("error checking service status: %v", err)
 				return fmt.Errorf("wait service %s error: %w", c.job.Name, err)
@@ -237,7 +238,7 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 
 	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
 
-	serviceName := fmt.Sprintf("%s-%s", component.AppID, component.Name)
+	serviceName := BuildSeverName(component.Name, component.AppID)
 	svc := applyv1.Service(serviceName, component.Namespace).
 		WithLabels(labels).
 		WithSpec(applyv1.ServiceSpec().
@@ -307,4 +308,8 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 
 	klog.Infof("Service updated: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
 	return appliedSvc, nil
+}
+
+func BuildSeverName(name, appID string) string {
+	return fmt.Sprintf("%s-%s", name, appID)
 }
