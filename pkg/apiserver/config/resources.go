@@ -10,4 +10,5 @@ const (
 	ResourcePVC         ResourceKind = "pvc"
 	ResourceConfigMap   ResourceKind = "configmap"
 	ResourceSecret      ResourceKind = "secret"
+	ResourceIngress     ResourceKind = "ingress"
 )

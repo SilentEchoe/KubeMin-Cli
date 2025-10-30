@@ -359,15 +359,15 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 		// Check if the PVC has the template annotation.
 		anno := pvc.GetAnnotations()
 		if anno != nil && anno[config.LabelStorageRole] == "template" {
-			// This is a PVC template. It should be applied to a StatefulSet.
+			// This is a PVC template. It should be applied to a Service.
 			if sts, isSts := workload.(*appsv1.StatefulSet); isSts {
-				// It's a template for our StatefulSet. Add it to the templates list.
+				// It's a template for our Service. Add it to the templates list.
 				// The namespace MUST be removed from the template's metadata.
 				pvc.Namespace = ""
 				sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
-				// The template is now part of the StatefulSet, so we don't keep it as a standalone object.
+				// The template is now part of the Service, so we don't keep it as a standalone object.
 			} else {
-				// This is an error case: a template was requested for a non-StatefulSet workload.
+				// This is an error case: a template was requested for a non-Service workload.
 				klog.Warningf("Component %s requested a PVC template for a workload of type %T, which is not supported. The PVC will be ignored.", mainContainerName, workload)
 			}
 		} else {

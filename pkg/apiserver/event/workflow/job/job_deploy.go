@@ -1,9 +1,11 @@
 package job
 
 import (
+	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/fatih/color"
 	"sync"
 	"time"
 
@@ -246,7 +248,7 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 	return oldDeploy, true, nil
 }
 
-func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) interface{} {
+func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) *GenerateServiceResult {
 	serviceName := component.Name
 
 	var ContainerPort []corev1.ContainerPort
@@ -291,7 +293,15 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 		},
 	}
 
-	return deployment
+	additionalObjects, err := traitsPlu.ApplyTraits(component, deployment)
+	if err != nil {
+		klog.Errorf("Service Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
+		return nil
+	}
+	return &GenerateServiceResult{
+		Service:           deployment,
+		AdditionalObjects: additionalObjects,
+	}
 }
 
 func (c *DeployJobCtl) ApplyDeployment(ctx context.Context, deploy *appsv1.Deployment) (*appsv1.Deployment, error) {

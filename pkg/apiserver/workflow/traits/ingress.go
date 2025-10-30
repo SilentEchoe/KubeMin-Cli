@@ -1,8 +1,9 @@
 package traits
 
 import (
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
+	
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
@@ -51,10 +52,12 @@ func applyIngressDefaults(traitSpec *spec.IngressTraitsSpec, component *model.Ap
 		}
 		traitSpec.Name = fmt.Sprintf("%s-%s", base, suffix)
 	}
+
 	if traitSpec.Namespace == "" && component != nil {
 		traitSpec.Namespace = component.Namespace
+	} else {
+		traitSpec.Namespace = config.DefaultNamespace
 	}
-	traitSpec.Label = job.BuildLabels(component, nil)
 }
 
 func BuildIngress(ingressSpec *spec.IngressTraitsSpec) (*networkingv1.Ingress, error) {
@@ -65,12 +68,11 @@ func BuildIngress(ingressSpec *spec.IngressTraitsSpec) (*networkingv1.Ingress, e
 	if len(ingressSpec.Routes) == 0 {
 		return nil, fmt.Errorf("at least one route is required")
 	}
-	
+
 	return buildIngressFromSpec(&model.IngressTraitsSpec{
 		Name:      ingressSpec.Name,
 		Namespace: ingressSpec.Namespace,
 		TLS:       ingressSpec.TLS,
-		Default:   ingressSpec.Default,
 		Routes:    ingressSpec.Routes,
 	}), nil
 }
@@ -78,6 +80,44 @@ func BuildIngress(ingressSpec *spec.IngressTraitsSpec) (*networkingv1.Ingress, e
 func buildIngressFromSpec(ingressSpec *spec.IngressTraitsSpec) *networkingv1.Ingress {
 	ingress := networkingv1.IngressSpec{
 		TLS: convertTLS(ingressSpec.TLS),
+	}
+
+	hostRules := map[string]*networkingv1.HTTPIngressRuleValue{}
+	var hostOrder []string
+
+	for _, route := range ingressSpec.Routes {
+		path := route.Path
+		if path == "" {
+			path = "/"
+		}
+		pathType := networkingv1.PathTypePrefix
+		backend := convertBackend(route.Backend)
+
+		targetHosts := deriveHosts(ingressSpec, route)
+		for _, host := range targetHosts {
+			if _, ok := hostRules[host]; !ok {
+				hostRules[host] = &networkingv1.HTTPIngressRuleValue{}
+				hostOrder = append(hostOrder, host)
+			}
+			hostRules[host].Paths = append(hostRules[host].Paths, networkingv1.HTTPIngressPath{
+				Path:     path,
+				PathType: &pathType,
+				Backend:  backend,
+			})
+		}
+
+		for _, host := range hostOrder {
+			rule := networkingv1.IngressRule{
+				IngressRuleValue: networkingv1.IngressRuleValue{
+					HTTP: hostRules[host],
+				},
+			}
+			if host != "" {
+				rule.Host = host
+			}
+			ingress.Rules = append(ingress.Rules, rule)
+		}
+
 	}
 
 	ing := &networkingv1.Ingress{
@@ -88,6 +128,7 @@ func buildIngressFromSpec(ingressSpec *spec.IngressTraitsSpec) *networkingv1.Ing
 		},
 		Spec: ingress,
 	}
+	ing.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("Ingress"))
 	return ing
 }
 
@@ -104,4 +145,29 @@ func convertTLS(src []model.IngressTLSConfig) []networkingv1.IngressTLS {
 		})
 	}
 	return res
+}
+
+func convertBackend(route model.IngressRoute) networkingv1.IngressBackend {
+	port := route.ServicePort
+	if port <= 0 {
+		port = 80
+	}
+	return networkingv1.IngressBackend{
+		Service: &networkingv1.IngressServiceBackend{
+			Name: route.ServiceName,
+			Port: networkingv1.ServiceBackendPort{
+				Number: port,
+			},
+		},
+	}
+}
+
+func deriveHosts(feature *model.IngressTraitsSpec, route spec.IngressRoutes) []string {
+	if route.Host != "" {
+		return []string{route.Host}
+	}
+	if len(feature.Hosts) > 0 {
+		return append([]string(nil), feature.Hosts...)
+	}
+	return []string{""}
 }

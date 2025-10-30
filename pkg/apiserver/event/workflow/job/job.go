@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
@@ -25,6 +26,11 @@ type JobCtl interface {
 	Run(ctx context.Context) error
 	Clean(ctx context.Context)
 	SaveInfo(ctx context.Context) error
+}
+
+type GenerateServiceResult struct {
+	Service           interface{}
+	AdditionalObjects []client.Object
 }
 
 type taskIDKey struct{}
@@ -101,6 +107,8 @@ func initJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore
 		jobCtl = NewDeployConfigMapJobCtl(job, client, store, ack)
 	case string(config.JobDeploySecret):
 		jobCtl = NewDeploySecretJobCtl(job, client, store, ack)
+	case string(config.JobDeployIngress):
+		jobCtl = NewDeployIngressJobCtl(job, client, store, ack)
 	default:
 		klog.Errorf("unknown job type: %s", job.JobType)
 		return nil

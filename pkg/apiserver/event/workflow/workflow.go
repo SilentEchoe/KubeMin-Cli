@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	networkingv1 "k8s.io/api/networking/v1"
 	"sort"
 	"sync"
 	"time"
@@ -543,7 +544,7 @@ func ParseProperties(ctx context.Context, properties *model.JSONStruct) model.Pr
 	return propertied
 }
 
-func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask) ([]*model.JobTask, error) {
+func CreateObjectJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask) ([]*model.JobTask, error) {
 	if len(additionalObjects) == 0 {
 		return jobs, nil
 	}
@@ -560,10 +561,22 @@ func CreatePVCJobsFromResult(additionalObjects []client.Object, component *model
 			)
 			pvcJob.JobType = string(config.JobDeployPVC)
 			pvcJob.JobInfo = pvc
-			pvcJob.Timeout = 60 * 5 // 5分钟超时
 
 			jobs = append(jobs, pvcJob)
 			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
+		}
+		if ingress, ok := obj.(*networkingv1.Ingress); ok {
+			ingressJob := NewJobTask(
+				fmt.Sprintf("%s-ingress-%s", component.Name, ingress.Name),
+				component.Namespace,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			ingressJob.JobType = string(config.JobDeployIngress)
+			ingressJob.JobInfo = ingress
+			jobs = append(jobs, ingressJob)
+			klog.Infof("Created Ingress job for component %s: %s", component.Name, ingress.Name)
 		}
 	}
 	return jobs, nil
@@ -601,18 +614,21 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	case config.ServerJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploy)
-		jobTask.JobInfo = job.GenerateWebService(component, &properties)
-		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+		serviceJobs := job.GenerateWebService(component, &properties)
+		if serviceJobs != nil {
+			jobTask.JobInfo = serviceJobs.Service
+			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+		}
 
 	case config.StoreJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployStore)
 		storeJobs := job.GenerateStoreService(component)
 		if storeJobs != nil {
-			jobTask.JobInfo = storeJobs.StatefulSet
+			jobTask.JobInfo = storeJobs.Service
 			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
 
-			pvcJobs, err := CreatePVCJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
+			pvcJobs, err := CreateObjectJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
 			if err != nil {
 				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
 			} else if len(pvcJobs) > 0 {

@@ -151,9 +151,9 @@ type ResourceTraitsSpec struct {
 type IngressTraitsSpec struct {
 	Name      string             `json:"name"`
 	Namespace string             `json:"namespace"`
+	Hosts     []string           `json:"hosts,omitempty"`
 	Label     map[string]string  `json:"label"`
 	TLS       []IngressTLSConfig `json:"tls,omitempty"`
-	Default   *IngressRoute      `json:"default,omitempty"`
 	Routes    []IngressRoutes    `json:"routes"`
 }
 type IngressTLSConfig struct {

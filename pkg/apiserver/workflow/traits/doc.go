@@ -1,5 +1,5 @@
 // Package traits implements a pluggable, ordered "trait" processing pipeline
-// that decorates Kubernetes workloads (Deployment/StatefulSet/DaemonSet) with
+// that decorates Kubernetes workloads (Deployment/Service/DaemonSet) with
 // cross-cutting concerns such as storage, environment variables, probes, sidecars,
 // init containers, and compute resources.
 //

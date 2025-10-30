@@ -6,8 +6,6 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -28,11 +26,6 @@ type DeployStatefulSetJobCtl struct {
 	client    kubernetes.Interface
 	store     datastore.DataStore
 	ack       func()
-}
-
-type StoreServiceResult struct {
-	StatefulSet       *appsv1.StatefulSet
-	AdditionalObjects []client.Object
 }
 
 func NewDeployStatefulSetJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore.DataStore, ack func()) *DeployStatefulSetJobCtl {
@@ -132,7 +125,6 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 
 	//During execution, it is possible to determine which resources need to be created,
 	//but these resources are limited to those closely related to the components, such as PVC.
-
 	var statefulSet *appsv1.StatefulSet
 	if d, ok := c.job.JobInfo.(*appsv1.StatefulSet); ok {
 		statefulSet = d
@@ -185,7 +177,7 @@ func (c *DeployStatefulSetJobCtl) timeout() int64 {
 	return c.job.Timeout
 }
 
-func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceResult {
+func GenerateStoreService(component *model.ApplicationComponent) *GenerateServiceResult {
 	// 如果命名空间为空，则使用默认的命名空间
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
@@ -246,11 +238,11 @@ func GenerateStoreService(component *model.ApplicationComponent) *StoreServiceRe
 
 	additionalObjects, err := traitsPlu.ApplyTraits(component, statefulSet)
 	if err != nil {
-		klog.Errorf("StatefulSet Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
+		klog.Errorf("Service Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
 		return nil
 	}
-	return &StoreServiceResult{
-		StatefulSet:       statefulSet,
+	return &GenerateServiceResult{
+		Service:           statefulSet,
 		AdditionalObjects: additionalObjects,
 	}
 }
@@ -259,8 +251,8 @@ func getStatefulSetStatus(kubeClient kubernetes.Interface, namespace string, nam
 	statefulSet, err := kubeClient.AppsV1().StatefulSets(namespace).Get(context.TODO(), name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			klog.Infof("StatefulSet deploy is nil")
-			klog.Infof("StatefulSet Name: %s, Namespace: %s", name, namespace)
+			klog.Infof("Service deploy is nil")
+			klog.Infof("Service Name: %s, Namespace: %s", name, namespace)
 			return nil, nil
 		}
 		return nil, err

@@ -45,7 +45,7 @@ func DetectReplicaCount(ctx context.Context, client kubernetes.Interface) int {
 			}
 			// fall back to replicaset replicas
 			return int(orInt32(rs.Spec.Replicas, 1))
-		case "StatefulSet":
+		case "Service":
 			ss, err := client.AppsV1().StatefulSets(ns).Get(ctx, or.Name, metav1.GetOptions{})
 			if err != nil {
 				klog.V(3).Infof("get statefulset failed: %v; default replica count = 1", err)

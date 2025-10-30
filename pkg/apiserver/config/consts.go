@@ -48,11 +48,12 @@ const (
 	SecretJob JobType = "secret"
 
 	JobDeploy          JobType = "deploy"
-	JobDeployService   JobType = "deploy_service"
+	JobDeployService   JobType = "service_deploy"
 	JobDeployStore     JobType = "store_deploy"
 	JobDeployPVC       JobType = "store_pvc_deploy"
 	JobDeployConfigMap JobType = "configmap_deploy"
 	JobDeploySecret    JobType = "secret_deploy"
+	JobDeployIngress   JobType = "ingress_deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"
