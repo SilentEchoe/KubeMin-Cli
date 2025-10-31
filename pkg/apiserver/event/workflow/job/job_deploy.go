@@ -1,13 +1,13 @@
 package job
 
 import (
-	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/fatih/color"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -23,6 +23,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
+	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 )
 
 type DeployJobCtl struct {
@@ -127,14 +129,19 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 	if c.client == nil {
 		return fmt.Errorf("client is nil")
 	}
-	var deploy *appsv1.Deployment
+	var (
+		deploy     *appsv1.Deployment
+		deployName string
+	)
 	if d, ok := c.job.JobInfo.(*appsv1.Deployment); ok {
 		deploy = d
+		deployName = buildWebServiceName(c.job.Name, c.job.AppID)
+		deploy.Name = deployName
 	} else {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deploy.Name, deploy.Namespace)
+	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deployName, deploy.Namespace)
 	if err != nil {
 		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
@@ -180,18 +187,20 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	targetName := buildWebServiceName(c.job.Name, c.job.AppID)
+
 	for {
 		select {
 		case <-ctx.Done():
-			return NewStatusError(config.StatusCancelled, fmt.Errorf("deployment %s cancelled: %w", c.job.Name, ctx.Err()))
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("deployment %s cancelled: %w", targetName, ctx.Err()))
 		case <-timeout:
-			klog.Infof("timeout waiting for job %s", c.job.Name)
-			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait deployment %s timeout", c.job.Name))
+			klog.Infof("timeout waiting for job %s", targetName)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait deployment %s timeout", targetName))
 		case <-ticker.C:
-			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, c.job.Name)
+			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, targetName)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
-				return fmt.Errorf("wait deployment %s error: %w", c.job.Name, err)
+				return fmt.Errorf("wait deployment %s error: %w", targetName, err)
 			}
 			if newResources != nil {
 				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
@@ -249,8 +258,8 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 }
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) *GenerateServiceResult {
-	serviceName := component.Name
-
+	deploymentName := buildWebServiceName(component.Name, component.AppID)
+	containerName := utils.NormalizeLowerStrip(component.Name)
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {
 		ContainerPort = append(ContainerPort, corev1.ContainerPort{
@@ -267,7 +276,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
+			Name:      deploymentName,
 			Namespace: component.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -282,7 +291,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  serviceName,
+							Name:  containerName,
 							Image: component.Image,
 							Ports: ContainerPort,
 							Env:   envs,
@@ -428,7 +437,6 @@ func compareVolumes(a, b []corev1.Volume) bool {
 				return false
 			}
 		}
-		// 可扩展支持 PVC、Secret、HostPath 等
 	}
 	return true
 }
@@ -438,4 +446,12 @@ func cleanObjectMeta(meta *metav1.ObjectMeta) {
 	meta.UID = ""
 	meta.CreationTimestamp = metav1.Time{}
 	meta.ManagedFields = nil
+}
+
+func buildWebServiceName(name, appID string) string {
+	name = utils.NormalizeLowerStrip(name)
+	if name == "" {
+		return utils.NormalizeLowerStrip(appID)
+	}
+	return fmt.Sprintf("%s-%s", name, utils.NormalizeLowerStrip(appID))
 }

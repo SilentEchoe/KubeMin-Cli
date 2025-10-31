@@ -1,6 +1,7 @@
 package job
 
 import (
+	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 	"time"
@@ -128,7 +129,11 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 	if ingress.Namespace == "" {
 		ingress.Namespace = c.namespace
 	}
-	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
+
+	ingressName := buildIngressName(ingress.Name, c.job.AppID)
+	ingress.Name = ingressName
+
+	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		ingress.ResourceVersion = existing.ResourceVersion
@@ -136,11 +141,12 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 			ingress.Labels = existing.Labels
 		}
 		if _, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Update(ctx, ingress, metav1.UpdateOptions{}); err != nil {
-			return fmt.Errorf("update ingress %s/%s failed: %w", ingress.Namespace, ingress.Name, err)
+			return fmt.Errorf("update ingress %s/%s failed: %w", ingress.Namespace, ingressName, err)
 		}
 		markResourceObserved(ctx, config.ResourceIngress, ingress.Namespace, ingress.Name)
 		klog.Infof("Ingress %s/%s updated successfully", ingress.Namespace, ingress.Name)
 	case k8serrors.IsNotFound(err):
+		ingress.Name = ingressName
 		result, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Create(ctx, ingress, metav1.CreateOptions{})
 		if err != nil {
 			klog.Errorf("failed to create ingress %q namespace: %q: %v", ingress.Name, ingress.Namespace, err)
@@ -149,7 +155,7 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 		MarkResourceCreated(ctx, config.ResourceIngress, ingress.Namespace, ingress.Name)
 		klog.Infof("Ingress %q created successfully", result.GetObjectMeta().GetName())
 	default:
-		return fmt.Errorf("get ingress %s/%s failed: %w", ingress.Namespace, ingress.Name, err)
+		return fmt.Errorf("get ingress %s/%s failed: %w", ingress.Namespace, ingressName, err)
 	}
 
 	return nil
@@ -160,19 +166,29 @@ func (c *DeployIngressJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	getIngressName := func() string {
+		if ingressObj, ok := c.job.JobInfo.(*networkingv1.Ingress); ok && ingressObj != nil && ingressObj.Name != "" {
+			return ingressObj.Name
+		}
+		return c.job.Name
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
-			return NewStatusError(config.StatusCancelled, fmt.Errorf("ingress %s cancelled: %w", c.job.Name, ctx.Err()))
+			name := getIngressName()
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("ingress %s cancelled: %w", name, ctx.Err()))
 		case <-timeout:
-			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait ingress %s timeout", c.job.Name))
+			name := getIngressName()
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait ingress %s timeout", name))
 		case <-ticker.C:
-			ing, err := c.client.NetworkingV1().Ingresses(c.job.Namespace).Get(ctx, c.job.Name, metav1.GetOptions{})
+			ingressName := getIngressName()
+			ing, err := c.client.NetworkingV1().Ingresses(c.job.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
 			if err != nil {
 				if k8serrors.IsNotFound(err) {
 					continue
 				}
-				return fmt.Errorf("wait ingress %s error: %w", c.job.Name, err)
+				return fmt.Errorf("wait ingress %s error: %w", ingressName, err)
 			}
 			if ingressReady(ing) {
 				return nil
@@ -193,4 +209,12 @@ func ingressReady(ing *networkingv1.Ingress) bool {
 		return false
 	}
 	return true
+}
+
+func buildIngressName(name, appID string) string {
+	name = utils.NormalizeLowerStrip(name)
+	if name == "" {
+		return utils.NormalizeLowerStrip(appID)
+	}
+	return fmt.Sprintf("%s-%s", name, utils.NormalizeLowerStrip(appID))
 }
