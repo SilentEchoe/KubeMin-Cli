@@ -177,7 +177,7 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	serviceName := BuildSeverName(c.job.Name, c.job.AppID)
+	serviceName := buildServiceName(c.job.Name, c.job.AppID)
 	for {
 		select {
 		case <-ctx.Done():
@@ -238,7 +238,7 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 
 	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
 
-	serviceName := BuildSeverName(component.Name, component.AppID)
+	serviceName := buildServiceName(component.Name, component.AppID)
 	svc := applyv1.Service(serviceName, component.Namespace).
 		WithLabels(labels).
 		WithSpec(applyv1.ServiceSpec().
@@ -310,6 +310,6 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 	return appliedSvc, nil
 }
 
-func BuildSeverName(name, appID string) string {
-	return fmt.Sprintf("%s-%s", name, appID)
+func buildServiceName(name, appID string) string {
+	return fmt.Sprintf("webservice-%s-%s", name, appID)
 }

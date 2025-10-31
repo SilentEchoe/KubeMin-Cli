@@ -132,6 +132,12 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
+	statefulSetName := buildStoreSeverName(c.job.Name, c.job.AppID)
+	statefulSet.Name = statefulSetName
+	if statefulSet.Namespace == "" {
+		statefulSet.Namespace = c.namespace
+	}
+
 	result, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Create(ctx, statefulSet, metav1.CreateOptions{})
 	if err != nil {
 		klog.Errorf("failed to create statefulSet %q namespace: %q : %v", statefulSet.Name, statefulSet.Namespace, err)
@@ -147,18 +153,20 @@ func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	targetName := buildStoreSeverName(c.job.Name, c.job.AppID)
+
 	for {
 		select {
 		case <-ctx.Done():
-			return NewStatusError(config.StatusCancelled, fmt.Errorf("statefulset %s cancelled: %w", c.job.Name, ctx.Err()))
+			return NewStatusError(config.StatusCancelled, fmt.Errorf("statefulset %s cancelled: %w", targetName, ctx.Err()))
 		case <-timeout:
-			klog.Infof("timeout waiting for job %s", c.job.Name)
-			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait statefulset %s timeout", c.job.Name))
+			klog.Infof("timeout waiting for job %s", targetName)
+			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait statefulset %s timeout", targetName))
 		case <-ticker.C:
-			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, c.job.Name)
+			newResources, err := getStatefulSetStatus(c.client, c.job.Namespace, targetName)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
-				return fmt.Errorf("wait statefulset %s error: %w", c.job.Name, err)
+				return fmt.Errorf("wait statefulset %s error: %w", targetName, err)
 			}
 			if newResources != nil {
 				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
@@ -182,7 +190,8 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 	if component.Namespace == "" {
 		component.Namespace = config.DefaultNamespace
 	}
-	serviceName := component.Name
+	statefulSetName := buildStoreSeverName(component.Name, component.AppID)
+	containerName := utils.NormalizeLowerStrip(component.Name)
 
 	properties := ParseProperties(component.Properties)
 
@@ -208,7 +217,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 
 	statefulSet := &appsv1.StatefulSet{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      serviceName,
+			Name:      statefulSetName,
 			Namespace: component.Namespace,
 		},
 		Spec: appsv1.StatefulSetSpec{
@@ -223,7 +232,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:            serviceName,
+							Name:            containerName,
 							Image:           component.Image,
 							Ports:           ContainerPort,
 							Env:             envs,
@@ -272,4 +281,16 @@ func getStatefulSetStatus(kubeClient kubernetes.Interface, namespace string, nam
 		ReadyReplicas: statefulSet.Status.ReadyReplicas,
 		Ready:         isOk,
 	}, nil
+}
+
+func buildStoreSeverName(name, appID string) string {
+	base := utils.NormalizeLowerStrip(name)
+	if base == "" {
+		base = "store"
+	}
+	suffix := utils.NormalizeLowerStrip(appID)
+	if suffix == "" {
+		return fmt.Sprintf("store-%s", base)
+	}
+	return fmt.Sprintf("store-%s-%s", base, suffix)
 }
