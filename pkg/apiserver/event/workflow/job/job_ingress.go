@@ -1,7 +1,6 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils"
 	"context"
 	"fmt"
 	"time"
@@ -130,10 +129,7 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 		ingress.Namespace = c.namespace
 	}
 
-	ingressName := buildIngressName(ingress.Name, c.job.AppID)
-	ingress.Name = ingressName
-
-	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingressName, metav1.GetOptions{})
+	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
 		ingress.ResourceVersion = existing.ResourceVersion
@@ -141,12 +137,11 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 			ingress.Labels = existing.Labels
 		}
 		if _, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Update(ctx, ingress, metav1.UpdateOptions{}); err != nil {
-			return fmt.Errorf("update ingress %s/%s failed: %w", ingress.Namespace, ingressName, err)
+			return fmt.Errorf("update ingress %s/%s failed: %w", ingress.Namespace, ingress.Name, err)
 		}
 		markResourceObserved(ctx, config.ResourceIngress, ingress.Namespace, ingress.Name)
 		klog.Infof("Ingress %s/%s updated successfully", ingress.Namespace, ingress.Name)
 	case k8serrors.IsNotFound(err):
-		ingress.Name = ingressName
 		result, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Create(ctx, ingress, metav1.CreateOptions{})
 		if err != nil {
 			klog.Errorf("failed to create ingress %q namespace: %q: %v", ingress.Name, ingress.Namespace, err)
@@ -155,7 +150,7 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 		MarkResourceCreated(ctx, config.ResourceIngress, ingress.Namespace, ingress.Name)
 		klog.Infof("Ingress %q created successfully", result.GetObjectMeta().GetName())
 	default:
-		return fmt.Errorf("get ingress %s/%s failed: %w", ingress.Namespace, ingressName, err)
+		return fmt.Errorf("get ingress %s/%s failed: %w", ingress.Namespace, ingress.Name, err)
 	}
 
 	return nil
@@ -209,12 +204,4 @@ func ingressReady(ing *networkingv1.Ingress) bool {
 		return false
 	}
 	return true
-}
-
-func buildIngressName(name, appID string) string {
-	name = utils.NormalizeLowerStrip(name)
-	if name == "" {
-		return utils.NormalizeLowerStrip(appID)
-	}
-	return fmt.Sprintf("%s-%s", name, utils.NormalizeLowerStrip(appID))
 }

@@ -86,9 +86,10 @@ func NewConfig() *Config {
 	return &Config{
 		BindAddr: "0.0.0.0:8000",
 		LeaderConfig: leaderConfig{
-			ID:        uuid.New().String(),
-			LockName:  "apiserver-lock",
-			Duration:  time.Second * 5,
+			ID:       uuid.New().String(),
+			LockName: "apiserver-lock",
+			//Duration:  time.Second * 5,
+			Duration:  time.Minute * 60,
 			Namespace: NAMESPACE,
 		},
 		Datastore: datastore.Config{

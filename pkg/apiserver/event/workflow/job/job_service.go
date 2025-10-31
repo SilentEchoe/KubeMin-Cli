@@ -309,7 +309,3 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 	klog.Infof("Service updated: %s/%s", appliedSvc.Namespace, appliedSvc.Name)
 	return appliedSvc, nil
 }
-
-func buildServiceName(name, appID string) string {
-	return fmt.Sprintf("webservice-%s-%s", name, appID)
-}

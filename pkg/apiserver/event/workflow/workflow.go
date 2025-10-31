@@ -553,7 +553,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 		if pvc, ok := obj.(*corev1.PersistentVolumeClaim); ok {
 			// 创建PVC Job
 			pvcJob := NewJobTask(
-				fmt.Sprintf("%s-pvc-%s", component.Name, pvc.Name),
+				fmt.Sprintf("%s-pvc-%s", pvc.Name, component.AppID),
 				component.Namespace,
 				task.WorkflowID,
 				task.ProjectID,
@@ -567,7 +567,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 		}
 		if ingress, ok := obj.(*networkingv1.Ingress); ok {
 			ingressJob := NewJobTask(
-				fmt.Sprintf("%s-ingress-%s", component.Name, ingress.Name),
+				fmt.Sprintf("%s-ing-%s", ingress.Name, component.AppID),
 				component.Namespace,
 				task.WorkflowID,
 				task.ProjectID,

@@ -282,15 +282,3 @@ func getStatefulSetStatus(kubeClient kubernetes.Interface, namespace string, nam
 		Ready:         isOk,
 	}, nil
 }
-
-func buildStoreSeverName(name, appID string) string {
-	base := utils.NormalizeLowerStrip(name)
-	if base == "" {
-		base = "store"
-	}
-	suffix := utils.NormalizeLowerStrip(appID)
-	if suffix == "" {
-		return fmt.Sprintf("store-%s", base)
-	}
-	return fmt.Sprintf("store-%s-%s", base, suffix)
-}

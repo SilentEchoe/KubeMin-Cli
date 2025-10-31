@@ -301,7 +301,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			},
 		},
 	}
-
+	
 	additionalObjects, err := traitsPlu.ApplyTraits(component, deployment)
 	if err != nil {
 		klog.Errorf("Service Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
