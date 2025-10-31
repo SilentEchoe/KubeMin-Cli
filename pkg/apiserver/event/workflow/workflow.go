@@ -612,34 +612,11 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 
 	switch component.ComponentType {
 	case config.ServerJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
-		jobTask.JobType = string(config.JobDeploy)
 		serviceJobs := job.GenerateWebService(component, &properties)
-		if serviceJobs != nil {
-			jobTask.JobInfo = serviceJobs.Service
-			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
-			jobs, err := CreateObjectJobsFromResult(serviceJobs.AdditionalObjects, component, task, nil)
-			if err != nil {
-				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
-			} else if len(jobs) > 0 {
-				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
-			}
-		}
-
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeploy, serviceJobs)
 	case config.StoreJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
-		jobTask.JobType = string(config.JobDeployStore)
 		storeJobs := job.GenerateStoreService(component)
-		if storeJobs != nil {
-			jobTask.JobInfo = storeJobs.Service
-			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
-			jobs, err := CreateObjectJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
-			if err != nil {
-				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
-			} else if len(jobs) > 0 {
-				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
-			}
-		}
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs)
 
 	case config.ConfJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
@@ -662,6 +639,34 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	}
 
 	return buckets
+}
+
+func queueServiceJobs(
+	logger klog.Logger,
+	buckets map[int][]*model.JobTask,
+	component *model.ApplicationComponent,
+	task *model.WorkflowQueue,
+	namespace string,
+	jobType config.JobType,
+	result *job.GenerateServiceResult,
+) {
+	if result == nil {
+		return
+	}
+
+	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+	jobTask.JobType = string(jobType)
+	jobTask.JobInfo = result.Service
+	buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+
+	jobs, err := CreateObjectJobsFromResult(result.AdditionalObjects, component, task, nil)
+	if err != nil {
+		logger.Error(err, "Failed to create additional resource jobs", "componentName", component.Name)
+		return
+	}
+	if len(jobs) > 0 {
+		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
+	}
 }
 
 func newJobBuckets() map[int][]*model.JobTask {
