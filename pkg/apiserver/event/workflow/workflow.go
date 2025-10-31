@@ -618,6 +618,12 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		if serviceJobs != nil {
 			jobTask.JobInfo = serviceJobs.Service
 			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+			jobs, err := CreateObjectJobsFromResult(serviceJobs.AdditionalObjects, component, task, nil)
+			if err != nil {
+				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
+			} else if len(jobs) > 0 {
+				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
+			}
 		}
 
 	case config.StoreJob:
@@ -627,12 +633,11 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		if storeJobs != nil {
 			jobTask.JobInfo = storeJobs.Service
 			buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
-
-			pvcJobs, err := CreateObjectJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
+			jobs, err := CreateObjectJobsFromResult(storeJobs.AdditionalObjects, component, task, nil)
 			if err != nil {
 				logger.Error(err, "Failed to create PVC jobs", "componentName", component.Name)
-			} else if len(pvcJobs) > 0 {
-				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], pvcJobs...)
+			} else if len(jobs) > 0 {
+				buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
 			}
 		}
 

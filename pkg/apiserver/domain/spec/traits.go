@@ -9,6 +9,7 @@ type Traits struct {
 	Storage   []StorageTraitSpec  `json:"storage,omitempty"`
 	Secret    []SecretTraitsSpec  `json:"secret,omitempty"`
 	Sidecar   []SidecarTraitsSpec `json:"sidecar,omitempty"`
+	Ingress   []IngressTraitsSpec `json:"ingress,omitempty"`
 	EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
 	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
