@@ -32,8 +32,12 @@ func buildName(prefix, name, appID, fallbackBase string) string {
 	}
 }
 
-func buildDeploymentName(name, appID string) string {
-	return buildName("webservice", name, appID, "webservice")
+func buildWebServiceName(name, appID string) string {
+	name = utils.NormalizeLowerStrip(name)
+	if name == "" {
+		return utils.NormalizeLowerStrip(appID)
+	}
+	return fmt.Sprintf("webservice-%s-%s", name, utils.NormalizeLowerStrip(appID))
 }
 
 func buildServiceName(name, appID string) string {

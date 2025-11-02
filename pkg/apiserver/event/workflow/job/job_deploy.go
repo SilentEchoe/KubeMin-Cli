@@ -301,7 +301,7 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 			},
 		},
 	}
-	
+
 	additionalObjects, err := traitsPlu.ApplyTraits(component, deployment)
 	if err != nil {
 		klog.Errorf("Service Info %s Traits Error:%s", color.WhiteString(component.Namespace+"/"+component.Name), err)
@@ -446,12 +446,4 @@ func cleanObjectMeta(meta *metav1.ObjectMeta) {
 	meta.UID = ""
 	meta.CreationTimestamp = metav1.Time{}
 	meta.ManagedFields = nil
-}
-
-func buildWebServiceName(name, appID string) string {
-	name = utils.NormalizeLowerStrip(name)
-	if name == "" {
-		return utils.NormalizeLowerStrip(appID)
-	}
-	return fmt.Sprintf("%s-%s", name, utils.NormalizeLowerStrip(appID))
 }

@@ -97,8 +97,9 @@ const (
 )
 
 const (
+	JobPriorityMaxHigh = 0
 	// JobPriorityHigh defines the high priority level, for resources like PVC, ConfigMap, Secret.
-	JobPriorityHigh = 0
+	JobPriorityHigh = 1
 	// JobPriorityNormal defines the normal priority level, for resources like Deployments, StatefulSets.
 	JobPriorityNormal = 10
 	// JobPriorityLow defines the low priority level, for cleanup or notification jobs.
