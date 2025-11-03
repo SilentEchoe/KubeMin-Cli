@@ -3,6 +3,7 @@ package traits
 import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/utils"
 
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -53,9 +54,9 @@ func applyIngressDefaults(traitSpec *spec.IngressTraitsSpec, component *model.Ap
 		traitSpec.Name = fmt.Sprintf("%s-%s", base, suffix)
 	}
 
-	if traitSpec.Namespace == "" && component != nil {
+	if component != nil && component.Namespace != "" {
 		traitSpec.Namespace = component.Namespace
-	} else {
+	} else if traitSpec.Namespace == "" {
 		traitSpec.Namespace = config.DefaultNamespace
 	}
 }
@@ -69,29 +70,30 @@ func BuildIngress(ingressSpec *spec.IngressTraitsSpec) (*networkingv1.Ingress, e
 		return nil, fmt.Errorf("at least one route is required")
 	}
 
-	return buildIngressFromSpec(&model.IngressTraitsSpec{
-		Name:        ingressSpec.Name,
-		Namespace:   ingressSpec.Namespace,
-		Annotations: ingressSpec.Annotations,
-		TLS:         ingressSpec.TLS,
-		Routes:      ingressSpec.Routes,
-	}), nil
+	return buildIngressFromSpec(ingressSpec), nil
 }
 
-func buildIngressFromSpec(ingressSpec *spec.IngressTraitsSpec) *networkingv1.Ingress {
-	ingress := networkingv1.IngressSpec{
+func buildIngressFromSpec(ingressSpec *model.IngressTraitsSpec) *networkingv1.Ingress {
+	annotations := utils.CopyStringMap(ingressSpec.Annotations)
+	ingSpec := networkingv1.IngressSpec{
 		TLS: convertTLS(ingressSpec.TLS),
+	}
+
+	if ingressSpec.IngressClassName != "" {
+		ingSpec.IngressClassName = utils.StringPtr(ingressSpec.IngressClassName)
 	}
 
 	hostRules := map[string]*networkingv1.HTTPIngressRuleValue{}
 	var hostOrder []string
 
 	for _, route := range ingressSpec.Routes {
+		annotations = applyRewriteAnnotations(annotations, route.Rewrite)
+
 		path := route.Path
 		if path == "" {
 			path = "/"
 		}
-		pathType := networkingv1.PathTypePrefix
+		pathType := determinePathType(route, ingressSpec, annotations)
 		backend := convertBackend(route.Backend)
 
 		targetHosts := deriveHosts(ingressSpec, route)
@@ -102,32 +104,36 @@ func buildIngressFromSpec(ingressSpec *spec.IngressTraitsSpec) *networkingv1.Ing
 			}
 			hostRules[host].Paths = append(hostRules[host].Paths, networkingv1.HTTPIngressPath{
 				Path:     path,
-				PathType: &pathType,
+				PathType: pointerToPathType(pathType),
 				Backend:  backend,
 			})
 		}
+	}
 
-		for _, host := range hostOrder {
-			rule := networkingv1.IngressRule{
-				IngressRuleValue: networkingv1.IngressRuleValue{
-					HTTP: hostRules[host],
-				},
-			}
-			if host != "" {
-				rule.Host = host
-			}
-			ingress.Rules = append(ingress.Rules, rule)
+	for _, host := range hostOrder {
+		rule := networkingv1.IngressRule{
+			IngressRuleValue: networkingv1.IngressRuleValue{
+				HTTP: hostRules[host],
+			},
 		}
+		if host != "" {
+			rule.Host = host
+		}
+		ingSpec.Rules = append(ingSpec.Rules, rule)
+	}
 
+	meta := metav1.ObjectMeta{
+		Name:      ingressSpec.Name,
+		Namespace: ingressSpec.Namespace,
+		Labels:    utils.CopyStringMap(ingressSpec.Label),
+	}
+	if len(annotations) > 0 {
+		meta.Annotations = annotations
 	}
 
 	ing := &networkingv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      ingressSpec.Name,
-			Namespace: ingressSpec.Namespace,
-			Labels:    ingressSpec.Label,
-		},
-		Spec: ingress,
+		ObjectMeta: meta,
+		Spec:       ingSpec,
 	}
 	ing.SetGroupVersionKind(networkingv1.SchemeGroupVersion.WithKind("Ingress"))
 	return ing
@@ -171,4 +177,58 @@ func deriveHosts(feature *model.IngressTraitsSpec, route spec.IngressRoutes) []s
 		return append([]string(nil), feature.Hosts...)
 	}
 	return []string{""}
+}
+
+func pointerToPathType(pt networkingv1.PathType) *networkingv1.PathType {
+	value := pt
+	return &value
+}
+
+func applyRewriteAnnotations(annotations map[string]string, rewrite *spec.RewritePolicy) map[string]string {
+	if rewrite == nil {
+		return annotations
+	}
+	if annotations == nil {
+		annotations = make(map[string]string)
+	}
+	rewriteType := strings.ToLower(rewrite.Type)
+	if rewrite.Replacement != "" {
+		if _, exists := annotations["nginx.ingress.kubernetes.io/rewrite-target"]; !exists {
+			annotations["nginx.ingress.kubernetes.io/rewrite-target"] = rewrite.Replacement
+		}
+	}
+	if rewriteType == "regex" || rewriteType == "regexreplace" {
+		annotations["nginx.ingress.kubernetes.io/use-regex"] = "true"
+	}
+	return annotations
+}
+
+func determinePathType(route model.IngressRoutes, ingressSpec *model.IngressTraitsSpec, annotations map[string]string) networkingv1.PathType {
+	if route.PathType != "" {
+		if pt, ok := parsePathType(route.PathType); ok {
+			return pt
+		}
+	}
+	if ingressSpec.DefaultPathType != "" {
+		if pt, ok := parsePathType(ingressSpec.DefaultPathType); ok {
+			return pt
+		}
+	}
+	if val, ok := annotations["nginx.ingress.kubernetes.io/use-regex"]; ok && strings.EqualFold(val, "true") {
+		return networkingv1.PathTypeImplementationSpecific
+	}
+	return networkingv1.PathTypePrefix
+}
+
+func parsePathType(value string) (networkingv1.PathType, bool) {
+	switch strings.ToLower(value) {
+	case "prefix":
+		return networkingv1.PathTypePrefix, true
+	case "exact":
+		return networkingv1.PathTypeExact, true
+	case "implementationspecific", "implementation-specific":
+		return networkingv1.PathTypeImplementationSpecific, true
+	default:
+		return networkingv1.PathType(""), false
+	}
 }

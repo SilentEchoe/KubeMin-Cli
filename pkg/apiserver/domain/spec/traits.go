@@ -150,13 +150,15 @@ type ResourceTraitsSpec struct {
 // IngressTraitsSpec captures the high-level ingress description.
 // All configuration is done through the unified Routes field.
 type IngressTraitsSpec struct {
-	Name        string             `json:"name"`
-	Namespace   string             `json:"namespace"`
-	Hosts       []string           `json:"hosts,omitempty"`
-	Label       map[string]string  `json:"label"`
-	Annotations map[string]string  `json:"annotations,omitempty"`
-	TLS         []IngressTLSConfig `json:"tls,omitempty"`
-	Routes      []IngressRoutes    `json:"routes"`
+	Name             string             `json:"name"`
+	Namespace        string             `json:"namespace"`
+	Hosts            []string           `json:"hosts,omitempty"`
+	Label            map[string]string  `json:"label"`
+	Annotations      map[string]string  `json:"annotations,omitempty"`
+	IngressClassName string             `json:"ingressClassName,omitempty"`
+	DefaultPathType  string             `json:"defaultPathType,omitempty"`
+	TLS              []IngressTLSConfig `json:"tls,omitempty"`
+	Routes           []IngressRoutes    `json:"routes"`
 }
 type IngressTLSConfig struct {
 	SecretName string   `json:"secretName"`
@@ -164,9 +166,10 @@ type IngressTLSConfig struct {
 }
 
 type IngressRoutes struct {
-	Path    string       `json:"path,omitempty"`
-	Host    string       `json:"host,omitempty"`
-	Backend IngressRoute `json:"backend"`
+	Path     string       `json:"path,omitempty"`
+	PathType string       `json:"pathType,omitempty"`
+	Host     string       `json:"host,omitempty"`
+	Backend  IngressRoute `json:"backend"`
 	// Route-level optional features
 	Rewrite *RewritePolicy `json:"rewrite,omitempty"`
 }

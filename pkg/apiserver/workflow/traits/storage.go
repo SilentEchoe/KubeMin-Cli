@@ -59,7 +59,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		case config.VolumeTypePVC:
 			qty, err := resource.ParseQuantity(defaultOr(vol.Size, "1Gi"))
 			if err != nil {
-				return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volName, err)
+				return nil, fmt.Errorf("invalid size %q for volume %s: %w", vol.Size, volumeName, err)
 			}
 			pvcSpec := corev1.PersistentVolumeClaimSpec{
 				AccessModes: []corev1.PersistentVolumeAccessMode{corev1.ReadWriteOnce},

@@ -8,6 +8,25 @@ func ParseInt64(i int64) *int64 {
 	return &i
 }
 
+func StringPtr(val string) *string {
+	if val == "" {
+		return nil
+	}
+	v := val
+	return &v
+}
+
+func CopyStringMap(src map[string]string) map[string]string {
+	if len(src) == 0 {
+		return nil
+	}
+	dst := make(map[string]string, len(src))
+	for k, v := range src {
+		dst[k] = v
+	}
+	return dst
+}
+
 var trimLowerReplacer = strings.NewReplacer(
 	" ", "",
 	"\n", "",

@@ -183,7 +183,6 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 
 		if shouldProcess {
 			klog.V(3).Infof("Applying trait '%s' for component %s.", traitName, component.Name)
-
 			ctx := NewTraitContext(component, workload, traitData)
 			result, err := p.Process(ctx)
 			if err != nil {
