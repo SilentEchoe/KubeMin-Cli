@@ -6,10 +6,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	networkingv1 "k8s.io/api/networking/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 type fakeDataStore struct {
@@ -216,4 +219,50 @@ func TestGenerateJobTasksParallel(t *testing.T) {
 		}
 	}
 	require.Equal(t, 2, deployCount)
+}
+
+func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
+	component := &model.ApplicationComponent{
+		Name:      "Gateway",
+		AppID:     "App-1",
+		Namespace: "default",
+	}
+	task := &model.WorkflowQueue{
+		WorkflowID: "wf-1",
+		ProjectID:  "proj-1",
+		AppID:      "App-1",
+	}
+
+	t.Run("auto name when ingress missing name", func(t *testing.T) {
+		ing := &networkingv1.Ingress{}
+		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil)
+		require.NoError(t, err)
+		require.Len(t, jobs, 1)
+
+		expected := fmt.Sprintf("ing-%s-%s", utils.NormalizeLowerStrip(component.Name), utils.NormalizeLowerStrip(component.AppID))
+		require.Equal(t, expected, jobs[0].Name)
+
+		ingressObj, ok := jobs[0].JobInfo.(*networkingv1.Ingress)
+		require.True(t, ok)
+		require.Equal(t, expected, ingressObj.Name)
+		require.Equal(t, component.Namespace, ingressObj.Namespace)
+	})
+
+	t.Run("normalize existing ingress name", func(t *testing.T) {
+		ing := &networkingv1.Ingress{}
+		baseName := "CustomRoute"
+		ing.Name = baseName
+
+		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil)
+		require.NoError(t, err)
+		require.Len(t, jobs, 1)
+
+		expected := fmt.Sprintf("ing-%s-%s", utils.NormalizeLowerStrip(baseName), utils.NormalizeLowerStrip(component.AppID))
+		require.Equal(t, expected, jobs[0].Name)
+
+		ingressObj, ok := jobs[0].JobInfo.(*networkingv1.Ingress)
+		require.True(t, ok)
+		require.Equal(t, expected, ingressObj.Name)
+		require.Equal(t, component.Namespace, ingressObj.Namespace)
+	})
 }

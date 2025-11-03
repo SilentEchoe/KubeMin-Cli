@@ -566,9 +566,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
 		}
 		if ingress, ok := obj.(*networkingv1.Ingress); ok {
+			baseName := nameOrFallback(ingress.Name, component.Name)
+			normalizedName := job.BuildIngressName(baseName, component.AppID)
+			ingress.Name = normalizedName
+			if ingress.Namespace == "" {
+				ingress.Namespace = component.Namespace
+			}
 			ingressJob := NewJobTask(
-				fmt.Sprintf("%s-ing-%s", ingress.Name, component.AppID),
-				component.Namespace,
+				ingress.Name,
+				ingress.Namespace,
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
@@ -726,4 +732,11 @@ func sortedPriorities(jobs map[int][]*model.JobTask) []int {
 	}
 	sort.Ints(priorities)
 	return priorities
+}
+
+func nameOrFallback(name, fallback string) string {
+	if name != "" {
+		return name
+	}
+	return fallback
 }

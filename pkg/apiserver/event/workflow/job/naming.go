@@ -44,7 +44,7 @@ func buildServiceName(name, appID string) string {
 	return buildName("svc", name, appID, "service")
 }
 
-func buildIngressName(name, appID string) string {
+func BuildIngressName(name, appID string) string {
 	return buildName("ing", name, appID, "ingress")
 }
 
