@@ -40,26 +40,29 @@ func buildWebServiceName(name, appID string) string {
 	return fmt.Sprintf("webservice-%s-%s", name, utils.NormalizeLowerStrip(appID))
 }
 
-func buildServiceName(name, appID string) string {
-	return buildName("svc", name, appID, "service")
-}
-
-func BuildIngressName(name, appID string) string {
-	return buildName("ing", name, appID, "ingress")
-}
-
-func buildPVCName(name, appID string) string {
-	return buildName("pvc", name, appID, "pvc")
-}
-
-func buildConfigMapName(name, appID string) string {
-	return buildName("cm", name, appID, "config")
-}
-
-func buildSecretName(name, appID string) string {
-	return buildName("secret", name, appID, "secret")
-}
-
+func buildServiceName(name, appID string) string   { return buildName("svc", name, appID, "service") }
+func buildIngressName(name, appID string) string   { return buildName("ing", name, appID, "ingress") }
+func buildPVCName(name, appID string) string       { return buildName("pvc", name, appID, "pvc") }
+func buildConfigMapName(name, appID string) string { return buildName("cm", name, appID, "config") }
+func buildSecretName(name, appID string) string    { return buildName("secret", name, appID, "secret") }
 func buildStoreSeverName(name, appID string) string {
 	return buildName("store", name, appID, "store")
 }
+
+// BuildIngressName returns a normalized ingress resource name for the given component/app.
+func BuildIngressName(name, appID string) string { return buildIngressName(name, appID) }
+
+// BuildPVCName returns a normalized PVC resource name for the given component/app.
+func BuildPVCName(name, appID string) string { return buildPVCName(name, appID) }
+
+// BuildConfigMapName returns a normalized ConfigMap resource name for the given component/app.
+func BuildConfigMapName(name, appID string) string { return buildConfigMapName(name, appID) }
+
+// BuildSecretName returns a normalized Secret resource name for the given component/app.
+func BuildSecretName(name, appID string) string { return buildSecretName(name, appID) }
+
+// BuildServiceName returns a normalized Service resource name for the given component/app.
+func BuildServiceName(name, appID string) string { return buildServiceName(name, appID) }
+
+// BuildStoreServerName returns a normalized store workload name for the given component/app.
+func BuildStoreServerName(name, appID string) string { return buildStoreSeverName(name, appID) }

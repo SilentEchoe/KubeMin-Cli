@@ -6,11 +6,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	job "KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
 )
@@ -139,6 +142,11 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 	require.Equal(t, "config", second.Name)
 	require.Equal(t, config.WorkflowModeStepByStep, second.Mode)
 	require.Len(t, second.Jobs[config.JobPriorityHigh], 1)
+	cmJob := second.Jobs[config.JobPriorityHigh][0]
+	require.Equal(t, job.BuildConfigMapName(configComponent.Name, configComponent.AppID), cmJob.Name)
+	cmInput, ok := cmJob.JobInfo.(*model.ConfigMapInput)
+	require.True(t, ok)
+	require.Equal(t, cmJob.Name, cmInput.Name)
 }
 
 func TestGenerateJobTasksParallel(t *testing.T) {
@@ -248,6 +256,27 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 		require.Equal(t, component.Namespace, ingressObj.Namespace)
 	})
 
+	t.Run("normalize pvc name and namespace", func(t *testing.T) {
+		baseName := "DataVol"
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: baseName,
+			},
+		}
+
+		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil)
+		require.NoError(t, err)
+		require.Len(t, j, 1)
+
+		expected := job.BuildPVCName(baseName, component.AppID)
+		require.Equal(t, expected, j[0].Name)
+
+		pvcObj, ok := j[0].JobInfo.(*corev1.PersistentVolumeClaim)
+		require.True(t, ok)
+		require.Equal(t, expected, pvcObj.Name)
+		require.Equal(t, component.Namespace, pvcObj.Namespace)
+	})
+
 	t.Run("normalize existing ingress name", func(t *testing.T) {
 		ing := &networkingv1.Ingress{}
 		baseName := "CustomRoute"
@@ -265,4 +294,36 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 		require.Equal(t, expected, ingressObj.Name)
 		require.Equal(t, component.Namespace, ingressObj.Namespace)
 	})
+}
+
+func TestSecretJobNameNormalization(t *testing.T) {
+	secretProps, err := model.NewJSONStructByStruct(model.Properties{Secret: map[string]string{"token": "value"}})
+	require.NoError(t, err)
+
+	component := &model.ApplicationComponent{
+		Name:          "ApiKey",
+		AppID:         "App-Env",
+		Namespace:     "",
+		ComponentType: config.SecretJob,
+		Properties:    secretProps,
+	}
+
+	task := &model.WorkflowQueue{
+		WorkflowID: "wf-secret",
+		ProjectID:  "proj-1",
+		AppID:      component.AppID,
+	}
+
+	ctx := context.Background()
+	buckets := buildJobsForComponent(ctx, component, task)
+	jobs := buckets[config.JobPriorityHigh]
+	require.Len(t, jobs, 1)
+
+	expectedName := job.BuildSecretName(component.Name, component.AppID)
+	require.Equal(t, expectedName, jobs[0].Name)
+
+	secretInput, ok := jobs[0].JobInfo.(*model.SecretInput)
+	require.True(t, ok)
+	require.Equal(t, expectedName, secretInput.Name)
+	require.Equal(t, config.DefaultNamespace, secretInput.Namespace)
 }
