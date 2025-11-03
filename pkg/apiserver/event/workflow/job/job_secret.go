@@ -217,7 +217,7 @@ func equalSecretPayload(a, b *corev1.Secret) bool {
 }
 
 func GenerateSecret(component *model.ApplicationComponent, properties *model.Properties) interface{} {
-	name := buildSecretName(component.Name, component.AppID)
+	name := component.Name
 	namespace := component.Namespace
 	if namespace == "" {
 		namespace = config.DefaultNamespace

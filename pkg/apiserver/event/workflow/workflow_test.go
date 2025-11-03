@@ -13,9 +13,9 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	job "KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/naming"
 )
 
 type fakeDataStore struct {
@@ -143,7 +143,7 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 	require.Equal(t, config.WorkflowModeStepByStep, second.Mode)
 	require.Len(t, second.Jobs[config.JobPriorityHigh], 1)
 	cmJob := second.Jobs[config.JobPriorityHigh][0]
-	require.Equal(t, job.BuildConfigMapName(configComponent.Name, configComponent.AppID), cmJob.Name)
+	require.Equal(t, configComponent.Name, cmJob.Name)
 	cmInput, ok := cmJob.JobInfo.(*model.ConfigMapInput)
 	require.True(t, ok)
 	require.Equal(t, cmJob.Name, cmInput.Name)
@@ -258,9 +258,30 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 
 	t.Run("normalize pvc name and namespace", func(t *testing.T) {
 		baseName := "DataVol"
+		canonical := naming.PVCName(baseName, component.AppID)
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: baseName,
+				Name:      canonical,
+				Namespace: component.Namespace,
+			},
+		}
+
+		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil)
+		require.NoError(t, err)
+		require.Len(t, j, 1)
+		require.Equal(t, canonical, j[0].Name)
+
+		pvcObj, ok := j[0].JobInfo.(*corev1.PersistentVolumeClaim)
+		require.True(t, ok)
+		require.Equal(t, canonical, pvcObj.Name)
+		require.Equal(t, component.Namespace, pvcObj.Namespace)
+	})
+
+	t.Run("fill namespace when pvc missing it", func(t *testing.T) {
+		canonical := naming.PVCName("cache", component.AppID)
+		pvc := &corev1.PersistentVolumeClaim{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: canonical,
 			},
 		}
 
@@ -268,13 +289,10 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, j, 1)
 
-		expected := job.BuildPVCName(baseName, component.AppID)
-		require.Equal(t, expected, j[0].Name)
-
 		pvcObj, ok := j[0].JobInfo.(*corev1.PersistentVolumeClaim)
 		require.True(t, ok)
-		require.Equal(t, expected, pvcObj.Name)
 		require.Equal(t, component.Namespace, pvcObj.Namespace)
+		require.Equal(t, canonical, j[0].Name)
 	})
 
 	t.Run("normalize existing ingress name", func(t *testing.T) {
@@ -319,7 +337,7 @@ func TestSecretJobNameNormalization(t *testing.T) {
 	jobs := buckets[config.JobPriorityHigh]
 	require.Len(t, jobs, 1)
 
-	expectedName := job.BuildSecretName(component.Name, component.AppID)
+	expectedName := component.Name
 	require.Equal(t, expectedName, jobs[0].Name)
 
 	secretInput, ok := jobs[0].JobInfo.(*model.SecretInput)

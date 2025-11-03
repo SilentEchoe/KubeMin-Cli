@@ -10,6 +10,8 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/utils/naming"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
@@ -41,17 +43,17 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	processedVolumes := make(map[string]bool)
 
 	for _, vol := range storageTraits {
-		if processedVolumes[vol.Name] {
+		volumeName := utils.NormalizeLowerStrip(vol.Name)
+		if volumeName == "" {
+			return nil, fmt.Errorf("storage trait requires a valid volume name")
+		}
+		if processedVolumes[volumeName] {
 			continue
 		}
-		processedVolumes[vol.Name] = true
+		processedVolumes[volumeName] = true
 		volType := config.StorageTypeMapping[vol.Type]
 
-		volName := vol.Name
-		if volName == "" {
-			return nil, fmt.Errorf("storage trait of type '%s' requires a name", vol.Type)
-		}
-		mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volName))
+		mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volumeName))
 
 		switch volType {
 		case config.VolumeTypePVC:
@@ -68,33 +70,42 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			}
 
 			pvc := corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{Name: volName, Namespace: ctx.Component.Namespace},
+				ObjectMeta: metav1.ObjectMeta{Name: vol.Name, Namespace: ctx.Component.Namespace},
 				Spec:       pvcSpec,
 			}
 
 			if vol.Create {
+				claimName := naming.PVCName(vol.Name, ctx.Component.AppID)
+				pvc.Name = claimName
 				pvc.Annotations = map[string]string{config.LabelStorageRole: "template"}
+				pvcs = append(pvcs, pvc)
+				volumes = append(volumes, corev1.Volume{
+					Name: volumeName,
+					VolumeSource: corev1.VolumeSource{
+						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName},
+					},
+				})
 			} else {
 				volumes = append(volumes, corev1.Volume{
-					Name:         volName,
-					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volName}},
+					Name:         volumeName,
+					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: vol.Name}},
 				})
+				pvcs = append(pvcs, pvc)
 			}
-			pvcs = append(pvcs, pvc)
 
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{
-				Name:         volName,
+				Name:         volumeName,
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
 
 		case config.VolumeTypeConfigMap:
 			sourceName := vol.SourceName
 			if sourceName == "" {
-				sourceName = volName
+				sourceName = vol.Name
 			}
 			volumes = append(volumes, corev1.Volume{
-				Name: volName,
+				Name: volumeName,
 				VolumeSource: corev1.VolumeSource{
 					ConfigMap: &corev1.ConfigMapVolumeSource{
 						LocalObjectReference: corev1.LocalObjectReference{Name: sourceName},
@@ -106,10 +117,10 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		case config.VolumeTypeSecret:
 			sourceName := vol.SourceName
 			if sourceName == "" {
-				sourceName = volName
+				sourceName = vol.Name
 			}
 			volumes = append(volumes, corev1.Volume{
-				Name: volName,
+				Name: volumeName,
 				VolumeSource: corev1.VolumeSource{
 					Secret: &corev1.SecretVolumeSource{
 						SecretName:  sourceName,
@@ -119,7 +130,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			})
 		}
 		// The VolumeMount is always created, regardless of the volume type.
-		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
+		volumeMounts = append(volumeMounts, corev1.VolumeMount{Name: volumeName, MountPath: mountPath, SubPath: vol.SubPath, ReadOnly: vol.ReadOnly})
 	}
 
 	// Convert PVCs to generic client.Object for the result

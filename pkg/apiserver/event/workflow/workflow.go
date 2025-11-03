@@ -551,15 +551,14 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 
 	for _, obj := range additionalObjects {
 		if pvc, ok := obj.(*corev1.PersistentVolumeClaim); ok {
-			baseName := nameOrFallback(pvc.Name, component.Name)
-			normalizedName := job.BuildPVCName(baseName, component.AppID)
-			pvc.Name = normalizedName
-			if pvc.Namespace == "" {
-				pvc.Namespace = component.Namespace
+			ns := pvc.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				pvc.Namespace = ns
 			}
 			pvcJob := NewJobTask(
 				pvc.Name,
-				pvc.Namespace,
+				ns,
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
@@ -630,15 +629,13 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs)
 
 	case config.ConfJob:
-		cmName := job.BuildConfigMapName(component.Name, component.AppID)
-		jobTask := NewJobTask(cmName, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
 
 	case config.SecretJob:
-		secretName := job.BuildSecretName(component.Name, component.AppID)
-		jobTask := NewJobTask(secretName, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
 		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
