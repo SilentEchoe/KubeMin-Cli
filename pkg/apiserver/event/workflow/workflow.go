@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	networkingv1 "k8s.io/api/networking/v1"
 	"sort"
 	"sync"
 	"time"
@@ -14,6 +13,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
 	corev1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -587,6 +588,86 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			ingressJob.JobInfo = ingress
 			jobs = append(jobs, ingressJob)
 			klog.Infof("Created Ingress job for component %s: %s", component.Name, ingress.Name)
+		}
+		if sa, ok := obj.(*corev1.ServiceAccount); ok {
+			ns := sa.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				sa.Namespace = ns
+			}
+			jobTask := NewJobTask(
+				sa.Name,
+				ns,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployServiceAccount)
+			jobTask.JobInfo = sa.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created ServiceAccount job for component %s: %s/%s", component.Name, ns, sa.Name)
+		}
+		if role, ok := obj.(*rbacv1.Role); ok {
+			ns := role.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				role.Namespace = ns
+			}
+			jobTask := NewJobTask(
+				role.Name,
+				ns,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployRole)
+			jobTask.JobInfo = role.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created Role job for component %s: %s/%s", component.Name, ns, role.Name)
+		}
+		if binding, ok := obj.(*rbacv1.RoleBinding); ok {
+			ns := binding.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				binding.Namespace = ns
+			}
+			jobTask := NewJobTask(
+				binding.Name,
+				ns,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployRoleBinding)
+			jobTask.JobInfo = binding.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created RoleBinding job for component %s: %s/%s", component.Name, ns, binding.Name)
+		}
+		if clusterRole, ok := obj.(*rbacv1.ClusterRole); ok {
+			jobTask := NewJobTask(
+				clusterRole.Name,
+				component.Namespace,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployClusterRole)
+			jobTask.JobInfo = clusterRole.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created ClusterRole job for component %s: %s", component.Name, clusterRole.Name)
+		}
+		if clusterBinding, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+			jobTask := NewJobTask(
+				clusterBinding.Name,
+				component.Namespace,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployClusterRoleBinding)
+			jobTask.JobInfo = clusterBinding.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created ClusterRoleBinding job for component %s: %s", component.Name, clusterBinding.Name)
 		}
 	}
 	return jobs, nil

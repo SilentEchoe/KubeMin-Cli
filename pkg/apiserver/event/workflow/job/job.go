@@ -109,6 +109,16 @@ func initJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore
 		jobCtl = NewDeploySecretJobCtl(job, client, store, ack)
 	case string(config.JobDeployIngress):
 		jobCtl = NewDeployIngressJobCtl(job, client, store, ack)
+	case string(config.JobDeployServiceAccount):
+		jobCtl = NewDeployServiceAccountJobCtl(job, client, store, ack)
+	case string(config.JobDeployRole):
+		jobCtl = NewDeployRoleJobCtl(job, client, store, ack)
+	case string(config.JobDeployRoleBinding):
+		jobCtl = NewDeployRoleBindingJobCtl(job, client, store, ack)
+	case string(config.JobDeployClusterRole):
+		jobCtl = NewDeployClusterRoleJobCtl(job, client, store, ack)
+	case string(config.JobDeployClusterRoleBinding):
+		jobCtl = NewDeployClusterRoleBindingJobCtl(job, client, store, ack)
 	default:
 		klog.Errorf("unknown job type: %s", job.JobType)
 		return nil

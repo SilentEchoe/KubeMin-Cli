@@ -90,4 +90,11 @@ RBAC Trait 允许组件声明其运行所需的 Kubernetes RBAC 对象。配置�
 - `ClusterRole <组件名>-sa-role`
 - `ClusterRoleBinding <组件名>-sa-binding`
 
+## 执行与幂等行为
+
+- RBAC Trait 生成的 ServiceAccount、Role/ClusterRole 以及 RoleBinding/ClusterRoleBinding 会被工作流调度成独立的高优先级任务，确保在主工作负载之前就绪。
+- 系统会在首次创建时为这些资源打上 `kube-min-cli=<AppID>` 标签；后续只有带有该标签的对象才会被更新，避免覆盖外部手动维护的 RBAC。
+- 如果目标命名空间中已经存在同名但未带标签的对象，调度任务会跳过更新操作，只作为“引用”使用。
+- 可以利用这一机制决定是否复用已有 Role：保留原始对象即可；若希望由系统托管，给对象补充 `kube-min-cli` 标签即可开启后续自动更新。
+
 以上示例和字段均可按需覆盖，满足不同服务在 Kubernetes 中对 RBAC 的需求。

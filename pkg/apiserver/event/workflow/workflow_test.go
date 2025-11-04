@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -312,6 +313,102 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 		require.Equal(t, expected, ingressObj.Name)
 		require.Equal(t, component.Namespace, ingressObj.Namespace)
 	})
+}
+
+func TestCreateObjectJobsFromResultRBAC(t *testing.T) {
+	component := &model.ApplicationComponent{
+		Name:      "Labeler",
+		AppID:     "App-2",
+		Namespace: "ops",
+	}
+	task := &model.WorkflowQueue{
+		WorkflowID: "wf-rbac",
+		ProjectID:  "proj-rbac",
+		AppID:      component.AppID,
+	}
+
+	sa := &corev1.ServiceAccount{ObjectMeta: metav1.ObjectMeta{Name: "pod-labeler-sa"}}
+	role := &rbacv1.Role{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-labeler-role"},
+		Rules: []rbacv1.PolicyRule{{
+			Verbs:     []string{"get"},
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+		}},
+	}
+	binding := &rbacv1.RoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-labeler-binding"},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      sa.Name,
+			Namespace: component.Namespace,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "Role",
+			APIGroup: rbacv1.GroupName,
+			Name:     role.Name,
+		},
+	}
+	clusterRole := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-labeler-cluster-role"},
+		Rules: []rbacv1.PolicyRule{{
+			Verbs:     []string{"list"},
+			APIGroups: []string{""},
+			Resources: []string{"pods"},
+		}},
+	}
+	clusterBinding := &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: "pod-labeler-cluster-binding"},
+		Subjects: []rbacv1.Subject{{
+			Kind:      rbacv1.ServiceAccountKind,
+			Name:      sa.Name,
+			Namespace: component.Namespace,
+		}},
+		RoleRef: rbacv1.RoleRef{
+			Kind:     "ClusterRole",
+			APIGroup: rbacv1.GroupName,
+			Name:     clusterRole.Name,
+		},
+	}
+
+	objs := []client.Object{sa, role, binding, clusterRole, clusterBinding}
+	jobs, err := CreateObjectJobsFromResult(objs, component, task, nil)
+	require.NoError(t, err)
+	require.Len(t, jobs, 5)
+
+	jobTypes := make(map[string]bool)
+	for _, job := range jobs {
+		jobTypes[job.JobType] = true
+		require.NotNil(t, job.JobInfo)
+		switch job.JobType {
+		case string(config.JobDeployServiceAccount):
+			saObj, ok := job.JobInfo.(*corev1.ServiceAccount)
+			require.True(t, ok)
+			require.Equal(t, component.Namespace, saObj.Namespace)
+		case string(config.JobDeployRole):
+			roleObj, ok := job.JobInfo.(*rbacv1.Role)
+			require.True(t, ok)
+			require.Equal(t, component.Namespace, roleObj.Namespace)
+		case string(config.JobDeployRoleBinding):
+			bindingObj, ok := job.JobInfo.(*rbacv1.RoleBinding)
+			require.True(t, ok)
+			require.Equal(t, component.Namespace, bindingObj.Namespace)
+		case string(config.JobDeployClusterRole):
+			_, ok := job.JobInfo.(*rbacv1.ClusterRole)
+			require.True(t, ok)
+		case string(config.JobDeployClusterRoleBinding):
+			_, ok := job.JobInfo.(*rbacv1.ClusterRoleBinding)
+			require.True(t, ok)
+		default:
+			t.Fatalf("unexpected job type %s", job.JobType)
+		}
+	}
+
+	require.True(t, jobTypes[string(config.JobDeployServiceAccount)])
+	require.True(t, jobTypes[string(config.JobDeployRole)])
+	require.True(t, jobTypes[string(config.JobDeployRoleBinding)])
+	require.True(t, jobTypes[string(config.JobDeployClusterRole)])
+	require.True(t, jobTypes[string(config.JobDeployClusterRoleBinding)])
 }
 
 func TestSecretJobNameNormalization(t *testing.T) {
