@@ -86,6 +86,7 @@ func RegisterAllProcessors() {
 	Register(&EnvsProcessor{})
 	Register(&ResourcesProcessor{})
 	Register(&ProbeProcessor{}) // Added ProbeProcessor
+	Register(&RBACProcessor{})
 
 	// 2. Register traits that add containers or recursively process other traits.
 	Register(&InitProcessor{})

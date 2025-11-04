@@ -10,6 +10,7 @@ type Traits struct {
 	Secret    []SecretTraitsSpec  `json:"secret,omitempty"`
 	Sidecar   []SidecarTraitsSpec `json:"sidecar,omitempty"`
 	Ingress   []IngressTraitsSpec `json:"ingress,omitempty"`
+	RBAC      []RBACPolicySpec    `json:"rbac,omitempty"`
 	EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
 	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
@@ -185,4 +186,28 @@ type RewritePolicy struct {
 	Type        string `json:"type"` // e.g. "replace", "regexReplace", "prefix"
 	Match       string `json:"match,omitempty"`
 	Replacement string `json:"replacement,omitempty"`
+}
+
+// RBACPolicySpec describes an RBAC policy to be created for the component.
+type RBACPolicySpec struct {
+	ServiceAccount             string            `json:"serviceAccount,omitempty"`
+	Namespace                  string            `json:"namespace,omitempty"`
+	ClusterScope               bool              `json:"clusterScope,omitempty"`
+	RoleName                   string            `json:"roleName,omitempty"`
+	BindingName                string            `json:"bindingName,omitempty"`
+	ServiceAccountLabels       map[string]string `json:"serviceAccountLabels,omitempty"`
+	ServiceAccountAnnotations  map[string]string `json:"serviceAccountAnnotations,omitempty"`
+	RoleLabels                 map[string]string `json:"roleLabels,omitempty"`
+	BindingLabels              map[string]string `json:"bindingLabels,omitempty"`
+	Rules                      []RBACRuleSpec    `json:"rules"`
+	ServiceAccountAutomountSAT *bool             `json:"automountServiceAccountToken,omitempty"`
+}
+
+// RBACRuleSpec mirrors rbacv1.PolicyRule with common fields exposed.
+type RBACRuleSpec struct {
+	APIGroups       []string `json:"apiGroups,omitempty"`
+	Resources       []string `json:"resources,omitempty"`
+	ResourceNames   []string `json:"resourceNames,omitempty"`
+	NonResourceURLs []string `json:"nonResourceURLs,omitempty"`
+	Verbs           []string `json:"verbs"`
 }
