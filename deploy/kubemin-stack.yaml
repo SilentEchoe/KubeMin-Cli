@@ -1,12 +1,48 @@
 apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubemin-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubemin-cli-sa
+  namespace: kubemin-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: kubemin-cli-leader-election
+  namespace: kubemin-system
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: kubemin-cli-leader-election
+  namespace: kubemin-system
+subjects:
+  - kind: ServiceAccount
+    name: kubemin-cli-sa
+    namespace: kubemin-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: kubemin-cli-leader-election
+---
+apiVersion: v1
 kind: Secret
 metadata:
   name: kubemin-mysql-secret
+  namespace: kubemin-system
   labels:
     app: kubemin-mysql
 type: Opaque
 stringData:
-  mysql-root-password: changeMeRoot
+  mysql-root-password: kubemincliRoot
   mysql-user: kubemin
   mysql-password: kubemincli
   mysql-database: kubemincli
@@ -15,6 +51,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubemin-mysql
+  namespace: kubemin-system
   labels:
     app: kubemin-mysql
 spec:
@@ -30,6 +67,7 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: kubemin-mysql
+  namespace: kubemin-system
   labels:
     app: kubemin-mysql
 spec:
@@ -88,6 +126,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: kubemin-redis
+  namespace: kubemin-system
   labels:
     app: kubemin-redis
 spec:
@@ -102,6 +141,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kubemin-redis
+  namespace: kubemin-system
   labels:
     app: kubemin-redis
 spec:
@@ -129,16 +169,61 @@ spec:
             - "yes"
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubemin-cli-flags
+  namespace: kubemin-system
+data:
+  KUBEMIN_BIND_ADDR: "0.0.0.0:8080"
+  KUBEMIN_LEADER_ID: "kubemin-apiserver-1"
+  KUBEMIN_LEADER_LOCK_NAME: "apiserver-lock"
+  KUBEMIN_DURATION: "5m"
+  KUBEMIN_LEADER_NAMESPACE: "kubemin-system"
+  KUBEMIN_KUBE_API_QPS: "150"
+  KUBEMIN_KUBE_API_BURST: "450"
+  KUBEMIN_EXIT_ON_LOST_LEADER: "false"
+  KUBEMIN_DATASTORE_TYPE: "mysql"
+  KUBEMIN_DATASTORE_DATABASE: "kubemincli"
+  KUBEMIN_MYSQL_MAX_IDLE_CONNS: "20"
+  KUBEMIN_MYSQL_MAX_OPEN_CONNS: "200"
+  KUBEMIN_MYSQL_CONN_MAX_LIFETIME: "30m"
+  KUBEMIN_MYSQL_CONN_MAX_IDLE_TIME: "10m"
+  KUBEMIN_ENABLE_TRACING: "true"
+  KUBEMIN_AUTO_TRACING: "true"
+  KUBEMIN_MSG_TYPE: "redis"
+  KUBEMIN_MSG_CHANNEL_PREFIX: "kubemin"
+  KUBEMIN_MSG_REDIS_MAXLEN: "50000"
+  KUBEMIN_CACHE_TYPE: "redis"
+  KUBEMIN_CACHE_HOST: "kubemin-redis"
+  KUBEMIN_CACHE_PORT: "6379"
+  KUBEMIN_CACHE_DB: "0"
+  KUBEMIN_CACHE_USERNAME: ""
+  KUBEMIN_CACHE_TTL: "24h"
+  KUBEMIN_CACHE_PREFIX: "kubemin:cache:"
+  KUBEMIN_PROFILING_ADDR: "0.0.0.0:6060"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubemin-cli-secret
+  namespace: kubemin-system
+type: Opaque
+stringData:
+  KUBEMIN_DATASTORE_URL: "root:kubemincliRoot@tcp(kubemin-mysql:3306)/kubemincli?charset=utf8&parseTime=true"
+  KUBEMIN_CACHE_PASSWORD: ""
+---
+apiVersion: v1
 kind: Service
 metadata:
   name: kubemin-cli
+  namespace: kubemin-system
   labels:
     app: kubemin-cli
 spec:
   ports:
     - name: http
       port: 8080
-      targetPort: 8080
+      targetPort: http
   selector:
     app: kubemin-cli
 ---
@@ -146,6 +231,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kubemin-cli
+  namespace: kubemin-system
   labels:
     app: kubemin-cli
 spec:
@@ -158,13 +244,19 @@ spec:
       labels:
         app: kubemin-cli
     spec:
+      serviceAccountName: kubemin-cli-sa
       containers:
         - name: kubemin-cli
-          image: anonymitycat/kubemin-cli:latest
+          image: docker.io/library/kubemin-cli:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
               name: http
+          envFrom:
+            - configMapRef:
+                name: kubemin-cli-flags
+            - secretRef:
+                name: kubemin-cli-secret
           env:
             - name: MYSQL_HOST
               value: kubemin-mysql
@@ -187,15 +279,10 @@ spec:
                   key: mysql-password
             - name: REDIS_ADDR
               value: kubemin-redis:6379
-          readinessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 10
-            periodSeconds: 10
-          livenessProbe:
-            httpGet:
-              path: /healthz
-              port: http
-            initialDelaySeconds: 30
-            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

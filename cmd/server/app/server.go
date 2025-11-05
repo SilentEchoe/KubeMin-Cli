@@ -16,6 +16,7 @@ import (
 
 	"KubeMin-Cli/cmd/server/app/options"
 	server "KubeMin-Cli/pkg/apiserver"
+	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/observability"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/profiling"
@@ -33,6 +34,9 @@ func NewAPIServerCommand() *cobra.Command {
 		Use:  "ApiServer",
 		Long: `The KubeMin-CLI API service, which provides application deployment and Istio operations`,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := config.ApplyEnvOverrides(cmd.Flags(), config.EnvPrefix); err != nil {
+				return fmt.Errorf("apply env overrides: %w", err)
+			}
 			if err := s.Validate(); err != nil {
 				return err
 			}
