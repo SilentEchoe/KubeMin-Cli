@@ -27,3 +27,6 @@
 
 # Local Go build cache if created
 .gocache/
+.buildx-cache/
+/.buildx-cache/
+

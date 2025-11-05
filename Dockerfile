@@ -9,7 +9,10 @@ COPY . .
 
 ARG TARGETOS=linux
 ARG TARGETARCH=amd64
-RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -o /workspace/kubemin-cli -ldflags="-s -w" ./cmd
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    --mount=type=cache,target=/go/pkg/mod \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH \
+    go build -trimpath -ldflags="-s -w" -o /workspace/kubemin-cli ./cmd
 
 FROM alpine:3.20
 RUN addgroup -S kubemin && adduser -S -G kubemin kubemin

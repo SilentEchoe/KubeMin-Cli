@@ -6,7 +6,7 @@ metadata:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: kubemin-cli-sa
+  name: kubemin-cli-platform
   namespace: kubemin-system
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -26,7 +26,7 @@ metadata:
   namespace: kubemin-system
 subjects:
   - kind: ServiceAccount
-    name: kubemin-cli-sa
+    name: kubemin-cli-platform
     namespace: kubemin-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -36,10 +36,10 @@ roleRef:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: kubemin-cli-cluster-admin
+  name: kubemin-cli-platform-cluster-admin
 subjects:
   - kind: ServiceAccount
-    name: kubemin-cli-sa
+    name: kubemin-cli-platform
     namespace: kubemin-system
 roleRef:
   apiGroup: rbac.authorization.k8s.io
@@ -216,25 +216,6 @@ data:
   KUBEMIN_PROFILING_ADDR: "0.0.0.0:6060"
 ---
 apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: kubemin-cli-sa
-  namespace: kubemin-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: kubemin-cli-cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: kubemin-cli-sa
-    namespace: kubemin-system
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
----
-apiVersion: v1
 kind: Secret
 metadata:
   name: kubemin-cli-secret
@@ -276,10 +257,10 @@ spec:
       labels:
         app: kubemin-cli
     spec:
-      serviceAccountName: kubemin-cli-sa
+      serviceAccountName: kubemin-cli-platform
       containers:
         - name: kubemin-cli
-          image: docker.io/library/kubemin-cli:latest
+          image: docker.yu3.co/3os/kubemin-cli:latest
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080

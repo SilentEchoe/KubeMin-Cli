@@ -16,8 +16,11 @@ LDFLAGS      ?=
 MAIN_PKG := ./cmd
 
 # Container settings
-DOCKER ?= docker
-IMAGE  ?= kubemin-cli:latest
+DOCKER          ?= docker
+DOCKER_BUILDER  ?= kubemin-cli-builder
+IMAGE           ?= kubemin-cli:latest
+DIST_DIR        ?= dist
+BUILDX_CACHE    ?= .buildx-cache
 
 # Null device for discarding binaries
 DEVNULL := /dev/null
@@ -25,7 +28,7 @@ ifeq ($(OS),Windows_NT)
   DEVNULL := NUL
 endif
 
-.PHONY: all build build-linux build-darwin build-windows clean test tidy fmt vet run docker-build
+.PHONY: all build build-linux build-darwin build-windows clean test tidy fmt vet run docker-build docker-build-linux docker-build-arm docker-build-macos docker-builder-init
 
 all: build
 
@@ -61,5 +64,42 @@ tidy:
 clean:
 	rm -rf $(BINARY_NAME)*
 
-docker-build:
-	$(DOCKER) build -t $(IMAGE) .
+docker-build: docker-builder-init docker-build-linux docker-build-arm docker-build-macos
+
+docker-builder-init:
+	@$(DOCKER) buildx inspect $(DOCKER_BUILDER) >/dev/null 2>&1 || \
+		( $(DOCKER) buildx create --name $(DOCKER_BUILDER) --driver docker-container >/dev/null && \
+		  $(DOCKER) buildx inspect --builder $(DOCKER_BUILDER) --bootstrap >/dev/null )
+	@$(DOCKER) buildx use $(DOCKER_BUILDER) >/dev/null
+
+docker-build-linux:
+	@which $(DOCKER) >/dev/null || (echo "docker not found in PATH"; exit 1)
+	@mkdir -p $(BUILDX_CACHE)
+	$(DOCKER) buildx build \
+		--builder $(DOCKER_BUILDER) \
+		--platform linux/amd64 \
+		--build-arg TARGETOS=linux \
+		--build-arg TARGETARCH=amd64 \
+		--cache-from type=local,src=$(BUILDX_CACHE) \
+		--cache-to type=local,dest=$(BUILDX_CACHE),mode=max \
+		-t $(IMAGE)-linux-amd64 \
+		--load .
+
+docker-build-arm:
+	@which $(DOCKER) >/dev/null || (echo "docker not found in PATH"; exit 1)
+	@mkdir -p $(BUILDX_CACHE)
+	$(DOCKER) buildx build \
+		--builder $(DOCKER_BUILDER) \
+		--platform linux/arm64 \
+		--build-arg TARGETOS=linux \
+		--build-arg TARGETARCH=arm64 \
+		--cache-from type=local,src=$(BUILDX_CACHE) \
+		--cache-to type=local,dest=$(BUILDX_CACHE),mode=max \
+		-t $(IMAGE)-linux-arm64 \
+		--load .
+
+docker-build-macos:
+	mkdir -p $(DIST_DIR)
+	CGO_ENABLED=$(CGO_ENABLED) GO111MODULE=$(GO111MODULE) GOOS=darwin GOARCH=amd64 \
+		$(GO) build $(GOFLAGS) -o $(DIST_DIR)/$(BINARY_NAME)-darwin-amd64 $(LDFLAGS) $(MAIN_PKG)
+	@echo "macOS binary written to $(DIST_DIR)/$(BINARY_NAME)-darwin-amd64"
