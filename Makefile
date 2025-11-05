@@ -15,13 +15,17 @@ LDFLAGS      ?=
 # Main entrypoint
 MAIN_PKG := ./cmd
 
+# Container settings
+DOCKER ?= docker
+IMAGE  ?= kubemin-cli:latest
+
 # Null device for discarding binaries
 DEVNULL := /dev/null
 ifeq ($(OS),Windows_NT)
   DEVNULL := NUL
 endif
 
-.PHONY: all build build-linux build-darwin build-windows clean test tidy fmt vet run
+.PHONY: all build build-linux build-darwin build-windows clean test tidy fmt vet run docker-build
 
 all: build
 
@@ -56,3 +60,6 @@ tidy:
 
 clean:
 	rm -rf $(BINARY_NAME)*
+
+docker-build:
+	$(DOCKER) build -t $(IMAGE) .

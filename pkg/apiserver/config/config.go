@@ -84,7 +84,7 @@ type MessagingConfig struct {
 
 func NewConfig() *Config {
 	return &Config{
-		BindAddr: "0.0.0.0:8000",
+		BindAddr: "0.0.0.0:8080",
 		LeaderConfig: leaderConfig{
 			ID:       uuid.New().String(),
 			LockName: "apiserver-lock",
