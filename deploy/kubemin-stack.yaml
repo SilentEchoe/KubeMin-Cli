@@ -33,6 +33,19 @@ roleRef:
   kind: Role
   name: kubemin-cli-leader-election
 ---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubemin-cli-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: kubemin-cli-sa
+    namespace: kubemin-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -201,6 +214,25 @@ data:
   KUBEMIN_CACHE_TTL: "24h"
   KUBEMIN_CACHE_PREFIX: "kubemin:cache:"
   KUBEMIN_PROFILING_ADDR: "0.0.0.0:6060"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubemin-cli-sa
+  namespace: kubemin-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubemin-cli-cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: kubemin-cli-sa
+    namespace: kubemin-system
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
 ---
 apiVersion: v1
 kind: Secret
