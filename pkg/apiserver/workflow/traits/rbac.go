@@ -78,6 +78,13 @@ func (p *RBACProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 		result.AdditionalObjects = append(result.AdditionalObjects, sa)
 
+		if result.ServiceAccountName == "" {
+			result.ServiceAccountName = saName
+		}
+		if result.AutomountServiceAccountToken == nil && policy.ServiceAccountAutomountSAT != nil {
+			result.AutomountServiceAccountToken = policy.ServiceAccountAutomountSAT
+		}
+
 		rules := make([]rbacv1.PolicyRule, len(policy.Rules))
 		for i, rule := range policy.Rules {
 			if len(rule.Verbs) == 0 {

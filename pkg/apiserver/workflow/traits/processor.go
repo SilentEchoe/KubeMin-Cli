@@ -38,6 +38,10 @@ type TraitResult struct {
 	EnvFromSources    map[string][]corev1.EnvFromSource // Keyed by container name
 	AdditionalObjects []client.Object
 
+	// Service account binding
+	ServiceAccountName           string
+	AutomountServiceAccountToken *bool
+
 	// Container-level modifications
 	LivenessProbe        *corev1.Probe
 	ReadinessProbe       *corev1.Probe
@@ -152,10 +156,8 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 			continue // Skip excluded traits.
 		}
 
-		fieldName := strings.ToUpper(traitName[:1]) + traitName[1:]
-		field := traitsVal.FieldByName(fieldName)
-
-		if !field.IsValid() {
+		field, ok := traitFieldByName(traitsVal, traitName)
+		if !ok || !field.IsValid() {
 			continue
 		}
 
@@ -273,8 +275,35 @@ func aggregateTraitResults(results []*TraitResult) *TraitResult {
 		if traitResult.ResourceRequirements != nil {
 			finalResult.ResourceRequirements = traitResult.ResourceRequirements
 		}
+
+		if traitResult.ServiceAccountName != "" {
+			finalResult.ServiceAccountName = traitResult.ServiceAccountName
+		}
+		if traitResult.AutomountServiceAccountToken != nil {
+			finalResult.AutomountServiceAccountToken = traitResult.AutomountServiceAccountToken
+		}
 	}
 	return finalResult
+}
+
+func traitFieldByName(traitsVal reflect.Value, traitName string) (reflect.Value, bool) {
+	t := traitsVal.Type()
+	lower := strings.ToLower(traitName)
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+		if strings.ToLower(field.Name) == lower {
+			return traitsVal.Field(i), true
+		}
+		if tag := field.Tag.Get("json"); tag != "" {
+			if idx := strings.Index(tag, ","); idx != -1 {
+				tag = tag[:idx]
+			}
+			if tag == traitName {
+				return traitsVal.Field(i), true
+			}
+		}
+	}
+	return reflect.Value{}, false
 }
 
 // applyTraitResultToWorkload mutates the provided workload's PodTemplateSpec by
@@ -289,6 +318,21 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 	podTemplate.Spec.InitContainers = append(podTemplate.Spec.InitContainers, result.InitContainers...)
 	podTemplate.Spec.Containers = append(podTemplate.Spec.Containers, result.Containers...)
 	podTemplate.Spec.Volumes = append(podTemplate.Spec.Volumes, result.Volumes...)
+
+	if result.ServiceAccountName != "" {
+		if podTemplate.Spec.ServiceAccountName == "" {
+			podTemplate.Spec.ServiceAccountName = result.ServiceAccountName
+		} else if podTemplate.Spec.ServiceAccountName != result.ServiceAccountName {
+			klog.Warningf("Trait attempted to set serviceAccountName=%s but workload already specifies %s; keeping existing value", result.ServiceAccountName, podTemplate.Spec.ServiceAccountName)
+		}
+	}
+	if result.AutomountServiceAccountToken != nil {
+		if podTemplate.Spec.AutomountServiceAccountToken == nil {
+			podTemplate.Spec.AutomountServiceAccountToken = result.AutomountServiceAccountToken
+		} else if *podTemplate.Spec.AutomountServiceAccountToken != *result.AutomountServiceAccountToken {
+			klog.Warningf("Trait attempted to set automountServiceAccountToken=%t but workload already specifies %t; keeping existing value", *result.AutomountServiceAccountToken, *podTemplate.Spec.AutomountServiceAccountToken)
+		}
+	}
 
 	// Create a map of all containers (main, init, sidecar) for easy lookup.
 	containerMap := make(map[string]*corev1.Container)

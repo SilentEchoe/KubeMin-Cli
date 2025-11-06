@@ -266,7 +266,6 @@ func getStatefulSetStatus(kubeClient kubernetes.Interface, namespace string, nam
 		}
 		return nil, err
 	}
-	klog.Infof("newResources: %s, Replicas: %v, ReadyReplicas: %d", statefulSet.Name, statefulSet.Spec.Replicas, statefulSet.Status.ReadyReplicas)
 	isOk := false
 	var replicas int32
 	if statefulSet.Spec.Replicas != nil {

@@ -37,6 +37,8 @@ func TestRBACProcessor_NamespaceRole(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, res)
 	require.Len(t, res.AdditionalObjects, 3)
+	require.Equal(t, "custom-sa", res.ServiceAccountName)
+	require.Nil(t, res.AutomountServiceAccountToken)
 
 	sa, ok := res.AdditionalObjects[0].(*corev1.ServiceAccount)
 	require.True(t, ok)
@@ -85,6 +87,8 @@ func TestRBACProcessor_ClusterScope(t *testing.T) {
 	res, err := p.Process(&TraitContext{Component: component, TraitData: policies})
 	require.NoError(t, err)
 	require.Len(t, res.AdditionalObjects, 3)
+	require.Equal(t, "controller-sa", res.ServiceAccountName)
+	require.Nil(t, res.AutomountServiceAccountToken)
 
 	sa := res.AdditionalObjects[0].(*corev1.ServiceAccount)
 	require.Equal(t, "controller-sa", sa.Name)
@@ -99,4 +103,41 @@ func TestRBACProcessor_ClusterScope(t *testing.T) {
 	require.Equal(t, "ClusterRole", clusterBinding.RoleRef.Kind)
 	require.Equal(t, "controller-sa-role", clusterBinding.RoleRef.Name)
 	require.Equal(t, "system", clusterBinding.Subjects[0].Namespace)
+}
+
+func TestRBACProcessor_ServiceAccountSelectionAndAutomount(t *testing.T) {
+	p := &RBACProcessor{}
+	component := &model.ApplicationComponent{
+		Name:      "worker",
+		Namespace: "ops",
+	}
+	automount := false
+	policies := []spec.RBACPolicySpec{
+		{
+			ServiceAccount:             "pod-labeler-sa",
+			ServiceAccountAutomountSAT: &automount,
+			Rules: []spec.RBACRuleSpec{
+				{
+					Resources: []string{"pods"},
+					Verbs:     []string{"patch"},
+				},
+			},
+		},
+		{
+			ServiceAccount: "secondary-sa",
+			Rules: []spec.RBACRuleSpec{
+				{
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get"},
+				},
+			},
+		},
+	}
+
+	res, err := p.Process(&TraitContext{Component: component, TraitData: policies})
+	require.NoError(t, err)
+	require.Equal(t, "pod-labeler-sa", res.ServiceAccountName, "first policy should determine bound serviceAccount")
+	require.NotNil(t, res.AutomountServiceAccountToken)
+	require.False(t, *res.AutomountServiceAccountToken)
+	require.Len(t, res.AdditionalObjects, 6, "two policies emit two RBAC sets plus serviceAccounts")
 }

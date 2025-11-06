@@ -669,6 +669,42 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRoleBinding job for component %s: %s", component.Name, clusterBinding.Name)
 		}
+		if cm, ok := obj.(*corev1.ConfigMap); ok {
+			ns := cm.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				cm.Namespace = ns
+			}
+			jobTask := NewJobTask(
+				cm.Name,
+				ns,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeployConfigMap)
+			jobTask.JobInfo = cm.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created ConfigMap job for component %s: %s/%s", component.Name, ns, cm.Name)
+		}
+		if secret, ok := obj.(*corev1.Secret); ok {
+			ns := secret.Namespace
+			if ns == "" {
+				ns = component.Namespace
+				secret.Namespace = ns
+			}
+			jobTask := NewJobTask(
+				secret.Name,
+				ns,
+				task.WorkflowID,
+				task.ProjectID,
+				task.AppID,
+			)
+			jobTask.JobType = string(config.JobDeploySecret)
+			jobTask.JobInfo = secret.DeepCopy()
+			jobs = append(jobs, jobTask)
+			klog.Infof("Created Secret job for component %s: %s/%s", component.Name, ns, secret.Name)
+		}
 	}
 	return jobs, nil
 }
@@ -713,13 +749,13 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
-		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
+		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 
 	case config.SecretJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
-		buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobTask)
+		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 	}
 
 	if len(properties.Ports) > 0 {
@@ -754,7 +790,14 @@ func queueServiceJobs(
 			return
 		}
 		if len(jobs) > 0 {
-			buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jobs...)
+			for _, jt := range jobs {
+				switch jt.JobType {
+				case string(config.JobDeployConfigMap), string(config.JobDeploySecret):
+					buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jt)
+				default:
+					buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jt)
+				}
+			}
 		}
 	}
 
@@ -766,9 +809,10 @@ func queueServiceJobs(
 
 func newJobBuckets() map[int][]*model.JobTask {
 	return map[int][]*model.JobTask{
-		config.JobPriorityHigh:   {},
-		config.JobPriorityNormal: {},
-		config.JobPriorityLow:    {},
+		config.JobPriorityMaxHigh: {},
+		config.JobPriorityHigh:    {},
+		config.JobPriorityNormal:  {},
+		config.JobPriorityLow:     {},
 	}
 }
 

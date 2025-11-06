@@ -4,6 +4,7 @@ RBAC Trait 允许组件声明其运行所需的 Kubernetes RBAC 对象。配置�
 
 - `ServiceAccount`
 - 视权限范围生成 `Role` + `RoleBinding`（命名空间级）或 `ClusterRole` + `ClusterRoleBinding`（集群级）
+- 当声明的策略包含 `serviceAccount` 时，组件生成的 Pod 会自动绑定该 ServiceAccount（若已有显式设置则保持原值），并沿用 `automountServiceAccountToken` 的配置。
 
 ## 配置示例
 
@@ -96,5 +97,6 @@ RBAC Trait 允许组件声明其运行所需的 Kubernetes RBAC 对象。配置�
 - 系统会在首次创建时为这些资源打上 `kube-min-cli=<AppID>` 标签；后续只有带有该标签的对象才会被更新，避免覆盖外部手动维护的 RBAC。
 - 如果目标命名空间中已经存在同名但未带标签的对象，调度任务会跳过更新操作，只作为“引用”使用。
 - 可以利用这一机制决定是否复用已有 Role：保留原始对象即可；若希望由系统托管，给对象补充 `kube-min-cli` 标签即可开启后续自动更新。
+- 当单个组件声明多个 RBAC 策略时，仅第一个策略的 ServiceAccount 会自动挂载到 Pod，其他策略仍可以复用该账号的 RBAC 设定。
 
 以上示例和字段均可按需覆盖，满足不同服务在 Kubernetes 中对 RBAC 的需求。
