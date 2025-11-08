@@ -16,7 +16,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 type fakeDataStore struct {
@@ -259,7 +259,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 
 	t.Run("normalize pvc name and namespace", func(t *testing.T) {
 		baseName := "DataVol"
-		canonical := naming.PVCName(baseName, component.AppID)
+		canonical := wfNaming.PVCName(baseName, component.AppID)
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      canonical,
@@ -279,7 +279,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 	})
 
 	t.Run("fill namespace when pvc missing it", func(t *testing.T) {
-		canonical := naming.PVCName("cache", component.AppID)
+		canonical := wfNaming.PVCName("cache", component.AppID)
 		pvc := &corev1.PersistentVolumeClaim{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: canonical,

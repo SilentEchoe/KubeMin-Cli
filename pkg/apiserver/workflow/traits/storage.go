@@ -11,7 +11,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
@@ -69,16 +69,17 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				pvcSpec.StorageClassName = &vol.StorageClass
 			}
 
-			pvc := corev1.PersistentVolumeClaim{
+			basePVC := corev1.PersistentVolumeClaim{
 				ObjectMeta: metav1.ObjectMeta{Name: vol.Name, Namespace: ctx.Component.Namespace},
 				Spec:       pvcSpec,
 			}
 
 			if vol.Create {
-				claimName := naming.PVCName(vol.Name, ctx.Component.AppID)
-				pvc.Name = claimName
-				pvc.Annotations = map[string]string{config.LabelStorageRole: "template"}
-				pvcs = append(pvcs, pvc)
+				claimName := wfNaming.PVCName(vol.Name, ctx.Component.AppID)
+				templatePVC := basePVC.DeepCopy()
+				templatePVC.Name = claimName
+				templatePVC.Annotations = map[string]string{config.LabelStorageRole: "template"}
+				pvcs = append(pvcs, *templatePVC)
 				volumes = append(volumes, corev1.Volume{
 					Name: volumeName,
 					VolumeSource: corev1.VolumeSource{
@@ -86,19 +87,17 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 					},
 				})
 			} else {
+				pvcs = append(pvcs, basePVC)
 				volumes = append(volumes, corev1.Volume{
 					Name:         volumeName,
 					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: vol.Name}},
 				})
-				pvcs = append(pvcs, pvc)
 			}
-
 		case config.VolumeTypeEmptyDir:
 			volumes = append(volumes, corev1.Volume{
 				Name:         volumeName,
 				VolumeSource: corev1.VolumeSource{EmptyDir: &corev1.EmptyDirVolumeSource{}},
 			})
-
 		case config.VolumeTypeConfigMap:
 			sourceName := vol.SourceName
 			if sourceName == "" {
@@ -113,7 +112,6 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 					},
 				},
 			})
-
 		case config.VolumeTypeSecret:
 			sourceName := vol.SourceName
 			if sourceName == "" {

@@ -1,11 +1,14 @@
 package job
 
-import "KubeMin-Cli/pkg/apiserver/utils/naming"
+import (
+	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
+)
 
 func buildWebServiceName(name, appID string) string { return naming.WebServiceName(name, appID) }
 func buildServiceName(name, appID string) string    { return naming.ServiceName(name, appID) }
 func buildIngressName(name, appID string) string    { return naming.IngressName(name, appID) }
-func buildPVCName(name, appID string) string        { return naming.PVCName(name, appID) }
+func buildPVCName(name, appID string) string        { return wfNaming.PVCName(name, appID) }
 func buildConfigMapName(name, appID string) string  { return naming.ConfigMapName(name, appID) }
 func buildSecretName(name, appID string) string     { return naming.SecretName(name, appID) }
 func buildStoreSeverName(name, appID string) string { return naming.StoreServerName(name, appID) }
@@ -14,7 +17,7 @@ func buildStoreSeverName(name, appID string) string { return naming.StoreServerN
 func BuildIngressName(name, appID string) string { return naming.IngressName(name, appID) }
 
 // BuildPVCName returns a normalized PVC resource name for the given component/app.
-func BuildPVCName(name, appID string) string { return naming.PVCName(name, appID) }
+func BuildPVCName(name, appID string) string { return wfNaming.PVCName(name, appID) }
 
 // BuildConfigMapName returns a normalized ConfigMap resource name for the given component/app.
 func BuildConfigMapName(name, appID string) string { return naming.ConfigMapName(name, appID) }
