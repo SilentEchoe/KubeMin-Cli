@@ -745,22 +745,22 @@ func queueServiceJobs(
 		return
 	}
 
+	appendJob := func(priority int, job *model.JobTask) {
+		if job == nil {
+			return
+		}
+		buckets[priority] = append(buckets[priority], job)
+	}
+
 	// Traits may emit extra Kubernetes objects (PVC, Ingress, etc.). Schedule them
 	// ahead of the base workload so dependencies are ready before the deployment runs.
 	if len(result.AdditionalObjects) > 0 {
 		jobs, err := CreateObjectJobsFromResult(result.AdditionalObjects, component, task, nil)
 		if err != nil {
 			logger.Error(err, "Failed to create additional resource jobs", "componentName", component.Name)
-			return
-		}
-		if len(jobs) > 0 {
+		} else {
 			for _, jt := range jobs {
-				switch jt.JobType {
-				case string(config.JobDeployConfigMap), string(config.JobDeploySecret):
-					buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jt)
-				default:
-					buckets[config.JobPriorityHigh] = append(buckets[config.JobPriorityHigh], jt)
-				}
+				appendJob(config.JobPriorityHigh, jt)
 			}
 		}
 	}
@@ -768,7 +768,7 @@ func queueServiceJobs(
 	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
 	jobTask.JobType = string(jobType)
 	jobTask.JobInfo = result.Service
-	buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], jobTask)
+	appendJob(config.JobPriorityNormal, jobTask)
 }
 
 func newJobBuckets() map[int][]*model.JobTask {
