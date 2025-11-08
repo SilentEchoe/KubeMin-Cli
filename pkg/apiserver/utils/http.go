@@ -100,7 +100,7 @@ func CleanRelativePath(path string) (string, error) {
 	return rel, nil
 }
 
-// ReadFileFromURLSimple 工具：简化版给 ConfigMapSpec 复用
+// ReadFileFromURLSimple 工具：供需要从远端拉取配置文本的场景复用
 func ReadFileFromURLSimple(url string) ([]byte, error) {
 	client := &http.Client{Timeout: 30 * time.Second}
 	resp, err := client.Get(url)

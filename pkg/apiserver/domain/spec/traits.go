@@ -39,14 +39,6 @@ type StorageTraitSpec struct {
 	StorageClass string `json:"storageClass,omitempty"` // StorageClass to use for the PVC.
 }
 
-type ConfigMapSpec struct {
-	Data map[string]string `json:"data"`
-}
-
-type SecretTraitsSpec struct {
-	Data map[string]string `json:"data"`
-}
-
 // SidecarTraitsSpec describes a sidecar container that may attach additional traits.
 type SidecarTraitsSpec struct {
 	Name    string            `json:"name"`

@@ -315,18 +315,14 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 	})
 }
 
-func TestCreateObjectJobsFromResultConfigAndSecret(t *testing.T) {
+func TestCreateObjectJobsFromResultIgnoresConfigAndSecret(t *testing.T) {
 	component := &model.ApplicationComponent{Name: "app", Namespace: "demo", AppID: "aid"}
 	task := &model.WorkflowQueue{WorkflowID: "wf", ProjectID: "proj", AppID: "aid"}
 	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "app-config"}, Data: map[string]string{"key": "value"}}
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "app-secret"}}
 	jobs, err := CreateObjectJobsFromResult([]client.Object{cm, secret}, component, task, nil)
 	require.NoError(t, err)
-	require.Len(t, jobs, 2)
-	require.Equal(t, string(config.JobDeployConfigMap), jobs[0].JobType)
-	require.Equal(t, string(config.JobDeploySecret), jobs[1].JobType)
-	require.Equal(t, "demo", jobs[0].Namespace)
-	require.Equal(t, "demo", jobs[1].Namespace)
+	require.Empty(t, jobs, "configmap/secret should be ignored; dedicated jobs exist elsewhere")
 }
 
 func TestCreateObjectJobsFromResultRBAC(t *testing.T) {
