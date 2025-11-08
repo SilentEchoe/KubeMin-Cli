@@ -128,10 +128,6 @@ type InitTrait = spec.InitTraitSpec
 // StorageTrait 描述存储特征
 type StorageTrait = spec.StorageTraitSpec
 
-type ConfigMapSpec = spec.ConfigMapSpec
-
-type SecretSpec = spec.SecretTraitsSpec
-
 type SidecarSpec = spec.SidecarTraitsSpec
 
 // ResourceSpec defines CPU/Memory/GPU resources for containers
