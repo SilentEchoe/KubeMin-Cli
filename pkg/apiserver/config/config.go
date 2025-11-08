@@ -19,6 +19,13 @@ type leaderConfig struct {
 	Namespace string
 }
 
+// WorkflowRuntimeConfig controls how workflow steps are executed.
+type WorkflowRuntimeConfig struct {
+	// SequentialMaxConcurrency caps how many jobs within a sequential
+	// workflow step may run at once. Values <= 0 fall back to 1.
+	SequentialMaxConcurrency int
+}
+
 type Config struct {
 	// api server bind address
 	BindAddr string
@@ -59,6 +66,9 @@ type Config struct {
 	ExitOnLostLeader bool
 	// Messaging configuration (pub/sub)
 	Messaging MessagingConfig
+
+	// WorkflowRuntime configures workflow scheduling behaviour.
+	Workflow WorkflowRuntimeConfig
 }
 
 type RedisCacheConfig struct {
@@ -122,6 +132,9 @@ func NewConfig() *Config {
 		JaegerEndpoint:   "",
 		//JaegerEndpoint:   "http://localhost:14268/api/traces",
 		Messaging: MessagingConfig{Type: "redis", RedisStreamMaxLen: 50000},
+		Workflow: WorkflowRuntimeConfig{
+			SequentialMaxConcurrency: 1,
+		},
 	}
 }
 
@@ -137,6 +150,9 @@ func (c *Config) Validate() []error {
 		if strings.TrimSpace(c.Cache.CacheHost) == "" || c.Cache.CacheProt <= 0 {
 			errs = append(errs, fmt.Errorf("redis cache host/port is invalid"))
 		}
+	}
+	if c.Workflow.SequentialMaxConcurrency <= 0 {
+		errs = append(errs, fmt.Errorf("workflow sequential max concurrency must be >= 1"))
 	}
 	// messaging basic checks
 	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
@@ -181,6 +197,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.StringVar(&c.Cache.Password, "cache-password", configParameter.Cache.Password, "cache password for redis backend")
 	fs.DurationVar(&c.Cache.CacheTTL, "cache-ttl", configParameter.Cache.CacheTTL, "default TTL for redis cache entries (e.g. 24h)")
 	fs.StringVar(&c.Cache.KeyPrefix, "cache-prefix", configParameter.Cache.KeyPrefix, "key prefix for redis cache entries")
+	fs.IntVar(&c.Workflow.SequentialMaxConcurrency, "workflow-sequential-max-concurrency", configParameter.Workflow.SequentialMaxConcurrency, "maximum number of jobs that may run concurrently inside sequential workflow steps (>=1)")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

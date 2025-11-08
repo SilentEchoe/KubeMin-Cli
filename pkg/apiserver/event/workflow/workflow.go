@@ -349,6 +349,10 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	defer cancel()
 
 	stepExecutions := GenerateJobTasks(ctx, w.workflowTask, w.Store)
+	seqLimit := 1
+	if concurrency > 0 {
+		seqLimit = concurrency
+	}
 
 	for _, stepExec := range stepExecutions {
 		if stepExec.Jobs == nil {
@@ -360,10 +364,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 			if len(tasksInPriority) == 0 {
 				continue
 			}
-			stepConcurrency := 1
-			if stepExec.Mode.IsParallel() {
-				stepConcurrency = len(tasksInPriority)
-			}
+			stepConcurrency := determineStepConcurrency(stepExec.Mode, len(tasksInPriority), seqLimit)
 			logger.Info("Executing workflow step", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
 
 			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack)
@@ -515,8 +516,13 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 		klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
 		return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
 	}
+
+	sequentialConcurrency := jobConcurrency
+	if w.Cfg != nil && w.Cfg.Workflow.SequentialMaxConcurrency > 0 {
+		sequentialConcurrency = w.Cfg.Workflow.SequentialMaxConcurrency
+	}
 	// 执行新的任务
-	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, jobConcurrency)
+	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, sequentialConcurrency)
 	return nil
 }
 
@@ -816,6 +822,22 @@ func logGeneratedJobs(logger klog.Logger, workflowName, stepName string, mode co
 			logger.Info("Generated job details", "workflowName", workflowName, "step", stepName, "jobName", j.Name, "jobType", j.JobType, "priority", priority)
 		}
 	}
+}
+
+func determineStepConcurrency(mode config.WorkflowMode, jobCount, sequentialLimit int) int {
+	if jobCount <= 0 {
+		return 0
+	}
+	if mode.IsParallel() {
+		return jobCount
+	}
+	if sequentialLimit < 1 {
+		sequentialLimit = 1
+	}
+	if jobCount < sequentialLimit {
+		return jobCount
+	}
+	return sequentialLimit
 }
 
 func sortedPriorities(jobs map[int][]*model.JobTask) []int {
