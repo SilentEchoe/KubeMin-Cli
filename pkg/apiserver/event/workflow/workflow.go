@@ -301,46 +301,55 @@ func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.
 
 // 更改工作流的状态或信息
 func (w *WorkflowCtl) updateWorkflowTask() {
-	taskInColl := w.workflowTask
+	taskSnapshot := w.snapshotTask()
 	// 如果当前的task状态为：通过，暂停，超时，拒绝；则不处理，直接返回
-	if taskInColl.Status == config.StatusPassed || taskInColl.Status == config.StatusFailed || taskInColl.Status == config.StatusTimeout || taskInColl.Status == config.StatusReject {
-		klog.Infof("workflow %s, task %s, status %s: task already done, skipping update", taskInColl.WorkflowName, taskInColl.TaskID, taskInColl.Status)
+	if isWorkflowTerminal(taskSnapshot.Status) {
+		klog.Infof("workflow %s, task %s, status %s: task already done, skipping update", taskSnapshot.WorkflowName, taskSnapshot.TaskID, taskSnapshot.Status)
 		return
 	}
-	if err := w.Store.Put(context.Background(), w.workflowTask); err != nil {
-		klog.Errorf("update task status error for workflow %s, task %s: %v", w.workflowTask.WorkflowName, w.workflowTask.TaskID, err)
+	if err := w.Store.Put(context.Background(), &taskSnapshot); err != nil {
+		klog.Errorf("update task status error for workflow %s, task %s: %v", taskSnapshot.WorkflowName, taskSnapshot.TaskID, err)
 	}
 }
 
 func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 	// 1. Start a new trace for this workflow execution
 	tracer := otel.Tracer("workflow-runner")
-	ctx, span := tracer.Start(ctx, w.workflowTask.WorkflowName, trace.WithAttributes(
-		attribute.String("workflow.name", w.workflowTask.WorkflowName),
-		attribute.String("workflow.task_id", w.workflowTask.TaskID),
+	taskMeta := w.snapshotTask()
+	workflowName := taskMeta.WorkflowName
+	ctx, span := tracer.Start(ctx, workflowName, trace.WithAttributes(
+		attribute.String("workflow.name", workflowName),
+		attribute.String("workflow.task_id", taskMeta.TaskID),
 	))
 	defer span.End()
 
 	// 2. Create a logger with the traceID and put it in the context
-	logger := klog.FromContext(ctx).WithValues("traceID", span.SpanContext().TraceID().String())
+	logger := klog.FromContext(ctx).WithValues(
+		"traceID", span.SpanContext().TraceID().String(),
+		"workflowName", workflowName,
+		"taskID", taskMeta.TaskID,
+	)
 	ctx = klog.NewContext(ctx, logger)
-	ctx = job.WithTaskMetadata(ctx, w.workflowTask.TaskID)
+	ctx = job.WithTaskMetadata(ctx, taskMeta.TaskID)
 
 	// 将工作流的状态更改为运行中
-	w.workflowTask.Status = config.StatusRunning
-	w.workflowTask.CreateTime = time.Now()
+	w.mutateTask(func(task *model.WorkflowQueue) {
+		task.Status = config.StatusRunning
+		task.CreateTime = time.Now()
+	})
 	w.ack()
-	logger.Info("Starting workflow", "workflowName", w.workflowTask.WorkflowName, "status", w.workflowTask.Status)
+	logger.Info("Starting workflow", "status", w.snapshotTask().Status)
 
 	defer func() {
-		logger.Info("Finished workflow", "workflowName", w.workflowTask.WorkflowName, "status", w.workflowTask.Status)
+		logger.Info("Finished workflow", "status", w.snapshotTask().Status)
 		w.ack()
 	}()
 
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	stepExecutions := GenerateJobTasks(ctx, w.workflowTask, w.Store)
+	taskForGeneration := w.snapshotTask()
+	stepExecutions := GenerateJobTasks(ctx, &taskForGeneration, w.Store)
 	seqLimit := 1
 	if concurrency > 0 {
 		seqLimit = concurrency
@@ -357,21 +366,21 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 				continue
 			}
 			stepConcurrency := determineStepConcurrency(stepExec.Mode, len(tasksInPriority), seqLimit)
-			logger.Info("Executing workflow step", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
+			logger.Info("Executing workflow step", "workflowName", workflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
 
 			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack)
 
 			for _, task := range tasksInPriority {
 				if task.Status != config.StatusCompleted {
-					logger.Error(nil, "Workflow failed at job, aborting.", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
-					w.workflowTask.Status = config.StatusFailed
+					logger.Error(nil, "Workflow failed at job, aborting.", "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
+					w.setStatus(config.StatusFailed)
 					span.SetStatus(codes.Error, "Workflow failed")
 					span.RecordError(fmt.Errorf("job %s failed with status %s", task.Name, task.Status))
 					return
 				}
 			}
 		}
-		logger.Info("Workflow step completed successfully", "workflowName", w.workflowTask.WorkflowName, "step", stepExec.Name)
+		logger.Info("Workflow step completed successfully", "workflowName", workflowName, "step", stepExec.Name)
 	}
 
 	span.SetStatus(codes.Ok, "Workflow completed successfully")
@@ -519,11 +528,37 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 }
 
 func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
-	w.workflowTask.Status = config.StatusCompleted
-	err := w.Store.Put(ctx, w.workflowTask)
+	w.setStatus(config.StatusCompleted)
+	taskSnapshot := w.snapshotTask()
+	err := w.Store.Put(ctx, &taskSnapshot)
 	if err != nil {
 		klog.Errorf("update Workflow status err: %v", err)
 	}
+}
+
+func (w *WorkflowCtl) mutateTask(mut func(task *model.WorkflowQueue)) {
+	w.workflowTaskMutex.Lock()
+	defer w.workflowTaskMutex.Unlock()
+	mut(w.workflowTask)
+}
+
+func (w *WorkflowCtl) snapshotTask() model.WorkflowQueue {
+	w.workflowTaskMutex.RLock()
+	defer w.workflowTaskMutex.RUnlock()
+	return *w.workflowTask
+}
+
+func (w *WorkflowCtl) setStatus(status config.Status) {
+	w.mutateTask(func(task *model.WorkflowQueue) {
+		task.Status = status
+	})
+}
+
+func isWorkflowTerminal(status config.Status) bool {
+	return status == config.StatusPassed ||
+		status == config.StatusFailed ||
+		status == config.StatusTimeout ||
+		status == config.StatusReject
 }
 
 func ParseProperties(ctx context.Context, properties *model.JSONStruct) model.Properties {

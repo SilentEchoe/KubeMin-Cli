@@ -132,7 +132,7 @@ func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model
 		Status: config.StatusWaiting,
 	}
 	queues, err := store.List(ctx, workflowQueue, &datastore.ListOptions{
-		SortBy: []datastore.SortOption{{Key: "createTime", Order: datastore.SortOrderDescending}},
+		SortBy: []datastore.SortOption{{Key: "createTime", Order: datastore.SortOrderAscending}},
 	})
 	if err != nil {
 		return nil, err
