@@ -25,13 +25,15 @@ const (
 
 // CancelWatcher coordinates redis-backed cancellation signalling for a workflow task.
 type CancelWatcher struct {
-	cli    *redis.Client
-	key    string
-	token  string
-	stopCh chan struct{}
-	once   sync.Once
-	wg     sync.WaitGroup
-	state  *cancelState
+	cli      *redis.Client
+	key      string
+	token    string
+	stopCh   chan struct{}
+	once     sync.Once
+	wg       sync.WaitGroup
+	state    *cancelState
+	taskID   string
+	cancelFn context.CancelFunc
 }
 
 type cancelState struct {
@@ -51,20 +53,89 @@ func (c *cancelState) get() string {
 	return c.reason
 }
 
+type localCancelRegistry struct {
+	mu       sync.Mutex
+	watchers map[string]map[*CancelWatcher]struct{}
+}
+
+var localCancelRegistryInstance = &localCancelRegistry{
+	watchers: make(map[string]map[*CancelWatcher]struct{}),
+}
+
+func (r *localCancelRegistry) add(taskID string, watcher *CancelWatcher) {
+	if watcher == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if _, ok := r.watchers[taskID]; !ok {
+		r.watchers[taskID] = make(map[*CancelWatcher]struct{})
+	}
+	r.watchers[taskID][watcher] = struct{}{}
+}
+
+func (r *localCancelRegistry) remove(taskID string, watcher *CancelWatcher) {
+	if watcher == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if listeners, ok := r.watchers[taskID]; ok {
+		delete(listeners, watcher)
+		if len(listeners) == 0 {
+			delete(r.watchers, taskID)
+		}
+	}
+}
+
+func (r *localCancelRegistry) cancel(taskID, reason string) {
+	r.mu.Lock()
+	listeners := r.watchers[taskID]
+	delete(r.watchers, taskID)
+	r.mu.Unlock()
+	if len(listeners) == 0 {
+		return
+	}
+	for watcher := range listeners {
+		if watcher == nil {
+			continue
+		}
+		watcher.state.set(reason)
+		if watcher.cancelFn != nil {
+			watcher.cancelFn()
+		}
+	}
+}
+
 // Watch establishes a cancellation watcher for the given workflow task. When Redis
 // is not configured, the context is returned unchanged and cleanup becomes a no-op.
 func Watch(ctx context.Context, taskID string) (*CancelWatcher, context.Context, context.CancelFunc, error) {
 	cli := cache.GetGlobalRedisClient()
 	if cli == nil {
-		// No redis available; fall back to the provided context without cancellation propagation.
-		emptyState := &cancelState{}
-		ctxWithState := context.WithValue(ctx, cancelStateKey{}, emptyState)
-		return &CancelWatcher{state: emptyState}, ctxWithState, func() {}, nil
+		// No redis available; fall back to an in-memory registry.
+		state := &cancelState{}
+		watcher := &CancelWatcher{
+			state:  state,
+			stopCh: make(chan struct{}),
+			taskID: taskID,
+		}
+		derivedCtx, cancelFn := context.WithCancel(ctx)
+		derivedCtx = context.WithValue(derivedCtx, cancelStateKey{}, watcher.state)
+		watcher.cancelFn = cancelFn
+		localCancelRegistryInstance.add(taskID, watcher)
+		return watcher, derivedCtx, cancelFn, nil
 	}
 
 	key := cancelKeyPrefix + taskID
 	token := uuid.NewString()
-	watcher := &CancelWatcher{cli: cli, key: key, token: token, stopCh: make(chan struct{}), state: &cancelState{}}
+	watcher := &CancelWatcher{
+		cli:    cli,
+		key:    key,
+		token:  token,
+		stopCh: make(chan struct{}),
+		state:  &cancelState{},
+		taskID: taskID,
+	}
 
 	// Attempt to claim the key for this task execution.
 	ok, err := cli.SetNX(ctx, key, token, defaultExpiry).Result()
@@ -89,6 +160,7 @@ func Watch(ctx context.Context, taskID string) (*CancelWatcher, context.Context,
 
 	derivedCtx, cancelFn := context.WithCancel(ctx)
 	derivedCtx = context.WithValue(derivedCtx, cancelStateKey{}, watcher.state)
+	watcher.cancelFn = cancelFn
 	watcher.wg.Add(1)
 	go watcher.maintain(derivedCtx, cancelFn)
 
@@ -100,7 +172,8 @@ func Watch(ctx context.Context, taskID string) (*CancelWatcher, context.Context,
 func Cancel(ctx context.Context, taskID, reason string) error {
 	cli := cache.GetGlobalRedisClient()
 	if cli == nil {
-		return fmt.Errorf("redis client not configured")
+		localCancelRegistryInstance.cancel(taskID, extractCancelReason(cancelMarker(reason)))
+		return nil
 	}
 	value := cancelMarker(reason)
 	return cli.Set(ctx, cancelKeyPrefix+taskID, value, defaultExpiry).Err()
@@ -112,9 +185,12 @@ func (w *CancelWatcher) Stop(ctx context.Context) {
 		return
 	}
 	w.once.Do(func() {
-		close(w.stopCh)
+		if w.stopCh != nil {
+			close(w.stopCh)
+		}
 		w.wg.Wait()
 		if w.cli == nil {
+			localCancelRegistryInstance.remove(w.taskID, w)
 			return
 		}
 		val, err := w.cli.Get(ctx, w.key).Result()

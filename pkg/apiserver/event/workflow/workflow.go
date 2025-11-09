@@ -211,25 +211,12 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 				continue
 			}
 			for _, m := range mags {
-				td, err := UnmarshalTaskDispatch(m.Payload)
-				if err != nil {
-					klog.Errorf("decode dispatch (claim) failed: %v", err)
+				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
+					klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, taskID)
 					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
+				} else {
+					klog.Warningf("consumer=%s left message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
-				task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
-				if err != nil {
-					klog.Errorf("load task %s failed: %v", td.TaskID, err)
-					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
-				}
-				if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-					klog.Errorf("run task %s failed: %v", td.TaskID, err)
-					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
-				}
-				klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, td.TaskID)
-				_ = w.Queue.Ack(ctx, group, m.ID)
 			}
 		default:
 			msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
@@ -238,25 +225,12 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 				continue
 			}
 			for _, m := range msgs {
-				td, err := UnmarshalTaskDispatch(m.Payload)
-				if err != nil {
-					klog.Errorf("decode dispatch failed: %v", err)
+				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
+					klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, taskID)
 					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
+				} else {
+					klog.Warningf("consumer=%s left claimed message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
-				task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
-				if err != nil {
-					klog.Errorf("load task %s failed: %v", td.TaskID, err)
-					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
-				}
-				if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-					klog.Errorf("run task %s failed: %v", td.TaskID, err)
-					_ = w.Queue.Ack(ctx, group, m.ID)
-					continue
-				}
-				klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, td.TaskID)
-				_ = w.Queue.Ack(ctx, group, m.ID)
 			}
 		}
 	}
@@ -279,6 +253,24 @@ func (w *Workflow) consumerName() string {
 		return w.Cfg.LeaderConfig.ID
 	}
 	return "worker"
+}
+
+func (w *Workflow) processDispatchMessage(ctx context.Context, m msg.Message) (bool, string) {
+	td, err := UnmarshalTaskDispatch(m.Payload)
+	if err != nil {
+		klog.Errorf("decode dispatch failed: %v", err)
+		return true, ""
+	}
+	task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
+	if err != nil {
+		klog.Errorf("load task %s failed: %v", td.TaskID, err)
+		return true, td.TaskID
+	}
+	if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+		klog.Errorf("run task %s failed: %v", td.TaskID, err)
+		return false, td.TaskID
+	}
+	return true, td.TaskID
 }
 
 type WorkflowCtl struct {

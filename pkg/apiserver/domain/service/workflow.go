@@ -51,8 +51,8 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 	}
 	exist, err := w.Store.IsExist(ctx, workflow)
 	if err != nil {
-		klog.Errorf("check workflow name is exist failure %s", err.Error())
-		return nil, bcode.ErrWorkflowExist
+		klog.Errorf("check workflow existence failure: %v", err)
+		return nil, fmt.Errorf("check workflow existence: %w", err)
 	}
 	if exist {
 		return nil, bcode.ErrWorkflowExist

@@ -35,6 +35,4 @@ func WebServiceName(name, appID string) string {
 
 func ServiceName(name, appID string) string     { return buildName("svc", name, appID, "service") }
 func IngressName(name, appID string) string     { return buildName("ing", name, appID, "ingress") }
-func ConfigMapName(name, appID string) string   { return buildName("cm", name, appID, "config") }
-func SecretName(name, appID string) string      { return buildName("secret", name, appID, "secret") }
 func StoreServerName(name, appID string) string { return buildName("store", name, appID, "store") }
