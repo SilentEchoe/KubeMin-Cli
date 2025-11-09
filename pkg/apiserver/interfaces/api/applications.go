@@ -1,9 +1,11 @@
 package api
 
 import (
+	"net/http"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
-	"net/http"
 
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
@@ -22,6 +24,7 @@ func NewApplications() Interface {
 func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/applications", a.createApplications)
 	group.GET("/applications", a.listApplications)
+	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
 }
 
 func (a *applications) createApplications(c *gin.Context) {
@@ -52,4 +55,22 @@ func (a *applications) listApplications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
+}
+
+func (a *applications) deleteApplicationResources(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+	resp, err := a.ApplicationService.CleanupApplicationResources(c.Request.Context(), appID)
+	if err != nil {
+		if resp != nil {
+			c.JSON(http.StatusInternalServerError, resp)
+			return
+		}
+		bcode.ReturnError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }

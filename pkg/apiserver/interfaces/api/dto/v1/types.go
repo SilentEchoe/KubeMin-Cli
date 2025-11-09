@@ -84,6 +84,12 @@ type ApplicationsDeployRequest struct {
 	Name         string `json:"appName"`
 }
 
+type CleanupApplicationResourcesResponse struct {
+	AppID            string   `json:"appId"`
+	DeletedResources []string `json:"deletedResources"`
+	FailedResources  []string `json:"failedResources,omitempty"`
+}
+
 type CreateWorkflowRequest struct {
 	Name        string                       `json:"name" validate:"checkname"`
 	Project     string                       `json:"project" validate:"checkname"`
