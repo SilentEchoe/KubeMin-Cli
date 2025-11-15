@@ -72,6 +72,10 @@ const (
 
 	WorkflowModeStepByStep WorkflowMode = "StepByStep"
 	WorkflowModeDAG        WorkflowMode = "DAG"
+
+	WaitingTasksQueryTimeout   = 5 * time.Second
+	TaskStateTransitionTimeout = 5 * time.Second
+	QueueDispatchTimeout       = 5 * time.Second
 )
 
 const (

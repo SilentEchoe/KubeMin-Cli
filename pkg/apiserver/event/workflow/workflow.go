@@ -3,6 +3,7 @@ package workflow
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -102,17 +103,26 @@ func (w *Workflow) WorkflowTaskSender(ctx context.Context) {
 		case <-ticker.C:
 		}
 
-		// 获取等待的任务
-		waitingTasks, err := w.WorkflowService.WaitingTasks(context.Background())
-		if err != nil || len(waitingTasks) == 0 {
+		waitingTasks, err := w.waitingTasks(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+				return
+			}
+			klog.Errorf("list waiting workflow tasks failed: %v", err)
+			continue
+		}
+		if len(waitingTasks) == 0 {
 			continue
 		}
 		for _, task := range waitingTasks {
 			if ctx.Err() != nil {
 				return
 			}
-			claimed, err := w.WorkflowService.MarkTaskStatus(context.Background(), task.TaskID, config.StatusWaiting, config.StatusQueued)
+			claimed, err := w.markTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
 			if err != nil {
+				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+					return
+				}
 				klog.Errorf("mark task queued failed: %v", err)
 				continue
 			}
@@ -122,7 +132,10 @@ func (w *Workflow) WorkflowTaskSender(ctx context.Context) {
 			// TODO jobConcurrency 默认为1，表示串行执行
 			if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
 				klog.Errorf("run task %s failed after mark queued: %v", task.TaskID, err)
-				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(context.Background(), task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
+						return
+					}
 					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
 				} else if !reverted {
 					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
@@ -146,16 +159,26 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 		}
 
 		// 获取等待的任务
-		waitingTasks, err := w.WorkflowService.WaitingTasks(context.Background())
-		if err != nil || len(waitingTasks) == 0 {
+		waitingTasks, err := w.waitingTasks(ctx)
+		if err != nil {
+			if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+				return
+			}
+			klog.Errorf("list waiting workflow tasks failed: %v", err)
+			continue
+		}
+		if len(waitingTasks) == 0 {
 			continue
 		}
 		for _, task := range waitingTasks {
 			if ctx.Err() != nil {
 				return
 			}
-			claimed, err := w.WorkflowService.MarkTaskStatus(context.Background(), task.TaskID, config.StatusWaiting, config.StatusQueued)
+			claimed, err := w.markTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
 			if err != nil {
+				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+					return
+				}
 				klog.Errorf("mark task queued failed: %v", err)
 				continue
 			}
@@ -166,16 +189,25 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 			b, err := MarshalTaskDispatch(payload)
 			if err != nil {
 				klog.Errorf("marshal task dispatch failed: %v", err)
-				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
+						return
+					}
 					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
 				} else if !reverted {
 					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
 				}
 				continue
 			}
-			if id, err := w.Queue.Enqueue(ctx, b); err != nil {
+			if id, err := w.enqueueDispatch(ctx, b); err != nil {
+				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+					return
+				}
 				klog.Errorf("enqueue task dispatch failed: %v", err)
-				if reverted, revertErr := w.WorkflowService.MarkTaskStatus(context.Background(), task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
+						return
+					}
 					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
 				} else if !reverted {
 					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
@@ -513,7 +545,7 @@ func NewJobTask(name, namespace, workflowID, projectID, appID string) *model.Job
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
 	//将状态更改为队列中
 	task.Status = config.StatusQueued
-	if success := w.WorkflowService.UpdateTask(ctx, task); !success {
+	if success := w.updateTask(ctx, task); !success {
 		klog.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
 		return fmt.Errorf("update task status error for workflow %s, task %s", task.WorkflowName, task.TaskID)
 	}
