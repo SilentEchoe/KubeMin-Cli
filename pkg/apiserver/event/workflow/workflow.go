@@ -118,30 +118,9 @@ func (w *Workflow) WorkflowTaskSender(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			claimed, err := w.markTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-					return
-				}
-				klog.Errorf("mark task queued failed: %v", err)
-				continue
-			}
-			if !claimed {
-				continue
-			}
-			// TODO jobConcurrency 默认为1，表示串行执行
-			if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
-				klog.Errorf("run task %s failed after mark queued: %v", task.TaskID, err)
-				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
-					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
-						return
-					}
-					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
-				} else if !reverted {
-					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
-				}
-				continue
-			}
+			w.claimAndProcessTask(ctx, task, func(procCtx context.Context, queuedTask *model.WorkflowQueue) error {
+				return w.updateQueueAndRunTask(procCtx, queuedTask, 1)
+			})
 		}
 	}
 }
@@ -174,48 +153,24 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			claimed, err := w.markTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
-			if err != nil {
-				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-					return
+			w.claimAndProcessTask(ctx, task, func(procCtx context.Context, queuedTask *model.WorkflowQueue) error {
+				payload := TaskDispatch{
+					TaskID:     queuedTask.TaskID,
+					WorkflowID: queuedTask.WorkflowID,
+					ProjectID:  queuedTask.ProjectID,
+					AppID:      queuedTask.AppID,
 				}
-				klog.Errorf("mark task queued failed: %v", err)
-				continue
-			}
-			if !claimed {
-				continue
-			}
-			payload := TaskDispatch{TaskID: task.TaskID, WorkflowID: task.WorkflowID, ProjectID: task.ProjectID, AppID: task.AppID}
-			b, err := MarshalTaskDispatch(payload)
-			if err != nil {
-				klog.Errorf("marshal task dispatch failed: %v", err)
-				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
-					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
-						return
-					}
-					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
-				} else if !reverted {
-					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
+				b, err := MarshalTaskDispatch(payload)
+				if err != nil {
+					return fmt.Errorf("marshal task dispatch: %w", err)
 				}
-				continue
-			}
-			if id, err := w.enqueueDispatch(ctx, b); err != nil {
-				if errors.Is(err, context.Canceled) || ctx.Err() != nil {
-					return
+				id, err := w.enqueueDispatch(procCtx, b)
+				if err != nil {
+					return fmt.Errorf("enqueue task dispatch: %w", err)
 				}
-				klog.Errorf("enqueue task dispatch failed: %v", err)
-				if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
-					if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
-						return
-					}
-					klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
-				} else if !reverted {
-					klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
-				}
-				continue
-			} else {
-				klog.Infof("dispatched task: %s, streamID: %s", task.TaskID, id)
-			}
+				klog.Infof("dispatched task: %s, streamID: %s", queuedTask.TaskID, id)
+				return nil
+			})
 		}
 	}
 }
@@ -285,6 +240,36 @@ func (w *Workflow) consumerName() string {
 		return w.Cfg.LeaderConfig.ID
 	}
 	return "worker"
+}
+
+// claimAndProcessTask 处理Task
+func (w *Workflow) claimAndProcessTask(ctx context.Context, task *model.WorkflowQueue, processor func(context.Context, *model.WorkflowQueue) error) {
+	claimed, err := w.markTaskStatus(ctx, task.TaskID, config.StatusWaiting, config.StatusQueued)
+	if err != nil {
+		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+			return
+		}
+		klog.Errorf("mark task %s queued failed: %v", task.TaskID, err)
+		return
+	}
+	if !claimed {
+		klog.V(4).Infof("task %s already claimed before mark queued", task.TaskID)
+		return
+	}
+	if err := processor(ctx, task); err != nil {
+		if errors.Is(err, context.Canceled) || ctx.Err() != nil {
+			return
+		}
+		klog.Errorf("process task %s failed: %v", task.TaskID, err)
+		if reverted, revertErr := w.markTaskStatus(ctx, task.TaskID, config.StatusQueued, config.StatusWaiting); revertErr != nil {
+			if errors.Is(revertErr, context.Canceled) || ctx.Err() != nil {
+				return
+			}
+			klog.Errorf("revert task %s status to waiting failed: %v", task.TaskID, revertErr)
+		} else if !reverted {
+			klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
+		}
+	}
 }
 
 func (w *Workflow) processDispatchMessage(ctx context.Context, m msg.Message) (bool, string) {
