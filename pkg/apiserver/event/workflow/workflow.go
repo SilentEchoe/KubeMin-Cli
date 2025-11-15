@@ -206,12 +206,12 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 				}
 			}
 		default:
-			msgs, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
+			mags, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
 			if err != nil {
 				klog.V(4).Infof("read group error: %v", err)
 				continue
 			}
-			for _, m := range msgs {
+			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
 					klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, taskID)
 					_ = w.Queue.Ack(ctx, group, m.ID)
