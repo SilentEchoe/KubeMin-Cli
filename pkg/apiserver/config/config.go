@@ -24,6 +24,22 @@ type WorkflowRuntimeConfig struct {
 	// SequentialMaxConcurrency caps how many jobs within a sequential
 	// workflow step may run at once. Values <= 0 fall back to 1.
 	SequentialMaxConcurrency int
+	// LocalPollInterval determines how often the local sender scans DB queues.
+	LocalPollInterval time.Duration
+	// DispatchPollInterval determines dispatcher scan cadence.
+	DispatchPollInterval time.Duration
+	// WorkerStaleInterval determines how frequently workers reclaim messages.
+	WorkerStaleInterval time.Duration
+	// WorkerAutoClaimMinIdle minimum idle before a message is considered stale.
+	WorkerAutoClaimMinIdle time.Duration
+	// WorkerAutoClaimCount batch size for AutoClaim operations.
+	WorkerAutoClaimCount int
+	// WorkerReadCount number of messages fetched per worker read.
+	WorkerReadCount int
+	// WorkerReadBlock blocking duration for worker reads.
+	WorkerReadBlock time.Duration
+	// DefaultJobTimeout per-job timeout.
+	DefaultJobTimeout time.Duration
 }
 
 type Config struct {
@@ -134,6 +150,14 @@ func NewConfig() *Config {
 		Messaging: MessagingConfig{Type: "redis", RedisStreamMaxLen: 50000},
 		Workflow: WorkflowRuntimeConfig{
 			SequentialMaxConcurrency: 1,
+			LocalPollInterval:        3 * time.Second,
+			DispatchPollInterval:     3 * time.Second,
+			WorkerStaleInterval:      15 * time.Second,
+			WorkerAutoClaimMinIdle:   60 * time.Second,
+			WorkerAutoClaimCount:     50,
+			WorkerReadCount:          10,
+			WorkerReadBlock:          2 * time.Second,
+			DefaultJobTimeout:        60 * time.Second,
 		},
 	}
 }
@@ -153,6 +177,30 @@ func (c *Config) Validate() []error {
 	}
 	if c.Workflow.SequentialMaxConcurrency <= 0 {
 		errs = append(errs, fmt.Errorf("workflow sequential max concurrency must be >= 1"))
+	}
+	if c.Workflow.LocalPollInterval <= 0 {
+		errs = append(errs, fmt.Errorf("workflow local poll interval must be > 0"))
+	}
+	if c.Workflow.DispatchPollInterval <= 0 {
+		errs = append(errs, fmt.Errorf("workflow dispatch poll interval must be > 0"))
+	}
+	if c.Workflow.WorkerStaleInterval <= 0 {
+		errs = append(errs, fmt.Errorf("workflow worker stale interval must be > 0"))
+	}
+	if c.Workflow.WorkerAutoClaimMinIdle <= 0 {
+		errs = append(errs, fmt.Errorf("workflow worker auto-claim min idle must be > 0"))
+	}
+	if c.Workflow.WorkerAutoClaimCount <= 0 {
+		errs = append(errs, fmt.Errorf("workflow worker auto-claim count must be > 0"))
+	}
+	if c.Workflow.WorkerReadCount <= 0 {
+		errs = append(errs, fmt.Errorf("workflow worker read count must be > 0"))
+	}
+	if c.Workflow.WorkerReadBlock <= 0 {
+		errs = append(errs, fmt.Errorf("workflow worker read block must be > 0"))
+	}
+	if c.Workflow.DefaultJobTimeout <= 0 {
+		errs = append(errs, fmt.Errorf("workflow default job timeout must be > 0"))
 	}
 	// messaging basic checks
 	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
@@ -198,6 +246,14 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.DurationVar(&c.Cache.CacheTTL, "cache-ttl", configParameter.Cache.CacheTTL, "default TTL for redis cache entries (e.g. 24h)")
 	fs.StringVar(&c.Cache.KeyPrefix, "cache-prefix", configParameter.Cache.KeyPrefix, "key prefix for redis cache entries")
 	fs.IntVar(&c.Workflow.SequentialMaxConcurrency, "workflow-sequential-max-concurrency", configParameter.Workflow.SequentialMaxConcurrency, "maximum number of jobs that may run concurrently inside sequential workflow steps (>=1)")
+	fs.DurationVar(&c.Workflow.LocalPollInterval, "workflow-local-poll-interval", configParameter.Workflow.LocalPollInterval, "interval for local workflow task scans")
+	fs.DurationVar(&c.Workflow.DispatchPollInterval, "workflow-dispatch-poll-interval", configParameter.Workflow.DispatchPollInterval, "interval for dispatcher waiting-task scans")
+	fs.DurationVar(&c.Workflow.WorkerStaleInterval, "workflow-worker-stale-interval", configParameter.Workflow.WorkerStaleInterval, "interval between workflow worker stale-claim passes")
+	fs.DurationVar(&c.Workflow.WorkerAutoClaimMinIdle, "workflow-worker-autoclaim-idle", configParameter.Workflow.WorkerAutoClaimMinIdle, "minimum idle duration before workflow workers auto-claim messages")
+	fs.IntVar(&c.Workflow.WorkerAutoClaimCount, "workflow-worker-autoclaim-count", configParameter.Workflow.WorkerAutoClaimCount, "workflow worker auto-claim batch size")
+	fs.IntVar(&c.Workflow.WorkerReadCount, "workflow-worker-read-count", configParameter.Workflow.WorkerReadCount, "workflow worker stream read batch size")
+	fs.DurationVar(&c.Workflow.WorkerReadBlock, "workflow-worker-read-block", configParameter.Workflow.WorkerReadBlock, "workflow worker stream read block duration")
+	fs.DurationVar(&c.Workflow.DefaultJobTimeout, "workflow-default-job-timeout", configParameter.Workflow.DefaultJobTimeout, "default workflow job timeout")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

@@ -56,6 +56,15 @@ func UnmarshalTaskDispatch(b []byte) (TaskDispatch, error) {
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 	w.InitQueue(ctx)
+	klog.Infof("workflow runtime config: localPoll=%s dispatchPoll=%s workerStale=%s autoClaimIdle=%s autoClaimCount=%d workerReadCount=%d workerReadBlock=%s",
+		w.localPollInterval(),
+		w.dispatchPollInterval(),
+		w.workerStaleInterval(),
+		w.workerAutoClaimMinIdle(),
+		w.workerAutoClaimCount(),
+		w.workerReadCount(),
+		w.workerReadBlock(),
+	)
 	// If queue is noop (local mode), fall back to direct DB scan executor for functionality.
 	if _, ok := w.Queue.(*msg.NoopQueue); ok {
 		go w.WorkflowTaskSender(ctx)
@@ -93,7 +102,7 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 
 // WorkflowTaskSender is the original local executor scanning DB and running tasks.
 func (w *Workflow) WorkflowTaskSender(ctx context.Context) {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(w.localPollInterval())
 	defer ticker.Stop()
 	for {
 		select {
@@ -127,7 +136,7 @@ func (w *Workflow) WorkflowTaskSender(ctx context.Context) {
 
 // Dispatcher scans waiting tasks and publishes dispatch messages.
 func (w *Workflow) Dispatcher(ctx context.Context) {
-	ticker := time.NewTicker(3 * time.Second)
+	ticker := time.NewTicker(w.dispatchPollInterval())
 	defer ticker.Stop()
 	for {
 		select {
@@ -184,7 +193,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 	if err := w.Queue.EnsureGroup(ctx, group); err != nil {
 		klog.V(4).Infof("ensure group error: %v", err)
 	}
-	staleTicker := time.NewTicker(15 * time.Second)
+	staleTicker := time.NewTicker(w.workerStaleInterval())
 	defer staleTicker.Stop()
 	for {
 		select {
@@ -192,7 +201,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			return
 		case <-staleTicker.C:
 			// periodically claim stale pending messages
-			mags, err := w.Queue.AutoClaim(ctx, group, consumer, 60*time.Second, 50)
+			mags, err := w.Queue.AutoClaim(ctx, group, consumer, w.workerAutoClaimMinIdle(), w.workerAutoClaimCount())
 			if err != nil {
 				klog.V(4).Infof("auto-claim error: %v", err)
 				continue
@@ -206,7 +215,7 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 				}
 			}
 		default:
-			mags, err := w.Queue.ReadGroup(ctx, group, consumer, 10, 2*time.Second)
+			mags, err := w.Queue.ReadGroup(ctx, group, consumer, w.workerReadCount(), w.workerReadBlock())
 			if err != nil {
 				klog.V(4).Infof("read group error: %v", err)
 				continue
@@ -522,7 +531,7 @@ func NewJobTask(name, namespace, workflowID, projectID, appID string) *model.Job
 		ProjectID:  projectID,
 		AppID:      appID,
 		Status:     config.StatusQueued,
-		Timeout:    60,
+		Timeout:    config.DefaultJobTaskTimeoutSeconds,
 	}
 }
 

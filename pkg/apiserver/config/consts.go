@@ -73,9 +73,17 @@ const (
 	WorkflowModeStepByStep WorkflowMode = "StepByStep"
 	WorkflowModeDAG        WorkflowMode = "DAG"
 
-	WaitingTasksQueryTimeout   = 5 * time.Second
-	TaskStateTransitionTimeout = 5 * time.Second
-	QueueDispatchTimeout       = 5 * time.Second
+	WaitingTasksQueryTimeout     = 5 * time.Second
+	TaskStateTransitionTimeout   = 5 * time.Second
+	QueueDispatchTimeout         = 5 * time.Second
+	DefaultLocalPollInterval     = 3 * time.Second
+	DefaultDispatchPollInterval  = 3 * time.Second
+	DefaultWorkerStaleInterval   = 15 * time.Second
+	DefaultWorkerAutoClaimIdle   = 60 * time.Second
+	DefaultWorkerAutoClaimCount  = 50
+	DefaultWorkerReadCount       = 10
+	DefaultWorkerReadBlock       = 2 * time.Second
+	DefaultJobTaskTimeoutSeconds = 60
 )
 
 const (
