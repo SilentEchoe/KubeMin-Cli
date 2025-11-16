@@ -76,6 +76,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	if application.Namespace == "" {
 		application.Namespace = config.DefaultNamespace
 	}
+
 	if err = repository.CreateApplications(ctx, c.Store, application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist

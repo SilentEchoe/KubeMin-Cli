@@ -110,7 +110,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 			stepConcurrency := determineStepConcurrency(stepExec.Mode, len(tasksInPriority), seqLimit)
 			logger.Info("Executing workflow step", "workflowName", workflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
 
-			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack)
+			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack, stepExec.Mode.IsParallel())
 
 			for _, task := range tasksInPriority {
 				if task.Status != config.StatusCompleted {

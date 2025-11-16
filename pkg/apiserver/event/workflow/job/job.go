@@ -126,7 +126,7 @@ func initJobCtl(job *model.JobTask, client kubernetes.Interface, store datastore
 	return jobCtl
 }
 
-func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func()) {
+func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func(), stopOnFailure bool) {
 	logger := klog.FromContext(ctx)
 	if len(jobs) == 0 {
 		logger.Info("no jobs to run")
@@ -146,7 +146,7 @@ func RunJobs(ctx context.Context, jobs []*model.JobTask, concurrency int, client
 		}
 		return
 	}
-	jobPool := NewPool(ctx, jobs, concurrency, client, store, ack)
+	jobPool := NewPool(ctx, jobs, concurrency, client, store, ack, stopOnFailure)
 	jobPool.Run()
 }
 
@@ -284,22 +284,29 @@ func jobStatusFailed(status config.Status) bool {
 }
 
 type Pool struct {
-	Jobs        []*model.JobTask
-	concurrency int
-	client      kubernetes.Interface
-	store       datastore.DataStore
-	jobsChan    chan *model.JobTask
-	ack         func()
-	ctx         context.Context
-	wg          sync.WaitGroup
+	Jobs          []*model.JobTask
+	concurrency   int
+	client        kubernetes.Interface
+	store         datastore.DataStore
+	jobsChan      chan *model.JobTask
+	ack           func()
+	ctx           context.Context
+	cancel        context.CancelFunc
+	stopOnFailure bool
+	wg            sync.WaitGroup
+	failureOnce   sync.Once
 }
 
 func (p *Pool) Run() {
-	p.wg.Add(len(p.Jobs))
+	defer p.cancel()
 	for i := 0; i < p.concurrency; i++ {
 		go p.work()
 	}
 	for _, task := range p.Jobs {
+		if p.stopOnFailure && p.ctx.Err() != nil {
+			break
+		}
+		p.wg.Add(1)
 		p.jobsChan <- task
 	}
 	// all workers return
@@ -311,21 +318,33 @@ func (p *Pool) Run() {
 func (p *Pool) work() {
 	for job := range p.jobsChan {
 		runJob(p.ctx, job, p.client, p.store, p.ack)
+		if p.stopOnFailure && jobStatusFailed(job.Status) {
+			p.failureOnce.Do(func() {
+				p.cancel()
+			})
+		}
 		p.wg.Done()
 	}
 }
 
 // NewPool initializes a new pool with the given tasks and
 // at the given concurrency.
-func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func()) *Pool {
+func NewPool(ctx context.Context, jobs []*model.JobTask, concurrency int, client kubernetes.Interface, store datastore.DataStore, ack func(), stopOnFailure bool) *Pool {
+	ctxForPool := ctx
+	cancel := func() {}
+	if stopOnFailure {
+		ctxForPool, cancel = context.WithCancel(ctx)
+	}
 	return &Pool{
-		Jobs:        jobs,
-		client:      client,
-		store:       store,
-		concurrency: concurrency,
-		jobsChan:    make(chan *model.JobTask),
-		ack:         ack,
-		ctx:         ctx,
+		Jobs:          jobs,
+		client:        client,
+		store:         store,
+		concurrency:   concurrency,
+		jobsChan:      make(chan *model.JobTask),
+		ack:           ack,
+		ctx:           ctxForPool,
+		cancel:        cancel,
+		stopOnFailure: stopOnFailure,
 	}
 }
 
