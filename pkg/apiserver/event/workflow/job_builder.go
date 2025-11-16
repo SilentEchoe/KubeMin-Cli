@@ -23,7 +23,7 @@ type StepExecution struct {
 	Jobs map[int][]*model.JobTask
 }
 
-func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore) []StepExecution {
+func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datastore.DataStore, defaultJobTimeoutSeconds int64) []StepExecution {
 	logger := klog.FromContext(ctx)
 	workflow := model.Workflow{ID: task.WorkflowID}
 	if err := ds.Get(ctx, &workflow); err != nil {
@@ -68,7 +68,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 				buckets := newJobBuckets()
 				for _, sub := range step.SubSteps {
 					subComponents := sub.ComponentNames()
-					appendComponentGroup(ctx, buckets, subComponents, componentMap, task)
+					appendComponentGroup(ctx, buckets, subComponents, componentMap, task, defaultJobTimeoutSeconds)
 				}
 				if !bucketsEmpty(buckets) {
 					totalJobs += countJobs(buckets)
@@ -83,7 +83,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 				for _, sub := range step.SubSteps {
 					buckets := newJobBuckets()
 					subComponents := sub.ComponentNames()
-					appendComponentGroup(ctx, buckets, subComponents, componentMap, task)
+					appendComponentGroup(ctx, buckets, subComponents, componentMap, task, defaultJobTimeoutSeconds)
 					if bucketsEmpty(buckets) {
 						continue
 					}
@@ -105,7 +105,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 		}
 		if mode.IsParallel() && len(componentNames) > 1 {
 			buckets := newJobBuckets()
-			appendComponentGroup(ctx, buckets, componentNames, componentMap, task)
+			appendComponentGroup(ctx, buckets, componentNames, componentMap, task, defaultJobTimeoutSeconds)
 			if !bucketsEmpty(buckets) {
 				totalJobs += countJobs(buckets)
 				stepName := step.Name
@@ -119,7 +119,7 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 		}
 		for _, name := range componentNames {
 			buckets := newJobBuckets()
-			appendComponentGroup(ctx, buckets, []string{name}, componentMap, task)
+			appendComponentGroup(ctx, buckets, []string{name}, componentMap, task, defaultJobTimeoutSeconds)
 			if bucketsEmpty(buckets) {
 				continue
 			}
@@ -133,7 +133,10 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	return executions
 }
 
-func NewJobTask(name, namespace, workflowID, projectID, appID string) *model.JobTask {
+func NewJobTask(name, namespace, workflowID, projectID, appID string, timeoutSeconds int64) *model.JobTask {
+	if timeoutSeconds <= 0 {
+		timeoutSeconds = int64(config.DefaultJobTaskTimeoutSeconds)
+	}
 	return &model.JobTask{
 		Name:       name,
 		Namespace:  namespace,
@@ -141,7 +144,7 @@ func NewJobTask(name, namespace, workflowID, projectID, appID string) *model.Job
 		ProjectID:  projectID,
 		AppID:      appID,
 		Status:     config.StatusQueued,
-		Timeout:    config.DefaultJobTaskTimeoutSeconds,
+		Timeout:    timeoutSeconds,
 	}
 }
 
@@ -162,7 +165,7 @@ func ParseProperties(ctx context.Context, properties *model.JSONStruct) model.Pr
 	return propertied
 }
 
-func CreateObjectJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask) ([]*model.JobTask, error) {
+func CreateObjectJobsFromResult(additionalObjects []client.Object, component *model.ApplicationComponent, task *model.WorkflowQueue, jobs []*model.JobTask, defaultJobTimeoutSeconds int64) ([]*model.JobTask, error) {
 	if len(additionalObjects) == 0 {
 		return jobs, nil
 	}
@@ -180,6 +183,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			pvcJob.JobType = string(config.JobDeployPVC)
 			pvcJob.JobInfo = pvc
@@ -200,6 +204,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			ingressJob.JobType = string(config.JobDeployIngress)
 			ingressJob.JobInfo = ingress
@@ -218,6 +223,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployServiceAccount)
 			jobTask.JobInfo = sa.DeepCopy()
@@ -236,6 +242,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployRole)
 			jobTask.JobInfo = role.DeepCopy()
@@ -254,6 +261,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployRoleBinding)
 			jobTask.JobInfo = binding.DeepCopy()
@@ -267,6 +275,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployClusterRole)
 			jobTask.JobInfo = clusterRole.DeepCopy()
@@ -280,6 +289,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployClusterRoleBinding)
 			jobTask.JobInfo = clusterBinding.DeepCopy()
@@ -290,7 +300,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 	return jobs, nil
 }
 
-func appendComponentGroup(ctx context.Context, buckets map[int][]*model.JobTask, componentNames []string, componentMap map[string]*model.ApplicationComponent, task *model.WorkflowQueue) {
+func appendComponentGroup(ctx context.Context, buckets map[int][]*model.JobTask, componentNames []string, componentMap map[string]*model.ApplicationComponent, task *model.WorkflowQueue, defaultJobTimeoutSeconds int64) {
 	logger := klog.FromContext(ctx)
 	for _, name := range componentNames {
 		component, ok := componentMap[name]
@@ -298,12 +308,12 @@ func appendComponentGroup(ctx context.Context, buckets map[int][]*model.JobTask,
 			logger.Info("Component referenced in workflow step not found", "componentName", name)
 			continue
 		}
-		componentBuckets := buildJobsForComponent(ctx, component, task)
+		componentBuckets := buildJobsForComponent(ctx, component, task, defaultJobTimeoutSeconds)
 		mergeJobBuckets(buckets, componentBuckets)
 	}
 }
 
-func buildJobsForComponent(ctx context.Context, component *model.ApplicationComponent, task *model.WorkflowQueue) map[int][]*model.JobTask {
+func buildJobsForComponent(ctx context.Context, component *model.ApplicationComponent, task *model.WorkflowQueue, defaultJobTimeoutSeconds int64) map[int][]*model.JobTask {
 	logger := klog.FromContext(ctx)
 	buckets := newJobBuckets()
 	if component == nil {
@@ -321,26 +331,26 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	switch component.ComponentType {
 	case config.ServerJob:
 		serviceJobs := job.GenerateWebService(component, &properties)
-		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeploy, serviceJobs)
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeploy, serviceJobs, defaultJobTimeoutSeconds)
 	case config.StoreJob:
 		storeJobs := job.GenerateStoreService(component)
-		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs)
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs, defaultJobTimeoutSeconds)
 
 	case config.ConfJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 
 	case config.SecretJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 	}
 
 	if len(properties.Ports) > 0 {
-		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
 		svcJob.JobType = string(config.JobDeployService)
 		svcJob.JobInfo = job.GenerateService(component, &properties)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
@@ -357,6 +367,7 @@ func queueServiceJobs(
 	namespace string,
 	jobType config.JobType,
 	result *job.GenerateServiceResult,
+	defaultJobTimeoutSeconds int64,
 ) {
 	if result == nil {
 		return
@@ -372,7 +383,7 @@ func queueServiceJobs(
 	// Traits may emit extra Kubernetes objects (PVC, Ingress, etc.). Schedule them
 	// ahead of the base workload so dependencies are ready before the deployment runs.
 	if len(result.AdditionalObjects) > 0 {
-		jobs, err := CreateObjectJobsFromResult(result.AdditionalObjects, component, task, nil)
+		jobs, err := CreateObjectJobsFromResult(result.AdditionalObjects, component, task, nil, defaultJobTimeoutSeconds)
 		if err != nil {
 			logger.Error(err, "Failed to create additional resource jobs", "componentName", component.Name)
 		} else {
@@ -382,7 +393,7 @@ func queueServiceJobs(
 		}
 	}
 
-	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID)
+	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
 	jobTask.JobType = string(jobType)
 	jobTask.JobInfo = result.Service
 	appendJob(config.JobPriorityNormal, jobTask)

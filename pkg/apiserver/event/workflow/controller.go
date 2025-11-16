@@ -20,20 +20,22 @@ import (
 )
 
 type WorkflowCtl struct {
-	workflowTask      *model.WorkflowQueue
-	workflowTaskMutex sync.RWMutex
-	Client            kubernetes.Interface
-	Store             datastore.DataStore
-	prefix            string
-	ack               func()
+	workflowTask             *model.WorkflowQueue
+	workflowTaskMutex        sync.RWMutex
+	Client                   kubernetes.Interface
+	Store                    datastore.DataStore
+	prefix                   string
+	ack                      func()
+	defaultJobTimeoutSeconds int64
 }
 
-func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.Interface, store datastore.DataStore) *WorkflowCtl {
+func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.Interface, store datastore.DataStore, cfg *config.Config) *WorkflowCtl {
 	ctl := &WorkflowCtl{
-		workflowTask: workflowTask,
-		Store:        store,
-		Client:       client,
-		prefix:       fmt.Sprintf("workflowctl-%s-%s", workflowTask.WorkflowName, workflowTask.TaskID),
+		workflowTask:             workflowTask,
+		Store:                    store,
+		Client:                   client,
+		prefix:                   fmt.Sprintf("workflowctl-%s-%s", workflowTask.WorkflowName, workflowTask.TaskID),
+		defaultJobTimeoutSeconds: resolveDefaultJobTimeout(cfg),
 	}
 	ctl.ack = ctl.updateWorkflowTask
 	return ctl
@@ -89,7 +91,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 	defer cancel()
 
 	taskForGeneration := w.snapshotTask()
-	stepExecutions := GenerateJobTasks(ctx, &taskForGeneration, w.Store)
+	stepExecutions := GenerateJobTasks(ctx, &taskForGeneration, w.Store, w.defaultJobTimeoutSeconds)
 	seqLimit := 1
 	if concurrency > 0 {
 		seqLimit = concurrency
@@ -136,6 +138,16 @@ func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {
 	if err != nil {
 		klog.Errorf("update Workflow status err: %v", err)
 	}
+}
+
+func resolveDefaultJobTimeout(cfg *config.Config) int64 {
+	if cfg != nil && cfg.Workflow.DefaultJobTimeout > 0 {
+		seconds := int64(cfg.Workflow.DefaultJobTimeout / time.Second)
+		if seconds > 0 {
+			return seconds
+		}
+	}
+	return config.DefaultJobTaskTimeoutSeconds
 }
 
 func (w *WorkflowCtl) mutateTask(mut func(task *model.WorkflowQueue)) {

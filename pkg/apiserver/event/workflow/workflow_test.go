@@ -131,7 +131,7 @@ func TestGenerateJobTasksSequential(t *testing.T) {
 		WorkflowName: "test-workflow",
 	}
 
-	executions := GenerateJobTasks(context.Background(), task, store)
+	executions := GenerateJobTasks(context.Background(), task, store, int64(config.DefaultJobTaskTimeoutSeconds))
 	require.Len(t, executions, 2)
 
 	first := executions[0]
@@ -212,7 +212,7 @@ func TestGenerateJobTasksParallel(t *testing.T) {
 		WorkflowName: "parallel-workflow",
 	}
 
-	executions := GenerateJobTasks(context.Background(), task, store)
+	executions := GenerateJobTasks(context.Background(), task, store, int64(config.DefaultJobTaskTimeoutSeconds))
 	require.Len(t, executions, 1)
 
 	parallel := executions[0]
@@ -244,7 +244,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 
 	t.Run("auto name when ingress missing name", func(t *testing.T) {
 		ing := &networkingv1.Ingress{}
-		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil)
+		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 		require.NoError(t, err)
 		require.Len(t, jobs, 1)
 
@@ -267,7 +267,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 			},
 		}
 
-		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil)
+		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 		require.NoError(t, err)
 		require.Len(t, j, 1)
 		require.Equal(t, canonical, j[0].Name)
@@ -286,7 +286,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 			},
 		}
 
-		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil)
+		j, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 		require.NoError(t, err)
 		require.Len(t, j, 1)
 
@@ -301,7 +301,7 @@ func TestCreateObjectJobsFromResultIngressNaming(t *testing.T) {
 		baseName := "CustomRoute"
 		ing.Name = baseName
 
-		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil)
+		jobs, err := CreateObjectJobsFromResult([]client.Object{ing}, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 		require.NoError(t, err)
 		require.Len(t, jobs, 1)
 
@@ -320,7 +320,7 @@ func TestCreateObjectJobsFromResultIgnoresConfigAndSecret(t *testing.T) {
 	task := &model.WorkflowQueue{WorkflowID: "wf", ProjectID: "proj", AppID: "aid"}
 	cm := &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "app-config"}, Data: map[string]string{"key": "value"}}
 	secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "app-secret"}}
-	jobs, err := CreateObjectJobsFromResult([]client.Object{cm, secret}, component, task, nil)
+	jobs, err := CreateObjectJobsFromResult([]client.Object{cm, secret}, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 	require.NoError(t, err)
 	require.Empty(t, jobs, "configmap/secret should be ignored; dedicated jobs exist elsewhere")
 }
@@ -382,7 +382,7 @@ func TestCreateObjectJobsFromResultRBAC(t *testing.T) {
 	}
 
 	objs := []client.Object{sa, role, binding, clusterRole, clusterBinding}
-	jobs, err := CreateObjectJobsFromResult(objs, component, task, nil)
+	jobs, err := CreateObjectJobsFromResult(objs, component, task, nil, int64(config.DefaultJobTaskTimeoutSeconds))
 	require.NoError(t, err)
 	require.Len(t, jobs, 5)
 
@@ -440,7 +440,7 @@ func TestSecretJobNameNormalization(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	buckets := buildJobsForComponent(ctx, component, task)
+	buckets := buildJobsForComponent(ctx, component, task, int64(config.DefaultJobTaskTimeoutSeconds))
 	jobs := buckets[config.JobPriorityMaxHigh]
 	require.Len(t, jobs, 1)
 

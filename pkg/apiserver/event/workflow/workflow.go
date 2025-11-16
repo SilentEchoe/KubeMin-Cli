@@ -105,7 +105,7 @@ func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueu
 	if w.taskGroup != nil {
 		taskCopy := task
 		w.taskGroup.Go(func() error {
-			controller := NewWorkflowController(taskCopy, w.KubeClient, w.Store)
+			controller := NewWorkflowController(taskCopy, w.KubeClient, w.Store, w.Cfg)
 			err := controller.Run(runnerCtx, concurrency)
 			if acquired {
 				w.workflowLimiter.Release(1)
@@ -118,7 +118,7 @@ func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueu
 		return
 	}
 	go func() {
-		controller := NewWorkflowController(task, w.KubeClient, w.Store)
+		controller := NewWorkflowController(task, w.KubeClient, w.Store, w.Cfg)
 		err := controller.Run(runnerCtx, concurrency)
 		if acquired {
 			w.workflowLimiter.Release(1)
