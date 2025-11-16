@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"golang.org/x/sync/errgroup"
+	"golang.org/x/sync/semaphore"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
@@ -22,10 +24,27 @@ type Workflow struct {
 	WorkflowService service.WorkflowService `inject:""`
 	Queue           msg.Queue               `inject:"queue"`
 	Cfg             *config.Config          `inject:""`
+	taskGroup       *errgroup.Group
+	taskGroupCtx    context.Context
+	errChan         chan error
+	workflowLimiter *semaphore.Weighted
 }
 
 func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 	w.InitQueue(ctx)
+	w.errChan = errChan
+	w.taskGroup, w.taskGroupCtx = errgroup.WithContext(ctx)
+	if max := w.maxWorkflowConcurrency(); max > 0 {
+		w.workflowLimiter = semaphore.NewWeighted(max)
+	}
+	go func() {
+		<-ctx.Done()
+		if w.taskGroup != nil {
+			if err := w.taskGroup.Wait(); err != nil {
+				w.reportTaskError(err)
+			}
+		}
+	}()
 	klog.Infof("workflow runtime config: localPoll=%s dispatchPoll=%s workerStale=%s autoClaimIdle=%s autoClaimCount=%d workerReadCount=%d workerReadBlock=%s",
 		w.localPollInterval(),
 		w.dispatchPollInterval(),
@@ -70,6 +89,68 @@ func (w *Workflow) InitQueue(ctx context.Context) {
 	}
 }
 
+func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueue, concurrency int) {
+	runnerCtx := ctx
+	if w.taskGroupCtx != nil {
+		runnerCtx = w.taskGroupCtx
+	}
+	acquired := false
+	if w.workflowLimiter != nil {
+		if err := w.workflowLimiter.Acquire(runnerCtx, 1); err != nil {
+			w.reportTaskError(fmt.Errorf("acquire workflow slot: %w", err))
+			return
+		}
+		acquired = true
+	}
+	if w.taskGroup != nil {
+		taskCopy := task
+		w.taskGroup.Go(func() error {
+			controller := NewWorkflowController(taskCopy, w.KubeClient, w.Store)
+			err := controller.Run(runnerCtx, concurrency)
+			if acquired {
+				w.workflowLimiter.Release(1)
+			}
+			if err != nil {
+				w.reportTaskError(err)
+			}
+			return nil
+		})
+		return
+	}
+	go func() {
+		controller := NewWorkflowController(task, w.KubeClient, w.Store)
+		err := controller.Run(runnerCtx, concurrency)
+		if acquired {
+			w.workflowLimiter.Release(1)
+		}
+		if err != nil {
+			w.reportTaskError(err)
+		}
+	}()
+}
+
+func (w *Workflow) reportTaskError(err error) {
+	if err == nil {
+		return
+	}
+	if w.errChan != nil {
+		select {
+		case w.errChan <- err:
+		default:
+			klog.Errorf("workflow task error: %v", err)
+		}
+	} else {
+		klog.Errorf("workflow task error: %v", err)
+	}
+}
+
+func (w *Workflow) maxWorkflowConcurrency() int64 {
+	if w.Cfg != nil && w.Cfg.Workflow.MaxConcurrentWorkflows > 0 {
+		return int64(w.Cfg.Workflow.MaxConcurrentWorkflows)
+	}
+	return int64(config.DefaultMaxConcurrentWorkflows)
+}
+
 // 更改工作流队列的状态，并运行它
 func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.WorkflowQueue, jobConcurrency int) error {
 	//将状态更改为队列中
@@ -83,7 +164,6 @@ func (w *Workflow) updateQueueAndRunTask(ctx context.Context, task *model.Workfl
 	if w.Cfg != nil && w.Cfg.Workflow.SequentialMaxConcurrency > 0 {
 		sequentialConcurrency = w.Cfg.Workflow.SequentialMaxConcurrency
 	}
-	// 执行新的任务
-	go NewWorkflowController(task, w.KubeClient, w.Store).Run(ctx, sequentialConcurrency)
+	w.runWorkflowTask(ctx, task, sequentialConcurrency)
 	return nil
 }

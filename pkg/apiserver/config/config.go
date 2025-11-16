@@ -40,6 +40,8 @@ type WorkflowRuntimeConfig struct {
 	WorkerReadBlock time.Duration
 	// DefaultJobTimeout per-job timeout.
 	DefaultJobTimeout time.Duration
+	// MaxConcurrentWorkflows limits how many workflow controllers run in parallel.
+	MaxConcurrentWorkflows int
 }
 
 type Config struct {
@@ -158,6 +160,7 @@ func NewConfig() *Config {
 			WorkerReadCount:          10,
 			WorkerReadBlock:          2 * time.Second,
 			DefaultJobTimeout:        60 * time.Second,
+			MaxConcurrentWorkflows:  config.DefaultMaxConcurrentWorkflows,
 		},
 	}
 }
@@ -201,6 +204,9 @@ func (c *Config) Validate() []error {
 	}
 	if c.Workflow.DefaultJobTimeout <= 0 {
 		errs = append(errs, fmt.Errorf("workflow default job timeout must be > 0"))
+	}
+	if c.Workflow.MaxConcurrentWorkflows <= 0 {
+		errs = append(errs, fmt.Errorf("workflow max concurrent executions must be > 0"))
 	}
 	// messaging basic checks
 	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
@@ -254,6 +260,7 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.IntVar(&c.Workflow.WorkerReadCount, "workflow-worker-read-count", configParameter.Workflow.WorkerReadCount, "workflow worker stream read batch size")
 	fs.DurationVar(&c.Workflow.WorkerReadBlock, "workflow-worker-read-block", configParameter.Workflow.WorkerReadBlock, "workflow worker stream read block duration")
 	fs.DurationVar(&c.Workflow.DefaultJobTimeout, "workflow-default-job-timeout", configParameter.Workflow.DefaultJobTimeout, "default workflow job timeout")
+	fs.IntVar(&c.Workflow.MaxConcurrentWorkflows, "workflow-max-concurrent", configParameter.Workflow.MaxConcurrentWorkflows, "maximum number of workflow controllers running concurrently")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

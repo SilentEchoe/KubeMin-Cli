@@ -52,7 +52,7 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 	}
 }
 
-func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
+func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 	// 1. Start a new trace for this workflow execution
 	tracer := otel.Tracer("workflow-runner")
 	taskMeta := w.snapshotTask()
@@ -112,11 +112,12 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 			for _, task := range tasksInPriority {
 				if task.Status != config.StatusCompleted {
-					logger.Error(nil, "Workflow failed at job, aborting.", "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
+					err := fmt.Errorf("workflow %s failed at job %s (status=%s)", workflowName, task.Name, task.Status)
+					logger.Error(err, "Workflow failed at job, aborting.", "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
 					w.setStatus(config.StatusFailed)
 					span.SetStatus(codes.Error, "Workflow failed")
-					span.RecordError(fmt.Errorf("job %s failed with status %s", task.Name, task.Status))
-					return
+					span.RecordError(err)
+					return err
 				}
 			}
 		}
@@ -125,6 +126,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) {
 
 	span.SetStatus(codes.Ok, "Workflow completed successfully")
 	w.updateWorkflowStatus(ctx)
+	return nil
 }
 
 func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {

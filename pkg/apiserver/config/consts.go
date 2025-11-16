@@ -80,10 +80,11 @@ const (
 	DefaultDispatchPollInterval  = 3 * time.Second
 	DefaultWorkerStaleInterval   = 15 * time.Second
 	DefaultWorkerAutoClaimIdle   = 60 * time.Second
-	DefaultWorkerAutoClaimCount  = 50
-	DefaultWorkerReadCount       = 10
-	DefaultWorkerReadBlock       = 2 * time.Second
-	DefaultJobTaskTimeoutSeconds = 60
+	DefaultWorkerAutoClaimCount   = 50
+	DefaultWorkerReadCount        = 10
+	DefaultWorkerReadBlock        = 2 * time.Second
+	DefaultJobTaskTimeoutSeconds  = 60
+	DefaultMaxConcurrentWorkflows = 10
 )
 
 const (
