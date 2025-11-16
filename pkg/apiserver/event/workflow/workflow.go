@@ -113,7 +113,7 @@ func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueu
 			if err != nil {
 				w.reportTaskError(err)
 			}
-			return nil
+			return err
 		})
 		return
 	}
