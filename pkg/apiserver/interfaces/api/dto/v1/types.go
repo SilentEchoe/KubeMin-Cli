@@ -166,6 +166,17 @@ type CreateWorkflowResponse struct {
 	WorkflowID string `json:"workflowId"`
 }
 
+type UpdateApplicationWorkflowRequest struct {
+	WorkflowID string                      `json:"workflowId,omitempty"`
+	Name       string                      `json:"name,omitempty"`
+	Alias      string                      `json:"alias,omitempty"`
+	Workflow   []CreateWorkflowStepRequest `json:"workflow" validate:"required,min=1,dive"`
+}
+
+type UpdateWorkflowResponse struct {
+	WorkflowID string `json:"workflowId"`
+}
+
 type ExecWorkflowRequest struct {
 	WorkflowID string `json:"workflowId" validate:"checkname"`
 }

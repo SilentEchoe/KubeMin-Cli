@@ -39,12 +39,17 @@ func NewBcode(httpCode, businessCode int32, message string) *Bcode {
 func ReturnError(c *gin.Context, err error) {
 	var bcode *Bcode
 	if errors.As(err, &bcode) {
-		c.JSON(int(bcode.HTTPCode), err)
+		c.JSON(int(bcode.HTTPCode), gin.H{
+			"Code":    bcode.BusinessCode,
+			"Message": bcode.Message,
+		})
 		return
 	}
 
 	if errors.Is(err, datastore.ErrRecordNotExist) {
-		c.JSON(http.StatusNotFound, err)
+		c.JSON(http.StatusNotFound, gin.H{
+			"message": err.Error(),
+		})
 		return
 	}
 
@@ -58,10 +63,10 @@ func ReturnError(c *gin.Context, err error) {
 		return
 	}
 
-	c.JSON(http.StatusInternalServerError, Bcode{
-		HTTPCode:     http.StatusInternalServerError,
-		BusinessCode: 500,
-		Message:      err.Error(),
+	c.JSON(http.StatusInternalServerError, gin.H{
+		"HTTPCode":     http.StatusInternalServerError,
+		"BusinessCode": 500,
+		"Message":      err.Error(),
 	})
 	return
 }

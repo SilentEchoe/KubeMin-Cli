@@ -25,6 +25,7 @@ func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/applications", a.createApplications)
 	group.GET("/applications", a.listApplications)
 	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
+	group.PUT("/applications/:appID/workflow", a.updateApplicationWorkflow)
 }
 
 func (a *applications) createApplications(c *gin.Context) {
@@ -73,4 +74,54 @@ func (a *applications) deleteApplicationResources(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+func (a *applications) updateApplicationWorkflow(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+	var req apis.UpdateApplicationWorkflowRequest
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
+		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
+		return
+	}
+	normalizeWorkflowSteps(req.Workflow)
+	if err := validate.Struct(req); err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+	ctx := c.Request.Context()
+	klog.Infof("update workflow request received appID=%s workflowId=%s name=%s", appID, req.WorkflowID, req.Name)
+	resp, err := a.ApplicationService.UpdateApplicationWorkflow(ctx, appID, req)
+	if err != nil {
+		klog.Errorf("update workflow failed appID=%s workflowId=%s error=%v", appID, req.WorkflowID, err)
+		bcode.ReturnError(c, err)
+		return
+	}
+	klog.Infof("update workflow succeeded appID=%s workflowId=%s", appID, resp.WorkflowID)
+	c.JSON(http.StatusOK, resp)
+}
+
+func normalizeWorkflowSteps(steps []apis.CreateWorkflowStepRequest) {
+	for i := range steps {
+		steps[i].Name = strings.ToLower(steps[i].Name)
+		for j := range steps[i].Components {
+			steps[i].Components[j] = strings.ToLower(steps[i].Components[j])
+		}
+		for j := range steps[i].Properties.Policies {
+			steps[i].Properties.Policies[j] = strings.ToLower(steps[i].Properties.Policies[j])
+		}
+		for j := range steps[i].SubSteps {
+			steps[i].SubSteps[j].Name = strings.ToLower(steps[i].SubSteps[j].Name)
+			for k := range steps[i].SubSteps[j].Properties.Policies {
+				steps[i].SubSteps[j].Properties.Policies[k] = strings.ToLower(steps[i].SubSteps[j].Properties.Policies[k])
+			}
+			for k := range steps[i].SubSteps[j].Components {
+				steps[i].SubSteps[j].Components[k] = strings.ToLower(steps[i].SubSteps[j].Components[k])
+			}
+		}
+	}
 }

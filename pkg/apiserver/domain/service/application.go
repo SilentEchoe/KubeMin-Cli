@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -35,6 +36,7 @@ type ApplicationsService interface {
 	ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
 	CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error)
+	UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error)
 }
 
 type applicationsServiceImpl struct {
@@ -262,6 +264,32 @@ func dedupeStrings(values []string) []string {
 	return result
 }
 
+func validateWorkflowComponentRefs(steps []apisv1.CreateWorkflowStepRequest, existing map[string]struct{}) error {
+	for _, step := range steps {
+		if err := ensureComponentsExist(mergeWorkflowComponents(step.Components, step.Properties.Policies), existing); err != nil {
+			klog.Errorf("workflow step=%s references missing components: %v", step.Name, err)
+			return err
+		}
+		for _, sub := range step.SubSteps {
+			if err := ensureComponentsExist(mergeWorkflowComponents(sub.Components, sub.Properties.Policies), existing); err != nil {
+				klog.Errorf("workflow substep=%s references missing components: %v", sub.Name, err)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func ensureComponentsExist(names []string, existing map[string]struct{}) error {
+	for _, name := range names {
+		lower := strings.ToLower(name)
+		if _, ok := existing[lower]; !ok {
+			return fmt.Errorf("%w: component %q not found", bcode.ErrWorkflowConfig, name)
+		}
+	}
+	return nil
+}
+
 // ListApplications list applications
 func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error) {
 	listOptions := datastore.ListOptions{
@@ -393,6 +421,110 @@ func (c *applicationsServiceImpl) deleteComponentResources(ctx context.Context, 
 
 	c.deleteServiceForComponent(ctx, componentPtr, &props, reporter)
 	return nil
+}
+
+func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error) {
+	if appID == "" {
+		return nil, bcode.ErrApplicationNotExist
+	}
+	if len(req.Workflow) == 0 {
+		return nil, bcode.ErrWorkflowConfig
+	}
+	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+
+	components, err := repository.FindComponentsByAppID(ctx, c.Store, app.ID)
+	if err != nil {
+		return nil, err
+	}
+	componentSet := make(map[string]struct{}, len(components))
+	for _, comp := range components {
+		componentSet[strings.ToLower(comp.Name)] = struct{}{}
+	}
+	if err := validateWorkflowComponentRefs(req.Workflow, componentSet); err != nil {
+		klog.Errorf("component validation failed for app=%s workflowId=%s: %v", appID, req.WorkflowID, err)
+		return nil, err
+	}
+
+	workflowSteps := convertWorkflowStepsFromRequest(req.Workflow)
+	stepsStruct, err := model.NewJSONStructByStruct(workflowSteps)
+	if err != nil {
+		return nil, fmt.Errorf("marshal workflow steps: %w", err)
+	}
+
+	workflows, err := repository.FindWorkflowsByAppID(ctx, c.Store, app.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	targetName := strings.ToLower(strings.TrimSpace(req.Name))
+	var target *model.Workflow
+	if req.WorkflowID != "" {
+		wf, err := repository.WorkflowByID(ctx, c.Store, req.WorkflowID)
+		if err != nil {
+			if errors.Is(err, datastore.ErrRecordNotExist) {
+				return nil, bcode.ErrWorkflowNotExist
+			}
+			return nil, err
+		}
+		if wf.AppID != app.ID {
+			return nil, bcode.ErrWorkflowConfig
+		}
+		target = wf
+		if targetName == "" {
+			targetName = target.Name
+		}
+	} else if targetName != "" {
+		for _, wf := range workflows {
+			if strings.EqualFold(wf.Name, targetName) {
+				target = wf
+				break
+			}
+		}
+	}
+	if target == nil && len(workflows) > 0 {
+		target = workflows[0]
+		if targetName == "" {
+			targetName = target.Name
+		}
+	}
+	if targetName == "" {
+		targetName = fmt.Sprintf("%s-workflow", strings.ToLower(app.Name))
+	}
+
+	if target == nil {
+		target = &model.Workflow{
+			ID:           utils.RandStringByNumLowercase(24),
+			Name:         targetName,
+			Alias:        req.Alias,
+			Disabled:     false,
+			ProjectID:    app.Project,
+			AppID:        app.ID,
+			WorkflowType: config.WorkflowTaskTypeWorkflow,
+			Status:       config.StatusCreated,
+		}
+		target.Steps = stepsStruct
+		if err := repository.CreateWorkflow(ctx, c.Store, target); err != nil {
+			return nil, err
+		}
+	} else {
+		if targetName != "" {
+			target.Name = targetName
+		}
+		if req.Alias != "" {
+			target.Alias = req.Alias
+		}
+		target.Steps = stepsStruct
+		if err := c.Store.Put(ctx, target); err != nil {
+			return nil, err
+		}
+	}
+	return &apisv1.UpdateWorkflowResponse{WorkflowID: target.ID}, nil
 }
 
 func (c *applicationsServiceImpl) deleteServiceForComponent(ctx context.Context, component *model.ApplicationComponent, props *model.Properties, reporter *cleanupReporter) {
