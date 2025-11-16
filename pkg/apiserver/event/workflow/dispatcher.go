@@ -15,6 +15,13 @@ import (
 	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 )
 
+const (
+	workerBackoffMin       = 200 * time.Millisecond
+	workerBackoffMax       = 5 * time.Second
+	workerMaxReadFailures  = 3
+	workerMaxClaimFailures = 3
+)
+
 // TaskDispatch is the minimal payload for dispatching a workflow task to a worker.
 type TaskDispatch struct {
 	TaskID     string `json:"taskId"`
@@ -124,21 +131,32 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 	}
 	staleTicker := time.NewTicker(w.workerStaleInterval())
 	defer staleTicker.Stop()
+	currentDelay := workerBackoffMin
+	readFailures := 0
+	claimFailures := 0
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-staleTicker.C:
-			// periodically claim stale pending messages
 			mags, err := w.Queue.AutoClaim(ctx, group, consumer, w.workerAutoClaimMinIdle(), w.workerAutoClaimCount())
 			if err != nil {
 				klog.V(4).Infof("auto-claim error: %v", err)
+				claimFailures++
+				if claimFailures >= workerMaxClaimFailures {
+					w.reportWorkerError(fmt.Errorf("auto-claim failed %d times: %w", claimFailures, err))
+					return
+				}
 				continue
 			}
+			claimFailures = 0
+			currentDelay = workerBackoffMin
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
 					klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, taskID)
-					_ = w.Queue.Ack(ctx, group, m.ID)
+					if err := w.ackMessage(ctx, group, m.ID); err != nil {
+						klog.Errorf("failed to ack message id=%s task=%s: %v", m.ID, taskID, err)
+					}
 				} else {
 					klog.Warningf("consumer=%s left message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
@@ -147,12 +165,28 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			mags, err := w.Queue.ReadGroup(ctx, group, consumer, w.workerReadCount(), w.workerReadBlock())
 			if err != nil {
 				klog.V(4).Infof("read group error: %v", err)
+				readFailures++
+				if readFailures >= workerMaxReadFailures {
+					w.reportWorkerError(fmt.Errorf("read group failed %d times: %w", readFailures, err))
+					return
+				}
+				wait := w.workerBackoffDelay(currentDelay, workerBackoffMin, workerBackoffMax)
+				currentDelay = wait
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(wait):
+				}
 				continue
 			}
+			readFailures = 0
+			currentDelay = workerBackoffMin
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
 					klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, taskID)
-					_ = w.Queue.Ack(ctx, group, m.ID)
+					if err := w.ackMessage(ctx, group, m.ID); err != nil {
+						klog.Errorf("failed to ack claimed message id=%s task=%s: %v", m.ID, taskID, err)
+					}
 				} else {
 					klog.Warningf("consumer=%s left claimed message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
@@ -188,6 +222,31 @@ func (w *Workflow) claimAndProcessTask(ctx context.Context, task *model.Workflow
 			klog.V(4).Infof("task %s status already changed before revert", task.TaskID)
 		}
 	}
+}
+
+func (w *Workflow) ackMessage(ctx context.Context, group string, ids ...string) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	return w.Queue.Ack(ctx, group, ids...)
+}
+
+func (w *Workflow) workerBackoffDelay(current, min, max time.Duration) time.Duration {
+	if current < min {
+		return min
+	}
+	next := current * 2
+	if next > max {
+		return max
+	}
+	return next
+}
+
+func (w *Workflow) reportWorkerError(err error) {
+	if err == nil {
+		return
+	}
+	w.reportTaskError(err)
 }
 
 func (w *Workflow) processDispatchMessage(ctx context.Context, m msg.Message) (bool, string) {

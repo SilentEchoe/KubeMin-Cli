@@ -160,7 +160,7 @@ func NewConfig() *Config {
 			WorkerReadCount:          10,
 			WorkerReadBlock:          2 * time.Second,
 			DefaultJobTimeout:        60 * time.Second,
-			MaxConcurrentWorkflows:  config.DefaultMaxConcurrentWorkflows,
+			MaxConcurrentWorkflows:   DefaultMaxConcurrentWorkflows,
 		},
 	}
 }
