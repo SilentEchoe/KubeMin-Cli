@@ -152,16 +152,15 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			}
 			claimFailures = 0
 			currentDelay = workerBackoffMin
+			var acknowledgements []dispatchAck
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
-					klog.Infof("consumer=%s acked message id=%s task=%s", consumer, m.ID, taskID)
-					if err := w.ackMessage(ctx, group, m.ID); err != nil {
-						klog.Errorf("failed to ack message id=%s task=%s: %v", m.ID, taskID, err)
-					}
+					acknowledgements = append(acknowledgements, dispatchAck{id: m.ID, taskID: taskID})
 				} else {
 					klog.Warningf("consumer=%s left message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
 			}
+			w.ackDispatchMessages(ctx, group, consumer, acknowledgements)
 		default:
 			mags, err := w.Queue.ReadGroup(ctx, group, consumer, w.workerReadCount(), w.workerReadBlock())
 			if err != nil {
@@ -182,16 +181,15 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			}
 			readFailures = 0
 			currentDelay = workerBackoffMin
+			var acknowledgements []dispatchAck
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
-					klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, m.ID, taskID)
-					if err := w.ackMessage(ctx, group, m.ID); err != nil {
-						klog.Errorf("failed to ack claimed message id=%s task=%s: %v", m.ID, taskID, err)
-					}
+					acknowledgements = append(acknowledgements, dispatchAck{id: m.ID, taskID: taskID, claimed: true})
 				} else {
 					klog.Warningf("consumer=%s left claimed message pending id=%s task=%s due to processing error", consumer, m.ID, taskID)
 				}
 			}
+			w.ackDispatchMessages(ctx, group, consumer, acknowledgements)
 		}
 	}
 }
@@ -230,6 +228,39 @@ func (w *Workflow) ackMessage(ctx context.Context, group string, ids ...string) 
 		return nil
 	}
 	return w.Queue.Ack(ctx, group, ids...)
+}
+
+type dispatchAck struct {
+	id      string
+	taskID  string
+	claimed bool
+}
+
+func (w *Workflow) ackDispatchMessages(ctx context.Context, group, consumer string, acks []dispatchAck) {
+	if len(acks) == 0 {
+		return
+	}
+	ids := make([]string, 0, len(acks))
+	for _, ack := range acks {
+		ids = append(ids, ack.id)
+	}
+	if err := w.ackMessage(ctx, group, ids...); err != nil {
+		for _, ack := range acks {
+			if ack.claimed {
+				klog.Errorf("failed to ack claimed message id=%s task=%s: %v", ack.id, ack.taskID, err)
+			} else {
+				klog.Errorf("failed to ack message id=%s task=%s: %v", ack.id, ack.taskID, err)
+			}
+		}
+		return
+	}
+	for _, ack := range acks {
+		if ack.claimed {
+			klog.Infof("consumer=%s acked claimed message id=%s task=%s", consumer, ack.id, ack.taskID)
+		} else {
+			klog.Infof("consumer=%s acked message id=%s task=%s", consumer, ack.id, ack.taskID)
+		}
+	}
 }
 
 func (w *Workflow) workerBackoffDelay(current, min, max time.Duration) time.Duration {

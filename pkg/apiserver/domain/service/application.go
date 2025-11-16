@@ -26,7 +26,7 @@ import (
 	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
-	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	"KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 type ApplicationsService interface {

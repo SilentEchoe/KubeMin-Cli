@@ -1,7 +1,7 @@
 package job
 
 import (
-	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	"KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 func buildWebServiceName(name, appID string) string { return naming.WebServiceName(name, appID) }

@@ -68,6 +68,30 @@ func TestAckMessagePropagatesError(t *testing.T) {
 	require.Len(t, q.ackCalls, 1)
 }
 
+func TestAckDispatchMessagesBatchesIDs(t *testing.T) {
+	q := &fakeAckQueue{}
+	wf := &Workflow{Queue: q}
+	acks := []dispatchAck{
+		{id: "1", taskID: "task-1"},
+		{id: "2", taskID: "task-2", claimed: true},
+	}
+
+	wf.ackDispatchMessages(context.Background(), "workflow-workers", "consumer-1", acks)
+
+	require.Len(t, q.ackCalls, 1)
+	require.Equal(t, "workflow-workers", q.ackCalls[0].group)
+	require.Equal(t, []string{"1", "2"}, q.ackCalls[0].ids)
+}
+
+func TestAckDispatchMessagesSkipsEmptyBatch(t *testing.T) {
+	q := &fakeAckQueue{}
+	wf := &Workflow{Queue: q}
+
+	wf.ackDispatchMessages(context.Background(), "workflow-workers", "consumer-1", nil)
+
+	require.Len(t, q.ackCalls, 0)
+}
+
 func TestWorkerBackoffDelay(t *testing.T) {
 	wf := &Workflow{}
 	testCases := []struct {

@@ -14,7 +14,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils/naming"
+	"KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 func TestCleanupApplicationResourcesDeletesWorkload(t *testing.T) {
