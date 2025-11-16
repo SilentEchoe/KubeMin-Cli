@@ -122,6 +122,7 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
+	w.errChan = errChan
 	group := w.consumerGroup()
 	consumer := w.consumerName()
 	klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
@@ -143,8 +144,8 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			if err != nil {
 				klog.V(4).Infof("auto-claim error: %v", err)
 				claimFailures++
+				w.reportWorkerError(fmt.Errorf("auto-claim failed (%d consecutive): %w", claimFailures, err))
 				if claimFailures >= workerMaxClaimFailures {
-					w.reportWorkerError(fmt.Errorf("auto-claim failed %d times: %w", claimFailures, err))
 					return
 				}
 				continue
@@ -165,17 +166,17 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 			mags, err := w.Queue.ReadGroup(ctx, group, consumer, w.workerReadCount(), w.workerReadBlock())
 			if err != nil {
 				klog.V(4).Infof("read group error: %v", err)
-				readFailures++
-				if readFailures >= workerMaxReadFailures {
-					w.reportWorkerError(fmt.Errorf("read group failed %d times: %w", readFailures, err))
-					return
-				}
 				wait := w.workerBackoffDelay(currentDelay, workerBackoffMin, workerBackoffMax)
 				currentDelay = wait
 				select {
 				case <-ctx.Done():
 					return
 				case <-time.After(wait):
+				}
+				readFailures++
+				w.reportWorkerError(fmt.Errorf("read group failed (%d consecutive): %w", readFailures, err))
+				if readFailures >= workerMaxReadFailures {
+					return
 				}
 				continue
 			}
