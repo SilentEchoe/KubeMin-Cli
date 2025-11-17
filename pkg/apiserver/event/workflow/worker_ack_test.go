@@ -80,6 +80,10 @@ func (s *stubWorkflowService) ExecWorkflowTask(context.Context, string) (*apis.E
 	return nil, nil
 }
 
+func (s *stubWorkflowService) ExecWorkflowTaskForApp(context.Context, string, string) (*apis.ExecWorkflowResponse, error) {
+	return nil, nil
+}
+
 func (s *stubWorkflowService) WaitingTasks(context.Context) ([]*model.WorkflowQueue, error) {
 	return nil, nil
 }
@@ -90,6 +94,10 @@ func (s *stubWorkflowService) TaskRunning(context.Context) ([]*model.WorkflowQue
 	return nil, nil
 }
 func (s *stubWorkflowService) CancelWorkflowTask(context.Context, string, string, string) error {
+	return nil
+}
+
+func (s *stubWorkflowService) CancelWorkflowTaskForApp(context.Context, string, string, string, string) error {
 	return nil
 }
 func (s *stubWorkflowService) MarkTaskStatus(context.Context, string, config.Status, config.Status) (bool, error) {

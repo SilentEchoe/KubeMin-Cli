@@ -4,13 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gin-gonic/gin"
-	"k8s.io/klog/v2"
-
-	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
+	"github.com/gin-gonic/gin"
 )
 
 type workflow struct {
@@ -28,67 +24,21 @@ func (w *workflow) RegisterRoutes(group *gin.RouterGroup) {
 }
 
 func (w *workflow) createWorkflow(c *gin.Context) {
-	var req apis.CreateWorkflowRequest
-	if err := c.Bind(&req); err != nil {
-		klog.Error(err)
-		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
-		return
-	}
-	normalizeWorkflowRequest(&req)
-	if err := validate.Struct(req); err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	ctx := c.Request.Context()
-	resp, err := w.WorkflowService.CreateWorkflowTask(ctx, req)
-	if err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"message": "custom workflow execution API not implemented yet",
+	})
 }
 
 func (w *workflow) execWorkflowTask(c *gin.Context) {
-	var req apis.ExecWorkflowRequest
-	if err := c.Bind(&req); err != nil {
-		klog.Error(err)
-		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
-		return
-	}
-	if err := validate.Struct(req); err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	ctx := c.Request.Context()
-	resp, err := w.WorkflowService.ExecWorkflowTask(ctx, req.WorkflowID)
-	if err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, resp)
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"message": "custom workflow execution API not implemented yet",
+	})
 }
 
 func (w *workflow) cancelWorkflowTask(c *gin.Context) {
-	var req apis.CancelWorkflowRequest
-	if err := c.Bind(&req); err != nil {
-		klog.Error(err)
-		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
-		return
-	}
-	if err := validate.Struct(req); err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	user := req.User
-	if user == "" {
-		user = config.DefaultTaskRevoker
-	}
-	ctx := c.Request.Context()
-	if err := w.WorkflowService.CancelWorkflowTask(ctx, user, req.TaskID, req.Reason); err != nil {
-		bcode.ReturnError(c, err)
-		return
-	}
-	c.JSON(http.StatusOK, apis.CancelWorkflowResponse{TaskID: req.TaskID, Status: string(config.StatusCancelled)})
+	c.JSON(http.StatusNotImplemented, gin.H{
+		"message": "custom workflow cancellation API not implemented yet",
+	})
 }
 
 func normalizeWorkflowRequest(req *apis.CreateWorkflowRequest) {

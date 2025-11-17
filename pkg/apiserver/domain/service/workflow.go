@@ -25,10 +25,12 @@ type WorkflowService interface {
 	ListApplicationWorkflow(ctx context.Context, app *model.Applications) error
 	CreateWorkflowTask(ctx context.Context, workflow apis.CreateWorkflowRequest) (*apis.CreateWorkflowResponse, error)
 	ExecWorkflowTask(ctx context.Context, workflowID string) (*apis.ExecWorkflowResponse, error)
+	ExecWorkflowTaskForApp(ctx context.Context, appID, workflowID string) (*apis.ExecWorkflowResponse, error)
 	WaitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error)
 	UpdateTask(ctx context.Context, queue *model.WorkflowQueue) bool
 	TaskRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
 	CancelWorkflowTask(ctx context.Context, userName, taskID, reason string) error
+	CancelWorkflowTaskForApp(ctx context.Context, appID, userName, taskID, reason string) error
 	MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
 }
 
@@ -129,35 +131,22 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 
 // ExecWorkflowTask 执行工作流的任务
 func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowID string) (*apis.ExecWorkflowResponse, error) {
-	//查询该工作流是否存在
 	workflow, err := repository.WorkflowByID(ctx, w.Store, workflowID)
 	if err != nil {
 		return nil, err
 	}
+	return w.enqueueWorkflowTask(ctx, workflow)
+}
 
-	if workflow.Steps == nil {
-		return nil, bcode.ErrExecWorkflow
-	}
-	//验证并解析工作流，生成Job并放入消息队列(WorkflowQueue表)中
-	workflowTask := &model.WorkflowQueue{
-		TaskID:              utils.RandStringByNumLowercase(24),
-		AppID:               workflow.AppID,
-		WorkflowID:          workflowID,
-		ProjectID:           workflow.ProjectID,
-		WorkflowName:        workflow.Name,
-		WorkflowDisplayName: workflow.Alias,
-		Type:                workflow.WorkflowType,
-		Status:              config.StatusWaiting,
-	}
-
-	err = repository.CreateWorkflowQueue(ctx, w.Store, workflowTask)
+func (w *workflowServiceImpl) ExecWorkflowTaskForApp(ctx context.Context, appID, workflowID string) (*apis.ExecWorkflowResponse, error) {
+	workflow, err := repository.WorkflowByID(ctx, w.Store, workflowID)
 	if err != nil {
 		return nil, err
 	}
-
-	return &apis.ExecWorkflowResponse{
-		TaskID: workflowTask.TaskID,
-	}, nil
+	if workflow.AppID == "" || workflow.AppID != appID {
+		return nil, bcode.ErrWorkflowNotExist
+	}
+	return w.enqueueWorkflowTask(ctx, workflow)
 }
 
 func (w *workflowServiceImpl) ListApplicationWorkflow(ctx context.Context, app *model.Applications) error {
@@ -200,19 +189,53 @@ func (w *workflowServiceImpl) CancelWorkflowTask(ctx context.Context, userName, 
 	if err != nil {
 		return err
 	}
+	return w.cancelWorkflowTask(ctx, task, userName, reason)
+}
 
+func (w *workflowServiceImpl) CancelWorkflowTaskForApp(ctx context.Context, appID, userName, taskID, reason string) error {
+	task, err := repository.TaskByID(ctx, w.Store, taskID)
+	if err != nil {
+		return err
+	}
+	if task.AppID == "" || task.AppID != appID {
+		return bcode.ErrWorkflowNotExist
+	}
+	return w.cancelWorkflowTask(ctx, task, userName, reason)
+}
+
+func (w *workflowServiceImpl) cancelWorkflowTask(ctx context.Context, task *model.WorkflowQueue, userName, reason string) error {
 	task.TaskRevoker = userName
 	task.Status = config.StatusCancelled
 
-	err = repository.UpdateTask(ctx, w.Store, task)
-	if err != nil {
+	if err := repository.UpdateTask(ctx, w.Store, task); err != nil {
 		return err
 	}
 	if reason == "" {
 		reason = fmt.Sprintf("cancelled by %s", userName)
 	}
-	if err := signal.Cancel(ctx, taskID, reason); err != nil {
+	if err := signal.Cancel(ctx, task.TaskID, reason); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (w *workflowServiceImpl) enqueueWorkflowTask(ctx context.Context, workflow *model.Workflow) (*apis.ExecWorkflowResponse, error) {
+	if workflow == nil || workflow.Steps == nil {
+		return nil, bcode.ErrExecWorkflow
+	}
+	workflowTask := &model.WorkflowQueue{
+		TaskID:              utils.RandStringByNumLowercase(24),
+		AppID:               workflow.AppID,
+		WorkflowID:          workflow.ID,
+		ProjectID:           workflow.ProjectID,
+		WorkflowName:        workflow.Name,
+		WorkflowDisplayName: workflow.Alias,
+		Type:                workflow.WorkflowType,
+		Status:              config.StatusWaiting,
+	}
+
+	if err := repository.CreateWorkflowQueue(ctx, w.Store, workflowTask); err != nil {
+		return nil, err
+	}
+	return &apis.ExecWorkflowResponse{TaskID: workflowTask.TaskID}, nil
 }
