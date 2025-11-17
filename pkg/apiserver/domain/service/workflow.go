@@ -66,8 +66,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		return nil, err
 	}
 
-	err = repository.CreateWorkflow(ctx, w.Store, workflow)
-	if err != nil {
+	if err = repository.CreateWorkflow(ctx, w.Store, workflow); err != nil {
 		return nil, bcode.ErrCreateWorkflow
 	}
 
@@ -76,11 +75,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		nComponent := ConvertComponent(&component, workflow.ID)
 		properties, err := model.NewJSONStructByStruct(component.Properties)
 		if err != nil {
-			dErr := repository.DelWorkflow(ctx, w.Store, workflow)
-			if dErr != nil {
-				klog.Errorf("del workflow failure,%s", dErr.Error())
-				return nil, bcode.ErrInvalidProperties
-			}
+			w.rollbackWorkflowCreation(ctx, workflow)
 			klog.Errorf("new trait failure,%s", err.Error())
 			return nil, bcode.ErrInvalidProperties
 		}
@@ -89,11 +84,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 
 		err = repository.CreateComponents(ctx, w.Store, nComponent)
 		if err != nil {
-			dErr := repository.DelWorkflow(ctx, w.Store, workflow)
-			if dErr != nil {
-				klog.Errorf("Create Components err: %s", err)
-				return nil, err
-			}
+			w.rollbackWorkflowCreation(ctx, workflow)
 			klog.Errorf("Create Components err: %s", err)
 			return nil, bcode.ErrCreateComponents
 		}
@@ -238,4 +229,16 @@ func (w *workflowServiceImpl) enqueueWorkflowTask(ctx context.Context, workflow 
 		return nil, err
 	}
 	return &apis.ExecWorkflowResponse{TaskID: workflowTask.TaskID}, nil
+}
+
+func (w *workflowServiceImpl) rollbackWorkflowCreation(ctx context.Context, workflow *model.Workflow) {
+	if workflow == nil {
+		return
+	}
+	if err := repository.DelComponentsByAppID(ctx, w.Store, workflow.ID); err != nil {
+		klog.Errorf("cleanup components for workflow %s failed: %v", workflow.ID, err)
+	}
+	if err := repository.DelWorkflow(ctx, w.Store, workflow); err != nil {
+		klog.Errorf("cleanup workflow %s failed: %v", workflow.ID, err)
+	}
 }
