@@ -163,7 +163,7 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 
 func (c *DeployPVCJobCtl) shouldUpdatePVC(existing, desired *corev1.PersistentVolumeClaim) bool {
 	// 比较关键字段，决定是否需要更新
-	if existing.Spec.Resources.Requests.Storage().Cmp(*desired.Spec.Resources.Requests.Storage()) != 0 {
+	if !compareStorageSmart(existing.Spec.Resources.Requests, desired.Spec.Resources.Requests) {
 		return true
 	}
 
@@ -239,4 +239,24 @@ func (c *DeployPVCJobCtl) timeout() int64 {
 		c.job.Timeout = config.DeployTimeout
 	}
 	return c.job.Timeout
+}
+
+// compareStorageSmart 智能比较存储资源，PVC特殊处理
+func compareStorageSmart(a, b corev1.ResourceList) bool {
+	// 对于PVC存储，零值应该视为使用默认值，而不是"未设置"
+	aStorage := getPVCStorageValue(a)
+	bStorage := getPVCStorageValue(b)
+	return aStorage == bStorage
+}
+
+// getPVCStorageValue 获取PVC存储值，零值使用默认值
+func getPVCStorageValue(resources corev1.ResourceList) string {
+	if val, ok := resources[corev1.ResourceStorage]; ok {
+		// 如果值是零，返回默认PVC大小
+		if val.IsZero() {
+			return "1Gi" // PVC默认大小
+		}
+		return val.String()
+	}
+	return "1Gi" // 资源未设置，使用默认大小
 }

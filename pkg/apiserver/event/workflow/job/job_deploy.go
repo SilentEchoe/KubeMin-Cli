@@ -404,10 +404,36 @@ func compareEnvVars(a, b []corev1.EnvVar) bool {
 }
 
 func compareResources(a, b corev1.ResourceRequirements) bool {
-	return a.Requests.Cpu().Cmp(*b.Requests.Cpu()) == 0 &&
-		a.Requests.Memory().Cmp(*b.Requests.Memory()) == 0 &&
-		a.Limits.Cpu().Cmp(*b.Limits.Cpu()) == 0 &&
-		a.Limits.Memory().Cmp(*b.Limits.Memory()) == 0
+	// 使用智能零值处理，避免将零值资源与空资源混淆
+	return compareResourceListSmart(a.Requests, b.Requests) &&
+		compareResourceListSmart(a.Limits, b.Limits)
+}
+
+// compareResourceListSmart 智能比较资源列表，正确处理零值和未设置资源
+func compareResourceListSmart(a, b corev1.ResourceList) bool {
+	// 比较 CPU 资源
+	aCPU := getResourceValueSmart(a, corev1.ResourceCPU)
+	bCPU := getResourceValueSmart(b, corev1.ResourceCPU)
+	cpuEqual := aCPU == bCPU
+
+	// 比较内存资源
+	aMem := getResourceValueSmart(a, corev1.ResourceMemory)
+	bMem := getResourceValueSmart(b, corev1.ResourceMemory)
+	memEqual := aMem == bMem
+
+	return cpuEqual && memEqual
+}
+
+// getResourceValueSmart 智能获取资源值，将零值视为未设置
+func getResourceValueSmart(resources corev1.ResourceList, name corev1.ResourceName) string {
+	if val, ok := resources[name]; ok {
+		// 如果值是零，返回空字符串表示"未设置"
+		if val.IsZero() {
+			return ""
+		}
+		return val.String()
+	}
+	return "" // 资源未设置
 }
 
 func compareVolumeMounts(a, b []corev1.VolumeMount) bool {
