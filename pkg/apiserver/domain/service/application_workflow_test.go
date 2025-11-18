@@ -92,6 +92,134 @@ func TestUpdateApplicationWorkflowUpdatesExisting(t *testing.T) {
 	require.Equal(t, config.WorkflowModeStepByStep, steps.Steps[0].Mode)
 }
 
+func TestUpdateApplicationWorkflowCreatesNewWhenWorkflowIDMissing(t *testing.T) {
+	store := newInMemoryAppStore()
+	store.apps["app-1"] = &model.Applications{
+		ID:      "app-1",
+		Name:    "DemoApp",
+		Project: "proj-1",
+	}
+	store.components["nginx"] = &model.ApplicationComponent{Name: "nginx", AppID: "app-1"}
+
+	existing := &model.Workflow{
+		ID:        "wf-1",
+		Name:      "default-flow",
+		AppID:     "app-1",
+		ProjectID: "proj-1",
+	}
+	store.workflows[existing.ID] = existing
+
+	svc := &applicationsServiceImpl{Store: store}
+	req := apisv1.UpdateApplicationWorkflowRequest{
+		Name: "custom-flow",
+		Workflow: []apisv1.CreateWorkflowStepRequest{
+			{Name: "deploy-nginx", Components: []string{"nginx"}},
+		},
+	}
+
+	resp, err := svc.UpdateApplicationWorkflow(context.Background(), "app-1", req)
+	require.NoError(t, err)
+	require.NotEqual(t, existing.ID, resp.WorkflowID)
+
+	newWorkflow := store.workflows[resp.WorkflowID]
+	require.NotNil(t, newWorkflow)
+	require.Equal(t, "custom-flow", newWorkflow.Name)
+	require.Equal(t, "default-flow", store.workflows["wf-1"].Name)
+}
+
+func TestUpdateApplicationWorkflowInheritsMetadata(t *testing.T) {
+	store := newInMemoryAppStore()
+	store.apps["app-1"] = &model.Applications{
+		ID:        "app-1",
+		Name:      "DemoApp",
+		Namespace: "app-ns",
+		Project:   "proj-app",
+	}
+	store.components["nginx"] = &model.ApplicationComponent{Name: "nginx", AppID: "app-1"}
+	store.workflows["wf-legacy"] = &model.Workflow{
+		ID:          "wf-legacy",
+		Name:        "demoapp-workflow",
+		AppID:       "app-1",
+		Namespace:   "legacy-ns",
+		ProjectID:   "legacy-proj",
+		Description: "legacy-desc",
+	}
+
+	svc := &applicationsServiceImpl{Store: store}
+	req := apisv1.UpdateApplicationWorkflowRequest{
+		Name: "another-flow",
+		Workflow: []apisv1.CreateWorkflowStepRequest{
+			{Name: "deploy-nginx", Components: []string{"nginx"}},
+		},
+	}
+
+	resp, err := svc.UpdateApplicationWorkflow(context.Background(), "app-1", req)
+	require.NoError(t, err)
+
+	created := store.workflows[resp.WorkflowID]
+	require.NotNil(t, created)
+	require.Equal(t, "legacy-ns", created.Namespace)
+	require.Equal(t, "legacy-proj", created.ProjectID)
+	require.Equal(t, "legacy-desc", created.Description)
+}
+
+func TestUpdateApplicationWorkflowDefaultsMetadataFromApp(t *testing.T) {
+	store := newInMemoryAppStore()
+	store.apps["app-1"] = &model.Applications{
+		ID:        "app-1",
+		Name:      "DemoApp",
+		Namespace: "app-ns",
+		Project:   "proj-app",
+	}
+	store.components["nginx"] = &model.ApplicationComponent{Name: "nginx", AppID: "app-1"}
+
+	svc := &applicationsServiceImpl{Store: store}
+	req := apisv1.UpdateApplicationWorkflowRequest{
+		Workflow: []apisv1.CreateWorkflowStepRequest{
+			{Name: "deploy-nginx", Components: []string{"nginx"}},
+		},
+	}
+
+	resp, err := svc.UpdateApplicationWorkflow(context.Background(), "app-1", req)
+	require.NoError(t, err)
+
+	created := store.workflows[resp.WorkflowID]
+	require.NotNil(t, created)
+	require.Equal(t, "app-ns", created.Namespace)
+	require.Equal(t, "proj-app", created.ProjectID)
+}
+
+func TestUpdateApplicationWorkflowGeneratesUniqueName(t *testing.T) {
+	store := newInMemoryAppStore()
+	store.apps["app-1"] = &model.Applications{
+		ID:      "app-1",
+		Name:    "DemoApp",
+		Project: "proj-1",
+	}
+	store.components["nginx"] = &model.ApplicationComponent{Name: "nginx", AppID: "app-1"}
+	store.workflows["wf-default"] = &model.Workflow{
+		ID:        "wf-default",
+		Name:      "demoapp-workflow",
+		AppID:     "app-1",
+		ProjectID: "proj-1",
+	}
+
+	svc := &applicationsServiceImpl{Store: store}
+	req := apisv1.UpdateApplicationWorkflowRequest{
+		Workflow: []apisv1.CreateWorkflowStepRequest{
+			{Name: "deploy-nginx", Components: []string{"nginx"}},
+		},
+	}
+
+	resp, err := svc.UpdateApplicationWorkflow(context.Background(), "app-1", req)
+	require.NoError(t, err)
+	require.NotEqual(t, "wf-default", resp.WorkflowID)
+
+	created := store.workflows[resp.WorkflowID]
+	require.NotNil(t, created)
+	require.Equal(t, "demoapp-workflow-1", created.Name)
+}
+
 func TestUpdateApplicationWorkflowMissingComponent(t *testing.T) {
 	store := newInMemoryAppStore()
 	store.apps["app-1"] = &model.Applications{

@@ -295,6 +295,55 @@ func dedupeStrings(values []string) []string {
 	return result
 }
 
+func ensureUniqueWorkflowName(base string, workflows []*model.Workflow) string {
+	if base == "" {
+		return base
+	}
+	candidate := base
+	suffix := 1
+	for {
+		inUse := false
+		for _, wf := range workflows {
+			if wf == nil {
+				continue
+			}
+			if strings.EqualFold(wf.Name, candidate) {
+				inUse = true
+				break
+			}
+		}
+		if !inUse {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, suffix)
+		suffix++
+	}
+}
+
+func deriveWorkflowMetadata(app *model.Applications, workflows []*model.Workflow) (namespace, projectID, description string) {
+	if app != nil {
+		namespace = app.Namespace
+		projectID = app.Project
+		description = app.Description
+	}
+	for _, wf := range workflows {
+		if wf == nil {
+			continue
+		}
+		if wf.Namespace != "" {
+			namespace = wf.Namespace
+		}
+		if wf.ProjectID != "" {
+			projectID = wf.ProjectID
+		}
+		if wf.Description != "" {
+			description = wf.Description
+		}
+		break
+	}
+	return
+}
+
 func validateWorkflowComponentRefs(steps []apisv1.CreateWorkflowStepRequest, existing map[string]struct{}) error {
 	for _, step := range steps {
 		if err := ensureComponentsExist(mergeWorkflowComponents(step.Components, step.Properties.Policies), existing); err != nil {
@@ -510,32 +559,24 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 		if targetName == "" {
 			targetName = target.Name
 		}
-	} else if targetName != "" {
-		for _, wf := range workflows {
-			if strings.EqualFold(wf.Name, targetName) {
-				target = wf
-				break
-			}
-		}
-	}
-	if target == nil && len(workflows) > 0 {
-		target = workflows[0]
+	} else {
 		if targetName == "" {
-			targetName = target.Name
+			targetName = fmt.Sprintf("%s-workflow", strings.ToLower(app.Name))
 		}
-	}
-	if targetName == "" {
-		targetName = fmt.Sprintf("%s-workflow", strings.ToLower(app.Name))
+		targetName = ensureUniqueWorkflowName(targetName, workflows)
 	}
 
 	if target == nil {
+		namespace, projectID, description := deriveWorkflowMetadata(app, workflows)
 		target = &model.Workflow{
 			ID:           utils.RandStringByNumLowercase(24),
 			Name:         targetName,
 			Alias:        req.Alias,
+			Namespace:    namespace,
 			Disabled:     false,
-			ProjectID:    app.Project,
+			ProjectID:    projectID,
 			AppID:        app.ID,
+			Description:  description,
 			WorkflowType: config.WorkflowTaskTypeWorkflow,
 			Status:       config.StatusCreated,
 		}

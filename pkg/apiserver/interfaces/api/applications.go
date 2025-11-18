@@ -24,8 +24,8 @@ func NewApplications() Interface {
 }
 
 func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
-	group.POST("/applications", a.createApplications)
 	group.GET("/applications", a.listApplications)
+	group.POST("/applications", a.createApplications)
 	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
 	group.PUT("/applications/:appID/workflow", a.updateApplicationWorkflow)
 	group.POST("/applications/:appID/workflow/exec", a.execApplicationWorkflow)
