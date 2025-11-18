@@ -254,6 +254,12 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 }
 
 func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.ServiceApplyConfiguration) (*corev1.Service, error) {
+	// 处理可能为 nil 的字段
+	var serviceType corev1.ServiceType = corev1.ServiceTypeClusterIP // 默认值
+	if svc.Spec.Type != nil {
+		serviceType = *svc.Spec.Type
+	}
+
 	coreService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        *svc.Name,
@@ -262,7 +268,7 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 			Annotations: svc.Annotations,
 		},
 		Spec: corev1.ServiceSpec{
-			Type:     *svc.Spec.Type,
+			Type:     serviceType,
 			Selector: svc.Spec.Selector,
 			Ports:    make([]corev1.ServicePort, len(svc.Spec.Ports)),
 		},
@@ -275,16 +281,27 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 			portName = *port.Name
 		}
 
+		// 处理可能为 nil 的字段
+		var targetPort intstr.IntOrString
+		if port.TargetPort != nil {
+			targetPort = *port.TargetPort
+		}
+
+		var protocol corev1.Protocol = corev1.ProtocolTCP // 默认值
+		if port.Protocol != nil {
+			protocol = *port.Protocol
+		}
+
 		coreService.Spec.Ports[i] = corev1.ServicePort{
 			Name:       portName,
 			Port:       *port.Port,
-			TargetPort: *port.TargetPort,
-			Protocol:   *port.Protocol,
+			TargetPort: targetPort,
+			Protocol:   protocol,
 		}
 	}
 
-	// 检查 service 是否存在
-	_, err := c.client.CoreV1().Services(coreService.Namespace).Get(ctx, coreService.Name, metav1.GetOptions{})
+	// 检查 service 是否存在并获取现有 service 信息
+	existingService, err := c.client.CoreV1().Services(coreService.Namespace).Get(ctx, coreService.Name, metav1.GetOptions{})
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			// 如果不存在，则创建
@@ -297,6 +314,70 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 			return appliedSvc, nil
 		}
 		return nil, fmt.Errorf("failed to check service existence: %w", err)
+	}
+
+	// ✅ 复制必要字段 - 修复 Service 更新问题
+	if existingService != nil {
+		// 复制 ResourceVersion 用于乐观并发控制
+		coreService.ResourceVersion = existingService.ResourceVersion
+
+		// 复制 ClusterIP 和 ClusterIPs（不可变字段）
+		coreService.Spec.ClusterIP = existingService.Spec.ClusterIP
+		coreService.Spec.ClusterIPs = existingService.Spec.ClusterIPs
+
+		// 复制 IPFamilies（如果存在）
+		if len(existingService.Spec.IPFamilies) > 0 {
+			coreService.Spec.IPFamilies = existingService.Spec.IPFamilies
+		}
+
+		// 复制 SessionAffinityConfig（如果存在）
+		if existingService.Spec.SessionAffinityConfig != nil {
+			coreService.Spec.SessionAffinityConfig = existingService.Spec.SessionAffinityConfig
+		}
+
+		// 复制其他可能需要保留的字段
+		if existingService.Spec.SessionAffinity != "" {
+			coreService.Spec.SessionAffinity = existingService.Spec.SessionAffinity
+		}
+
+		// 复制 LoadBalancerIP（如果存在）
+		if existingService.Spec.LoadBalancerIP != "" {
+			coreService.Spec.LoadBalancerIP = existingService.Spec.LoadBalancerIP
+		}
+
+		// 复制 LoadBalancerSourceRanges（如果存在）
+		if len(existingService.Spec.LoadBalancerSourceRanges) > 0 {
+			coreService.Spec.LoadBalancerSourceRanges = existingService.Spec.LoadBalancerSourceRanges
+		}
+
+		// 复制 ExternalName（如果存在）
+		if existingService.Spec.ExternalName != "" {
+			coreService.Spec.ExternalName = existingService.Spec.ExternalName
+		}
+
+		// 复制 ExternalTrafficPolicy（如果存在）
+		if existingService.Spec.ExternalTrafficPolicy != "" {
+			coreService.Spec.ExternalTrafficPolicy = existingService.Spec.ExternalTrafficPolicy
+		}
+
+		// 复制 HealthCheckNodePort（如果存在）
+		if existingService.Spec.HealthCheckNodePort != 0 {
+			coreService.Spec.HealthCheckNodePort = existingService.Spec.HealthCheckNodePort
+		}
+
+		// 复制 PublishNotReadyAddresses（如果存在）
+		if existingService.Spec.PublishNotReadyAddresses {
+			coreService.Spec.PublishNotReadyAddresses = existingService.Spec.PublishNotReadyAddresses
+		}
+
+		// 复制 InternalTrafficPolicy（如果存在）
+		if existingService.Spec.InternalTrafficPolicy != nil {
+			coreService.Spec.InternalTrafficPolicy = existingService.Spec.InternalTrafficPolicy
+		}
+
+		klog.Infof("Copying necessary fields from existing service %s/%s: ResourceVersion=%s, ClusterIP=%s",
+			existingService.Namespace, existingService.Name,
+			existingService.ResourceVersion, existingService.Spec.ClusterIP)
 	}
 
 	// 如果存在，则更新
