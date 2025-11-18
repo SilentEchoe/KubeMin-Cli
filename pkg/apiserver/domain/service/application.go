@@ -30,6 +30,8 @@ import (
 	"KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
+const cleanupTimeout = 10 * time.Second
+
 type ApplicationsService interface {
 	CreateApplications(context.Context, apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error)
 	GetApplication(ctx context.Context, appName string) (*model.Applications, error)
@@ -91,9 +93,27 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		return nil, err
 	}
 
-	for _, component := range components {
-		if err = repository.CreateComponents(ctx, c.Store, component); err != nil {
-			klog.Errorf("Create Components err:%s", err)
+	// 预清理：删除该应用ID下的所有现有组件，确保幂等性
+	if err = repository.DelComponentsByAppID(ctx, c.Store, application.ID); err != nil {
+		klog.Errorf("Pre-cleanup components for application %s failed: %v", application.ID, err)
+		return nil, bcode.ErrComponentBuild
+	}
+
+	// 批量创建组件
+	if len(components) > 0 {
+		// 转换为Entity接口数组用于批量操作
+		entities := make([]datastore.Entity, len(components))
+		for i, component := range components {
+			entities[i] = component
+		}
+
+		// 使用批量创建，失败时回滚
+		if err = c.Store.BatchAdd(ctx, entities); err != nil {
+			klog.Errorf("Batch create components for application %s failed: %v", application.ID, err)
+			// 批量创建失败，清理已创建的部分组件
+			if cleanupErr := repository.DelComponentsByAppID(ctx, c.Store, application.ID); cleanupErr != nil {
+				klog.Errorf("Cleanup components on failure for application %s failed: %v", application.ID, cleanupErr)
+			}
 			return nil, bcode.ErrCreateComponents
 		}
 	}
@@ -174,7 +194,18 @@ func prepareComponents(appID, namespace string, reqComponents []apisv1.CreateCom
 		}
 
 		reqComponent.NameSpace = namespace
-		component := ConvertComponent(&reqComponent, appID)
+		// 复制 ConvertComponent 逻辑，确保一致性
+		if reqComponent.Replicas <= 0 {
+			reqComponent.Replicas = 1
+		}
+		component := &model.ApplicationComponent{
+			Name:          reqComponent.Name,
+			AppID:         appID,
+			Namespace:     reqComponent.NameSpace,
+			Image:         reqComponent.Image,
+			Replicas:      reqComponent.Replicas,
+			ComponentType: reqComponent.ComponentType,
+		}
 
 		properties, err := model.NewJSONStructByStruct(reqComponent.Properties)
 		if err != nil {
@@ -800,4 +831,12 @@ func pickNamespace(candidate, fallback string) string {
 	return config.DefaultNamespace
 }
 
-const cleanupTimeout = 10 * time.Second
+// rollbackApplicationCreation 回滚应用创建过程中的组件创建
+func (c *applicationsServiceImpl) rollbackApplicationCreation(ctx context.Context, application *model.Applications) {
+	if application == nil {
+		return
+	}
+	if err := repository.DelComponentsByAppID(ctx, c.Store, application.ID); err != nil {
+		klog.Errorf("cleanup components for application %s failed: %v", application.ID, err)
+	}
+}
