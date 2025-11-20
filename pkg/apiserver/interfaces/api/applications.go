@@ -9,6 +9,7 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
+	assembler "KubeMin-Cli/pkg/apiserver/interfaces/api/assembler/v1"
 	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
 	"KubeMin-Cli/pkg/apiserver/utils/bcode"
 )
@@ -26,8 +27,9 @@ func NewApplications() Interface {
 func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/applications", a.listApplications)
 	group.POST("/applications", a.createApplications)
-	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
+	group.GET("/applications/:appID/workflows", a.listApplicationWorkflows)
 	group.PUT("/applications/:appID/workflow", a.updateApplicationWorkflow)
+	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
 	group.POST("/applications/:appID/workflow/exec", a.execApplicationWorkflow)
 	group.POST("/applications/:appID/workflow/cancel", a.cancelApplicationWorkflow)
 }
@@ -60,6 +62,36 @@ func (a *applications) listApplications(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
+}
+
+func (a *applications) listApplicationWorkflows(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+	ctx := c.Request.Context()
+	workflows, err := a.ApplicationService.ListApplicationWorkflows(ctx, appID)
+	if err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+	resp := make([]*apis.ApplicationWorkflow, 0, len(workflows))
+	for _, wf := range workflows {
+		if wf == nil {
+			continue
+		}
+		dto, err := assembler.ConvertWorkflowModelToDTO(wf)
+		if err != nil {
+			klog.Errorf("convert workflow dto failed appID=%s workflowID=%s: %v", appID, wf.ID, err)
+			bcode.ReturnError(c, err)
+			return
+		}
+		if dto != nil {
+			resp = append(resp, dto)
+		}
+	}
+	c.JSON(http.StatusOK, apis.ListApplicationWorkflowsResponse{Workflows: resp})
 }
 
 func (a *applications) deleteApplicationResources(c *gin.Context) {

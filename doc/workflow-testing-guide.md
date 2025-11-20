@@ -1,6 +1,9 @@
 # KubeMin-Cli 工作流测试指南
 
+
+
 ## 概述
+
 本文档详细描述了KubeMin-Cli工作流系统的完整测试方案，旨在验证工作流的稳定性和可靠性。测试覆盖从基础组件创建到复杂多组件部署的全生命周期管理。
 
 ## 测试目标
@@ -72,7 +75,7 @@
 
 正常返回参数：
 
-```
+```json
 {
     "id": "7mcor3r4su789r99jhpxyzat",
     "name": "fnlz2z1lxe85k3me66og-nginx",
@@ -166,40 +169,267 @@ curl -X POST \
   
 
 **测试项 TC002: 基础Store组件创建**
-```yaml
-# 测试用例
-应用: test-app-002
-组件:
-  - 名称: redis-store
-  类型: store
-  镜像: redis:6.2
-  副本数: 1
-  存储: 1Gi
+
+在 `store` 组件上验证带持久化卷的 MySQL，可以一次覆盖 StatefulSet、PVC、服务暴露以及数据库探活。下面的负载示例使用 traits.storage 自动创建 20Gi 的持久卷。
+
+```json
+{
+  "name": "Km3undHVwXZNCqMZTarC-mysql",
+  "alias": "mysql",
+  "version": "1.0.0",
+  "project": "",
+  "description": "Create MySQL store",
+  "component": [
+    {
+      "name": "mysql-primary",
+      "type": "store",
+      "replicas": 1,
+      "image": "mysql:8.0.36",
+      "properties": {
+        "ports": [
+          {
+            "port": 3306,
+            "expose": true
+          }
+        ],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "RootPwd#123",
+          "MYSQL_DATABASE": "demo",
+          "MYSQL_USER": "demo",
+          "MYSQL_PASSWORD": "demoPwd#123"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "mysql-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "subPath": "mysql",
+            "size": "1Gi",
+            "storageClass": "standard",
+            "create": true
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "mysql-store",
+      "mode": "StepByStep",
+      "components": [
+        "mysql-primary"
+      ]
+    }
+  ]
+}
 ```
+
+**执行步骤**
+
+1. 保存上述 JSON 为 `payloads/mysql-store.json` 并提交创建请求：
+   ```shell
+   curl -X POST http://127.0.0.1:8080/api/v1/applications \
+     -H 'Content-Type: application/json' \
+     -d @payloads/mysql-store.json
+   ```
+   记录响应中的 `appId` 与 `workflow_id`。
+   
+   ```json
+   {
+       "id": "4tbupjg43ln3yj249l0v0fv8",
+       "name": "fnlz2z1lxe85k3me66og-mysql",
+       "alias": "mysql",
+       "project": "",
+       "description": "Create MySQL store",
+       "createTime": "2025-11-20T13:38:57.959305+08:00",
+       "updateTime": "2025-11-20T13:38:57.962363+08:00",
+       "icon": "",
+       "workflow_id": "ftjlu1amurnn8yltipwv5fj1"
+   }
+   ```
+2. 触发 store 工作流：
+   ```shell
+   curl -X POST \
+     http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
+     -H 'Content-Type: application/json' \
+     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+   ```
+   保存返回的 `taskId`。
+3. 轮询任务状态直到结束：
+   ```shell
+   curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+   ```
+
 **验证点:**
-- [ ] StatefulSet成功创建
-- [ ] PVC自动创建并绑定
-- [ ] Pod正常启动
-- [ ] 存储卷正确挂载
-- [ ] 工作流状态为completed
+
+- [x] StatefulSet成功创建
+  ```shell
+  kubectl get sts 
+  NAME                                           READY   AGE
+  store-mysql-primary-4tbupjg43ln3yj249l0v0fv8   1/1     107s
+  ```
+  
+- [x] PVC自动创建并绑定
+  ```shell
+  kubectl get pvc 
+  NAME                                     STATUS   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+  data   Bound    pvc-d8b52bfd-efed-402b-aaaf-4cf6a88326b2   5Gi        RWO            hostpath       <unset>                 2m6s
+  ```
+  
+- [x] Pod正常启动
+  ```shell
+  kubectl get pod -o wide
+  NAME                                             READY   STATUS    RESTARTS   AGE     IP        
+  store-mysql-primary-4tbupjg43ln3yj249l0v0fv8-0   1/1     Running   0          2m26s   10.1.2.213   
+  ```
+  
+- [x] 存储卷正确挂载
+  ```shell
+  kubectl describe pod store-mysql-primary-7mcor3r4su789r99jhpxyzat-0 | grep -A3 'Mounts'   
+     Mounts:
+        /var/lib/mysql from data (rw,path="mysql")
+        /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-gltjp (ro)
+  ```
+  
+- [x] MySQL读写校验
+  ```shell
+  kubectl run mysql-client --rm -it \
+      --image=mysql:8.0 --restart=Never -- \
+      mysql -h svc-mysql-primary-4tbupjg43ln3yj249l0v0fv8 -uroot -pRootPwd#123 \
+      -e 'CREATE DATABASE IF NOT EXISTS appdb;
+          USE appdb;
+          CREATE TABLE IF NOT EXISTS healthcheck(id INT);
+          INSERT INTO healthcheck VALUES (1);
+          SELECT COUNT(*) FROM healthcheck;'
+  mysql: [Warning] Using a password on the command line interface can be insecure.
+  +----------+
+  | COUNT(*) |
+  +----------+
+  |        1 |
+  +----------+
+  ```
+
+#动态创建的PVC不会被删除
+
+
 
 **测试项 TC003: 配置组件创建**
+
 ```yaml
-# 测试用例
-应用: test-app-003
-组件:
-  - 名称: app-config
-  类型: config
-  数据:
-    database.conf: |
-      host=localhost
-      port=3306
+{
+    "name": "fnlz2z1lxe85k3me66og-config",
+    "alias": "app-config",
+    "version": "1.0.0",
+    "project": "",
+    "description": "TC003 config component creation",
+    "component": [
+      {
+        "name": "app-config",
+        "type": "config",
+        "replicas": 1,
+        "properties": {
+          "conf": {
+            "database.conf": "host=localhost\nport=3306\n"
+          },
+          "labels": {
+            "kubemin.cli/test-case": "TC003"
+          }
+        }
+      }
+    ],
+    "workflow": [
+      {
+        "name": "config-step",
+        "mode": "StepByStep",
+        "components": [
+          "app-config"
+        ]
+      }
+    ]
+  }
 ```
+**执行步骤**
+
+1. 保存上述 JSON 为 `payloads/config.json` 并提交创建请求：
+
+   ```shell
+   curl -X POST http://127.0.0.1:8080/api/v1/applications \
+     -H 'Content-Type: application/json' \
+     -d @payloads/config.json
+   ```
+
+   记录响应中的 `appId` 与 `workflow_id`。
+
+   ```json
+   {
+       "id": "4kwaenmqb055rt6pyyp8ouh7",
+       "name": "fnlz2z1lxe85k3me66og-config",
+       "alias": "app-config",
+       "project": "",
+       "description": "TC003 config component creation",
+       "createTime": "2025-11-20T14:16:59.9162+08:00",
+       "updateTime": "2025-11-20T14:16:59.9162+08:00",
+       "icon": "",
+       "workflow_id": "kjk2efteq93lwims12e897gf"
+   }
+   ```
+
+2. 触发 store 工作流：
+
+   ```shell
+   curl -X POST \
+     http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
+     -H 'Content-Type: application/json' \
+     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+   ```
+
+   保存返回的 `taskId`。
+
 **验证点:**
-- [ ] ConfigMap成功创建
-- [ ] 数据内容正确
-- [ ] 可以被其他组件引用
-- [ ] 工作流状态为completed
+
+- [x] ConfigMap成功创建
+
+  ```
+  kubectl get cm
+  
+  NAME               DATA   AGE
+  app-config         1      33s
+  ```
+
+- [x] 数据内容正确
+
+  ```shell
+  > kubectl describe cm app-config
+  Name:         app-config
+  Namespace:    default
+  Labels:       kube-min-cli=4kwaenmqb055rt6pyyp8ouh7-app-config
+                kube-min-cli-appId=4kwaenmqb055rt6pyyp8ouh7
+                kube-min-cli-componentId=8
+                kubemin.cli/test-case=TC003
+  Annotations:  <none>
+  
+  Data
+  ====
+  database.conf:
+  ----
+  host=localhost
+  port=3306
+  
+  
+  
+  BinaryData
+  ====
+  
+  Events:  <none>
+  ```
+
+- [x] 可以被其他组件引用
+
+- [x] 工作流状态为completed
+
+  
 
 **测试项 TC004: 密钥组件创建**
 ```yaml

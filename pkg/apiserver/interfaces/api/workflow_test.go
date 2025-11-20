@@ -103,6 +103,19 @@ func (noopApplicationsService) CleanupApplicationResources(context.Context, stri
 func (noopApplicationsService) UpdateApplicationWorkflow(context.Context, string, apis.UpdateApplicationWorkflowRequest) (*apis.UpdateWorkflowResponse, error) {
 	return nil, nil
 }
+func (noopApplicationsService) ListApplicationWorkflows(context.Context, string) ([]*model.Workflow, error) {
+	return nil, nil
+}
+
+type workflowListApplicationService struct {
+	noopApplicationsService
+	workflows []*model.Workflow
+	err       error
+}
+
+func (s workflowListApplicationService) ListApplicationWorkflows(context.Context, string) ([]*model.Workflow, error) {
+	return s.workflows, s.err
+}
 
 func TestExecApplicationWorkflowEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
@@ -174,6 +187,68 @@ func TestCancelApplicationWorkflowEndpoint(t *testing.T) {
 	}
 	if svc.lastCancelReason != "manual stop" {
 		t.Fatalf("unexpected cancel reason: %s", svc.lastCancelReason)
+	}
+}
+
+func TestListApplicationWorkflowsEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	steps := &model.WorkflowSteps{
+		Steps: []*model.WorkflowStep{
+			{
+				Name:       "deploy-nginx",
+				Mode:       config.WorkflowModeStepByStep,
+				Properties: []model.Policies{{Policies: []string{"nginx"}}},
+			},
+		},
+	}
+	stepStruct, err := model.NewJSONStructByStruct(steps)
+	if err != nil {
+		t.Fatalf("build steps json: %v", err)
+	}
+	appSvc := workflowListApplicationService{
+		workflows: []*model.Workflow{
+			{
+				ID:          "wf-1",
+				Name:        "deploy",
+				Alias:       "Deploy",
+				Namespace:   "default",
+				ProjectID:   "proj",
+				Description: "desc",
+				Status:      config.StatusRunning,
+				Steps:       stepStruct,
+			},
+		},
+	}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.GET("/applications/:appID/workflows", appHandler.listApplicationWorkflows)
+
+	req := httptest.NewRequest(http.MethodGet, "/applications/app-1/workflows", nil)
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.Code)
+	}
+	var payload apis.ListApplicationWorkflowsResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(payload.Workflows) != 1 {
+		t.Fatalf("expected one workflow, got %d", len(payload.Workflows))
+	}
+	if payload.Workflows[0].ID != "wf-1" {
+		t.Fatalf("unexpected workflow ID %s", payload.Workflows[0].ID)
+	}
+	if len(payload.Workflows[0].Steps) != 1 {
+		t.Fatalf("expected one workflow step")
+	}
+	if len(payload.Workflows[0].Steps[0].Components) != 1 || payload.Workflows[0].Steps[0].Components[0] != "nginx" {
+		t.Fatalf("unexpected workflow step components: %+v", payload.Workflows[0].Steps[0].Components)
 	}
 }
 

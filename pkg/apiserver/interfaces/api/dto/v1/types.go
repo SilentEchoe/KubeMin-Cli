@@ -4,11 +4,7 @@ import (
 	"time"
 
 	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-)
-
-var (
-	CtxKeyApplication = "applications"
+	"KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 // ApplicationBase application base model
@@ -130,7 +126,6 @@ type CreateWorkflowSubStepRequest struct {
 	Components   []string           `json:"components,omitempty"`
 }
 
-// ConfigMap相关API类型
 type CreateConfigMapFromMapRequest struct {
 	Name        string            `json:"name" validate:"required"`
 	Namespace   string            `json:"namespace"`
@@ -194,4 +189,37 @@ type CancelWorkflowRequest struct {
 type CancelWorkflowResponse struct {
 	TaskID string `json:"taskId"`
 	Status string `json:"status"`
+}
+
+type ListApplicationWorkflowsResponse struct {
+	Workflows []*ApplicationWorkflow `json:"workflows"`
+}
+
+type ApplicationWorkflow struct {
+	ID           string                  `json:"id"`
+	Name         string                  `json:"name"`
+	Alias        string                  `json:"alias"`
+	Namespace    string                  `json:"namespace,omitempty"`
+	ProjectID    string                  `json:"projectId,omitempty"`
+	Description  string                  `json:"description,omitempty"`
+	Status       string                  `json:"status"`
+	Disabled     bool                    `json:"disabled"`
+	Steps        []WorkflowStepDetail    `json:"steps,omitempty"`
+	CreateTime   time.Time               `json:"createTime"`
+	UpdateTime   time.Time               `json:"updateTime"`
+	WorkflowType config.WorkflowTaskType `json:"workflowType"`
+}
+
+type WorkflowStepDetail struct {
+	Name         string                  `json:"name"`
+	WorkflowType config.JobType          `json:"workflowType,omitempty"`
+	Mode         config.WorkflowMode     `json:"mode,omitempty"`
+	Components   []string                `json:"components,omitempty"`
+	SubSteps     []WorkflowSubStepDetail `json:"subSteps,omitempty"`
+}
+
+type WorkflowSubStepDetail struct {
+	Name         string         `json:"name"`
+	WorkflowType config.JobType `json:"workflowType,omitempty"`
+	Components   []string       `json:"components,omitempty"`
 }

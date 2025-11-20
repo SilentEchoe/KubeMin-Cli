@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -242,6 +243,46 @@ func TestUpdateApplicationWorkflowMissingComponent(t *testing.T) {
 	require.Error(t, err)
 	require.True(t, errors.Is(err, bcode.ErrWorkflowConfig))
 	require.Contains(t, err.Error(), "not found")
+}
+
+func TestListApplicationWorkflows(t *testing.T) {
+	store := newInMemoryAppStore()
+	store.apps["app-1"] = &model.Applications{
+		ID:      "app-1",
+		Name:    "DemoApp",
+		Project: "proj-1",
+	}
+	store.workflows["wf-old"] = &model.Workflow{
+		ID:        "wf-old",
+		AppID:     "app-1",
+		ProjectID: "proj-1",
+		BaseModel: model.BaseModel{
+			UpdateTime: time.Unix(1, 0),
+		},
+	}
+	store.workflows["wf-new"] = &model.Workflow{
+		ID:        "wf-new",
+		AppID:     "app-1",
+		ProjectID: "proj-1",
+		BaseModel: model.BaseModel{
+			UpdateTime: time.Unix(10, 0),
+		},
+	}
+
+	svc := &applicationsServiceImpl{Store: store}
+	list, err := svc.ListApplicationWorkflows(context.Background(), "app-1")
+	require.NoError(t, err)
+	require.Len(t, list, 2)
+	require.Equal(t, "wf-new", list[0].ID)
+	require.Equal(t, "wf-old", list[1].ID)
+}
+
+func TestListApplicationWorkflowsMissingApp(t *testing.T) {
+	store := newInMemoryAppStore()
+	svc := &applicationsServiceImpl{Store: store}
+	_, err := svc.ListApplicationWorkflows(context.Background(), "missing")
+	require.Error(t, err)
+	require.True(t, errors.Is(err, bcode.ErrApplicationNotExist))
 }
 
 func decodeWorkflowSteps(t *testing.T, js *model.JSONStruct) *model.WorkflowSteps {

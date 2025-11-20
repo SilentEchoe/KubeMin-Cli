@@ -39,6 +39,7 @@ type ApplicationsService interface {
 	DeleteApplication(ctx context.Context, app *model.Applications) error
 	CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error)
 	UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error)
+	ListApplicationWorkflows(ctx context.Context, appID string) ([]*model.Workflow, error)
 }
 
 type applicationsServiceImpl struct {
@@ -597,6 +598,33 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 		}
 	}
 	return &apisv1.UpdateWorkflowResponse{WorkflowID: target.ID}, nil
+}
+
+func (c *applicationsServiceImpl) ListApplicationWorkflows(ctx context.Context, appID string) ([]*model.Workflow, error) {
+	if appID == "" {
+		return nil, bcode.ErrApplicationNotExist
+	}
+	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+	workflows, err := repository.FindWorkflowsByAppID(ctx, c.Store, app.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(workflows) == 0 {
+		return nil, nil
+	}
+	sort.SliceStable(workflows, func(i, j int) bool {
+		if workflows[i] == nil || workflows[j] == nil {
+			return workflows[j] != nil
+		}
+		return workflows[i].UpdateTime.Unix() > workflows[j].UpdateTime.Unix()
+	})
+	return workflows, nil
 }
 
 func (c *applicationsServiceImpl) deleteServiceForComponent(ctx context.Context, component *model.ApplicationComponent, props *model.Properties, reporter *cleanupReporter) {
