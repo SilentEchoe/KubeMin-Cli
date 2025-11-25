@@ -43,9 +43,9 @@ const (
 	// ServerJob JobType 的类型分为几种：1.无状态服务 2.存储服务 3.网络服务
 	ServerJob JobType = "webservice"
 	StoreJob  JobType = "store"
-	Service   JobType = "service"
 	ConfJob   JobType = "config"
 	SecretJob JobType = "secret"
+	Service   JobType = "service"
 
 	JobDeploy                   JobType = "deploy"
 	JobDeployService            JobType = "service_deploy"
@@ -73,13 +73,13 @@ const (
 	WorkflowModeStepByStep WorkflowMode = "StepByStep"
 	WorkflowModeDAG        WorkflowMode = "DAG"
 
-	WaitingTasksQueryTimeout     = 5 * time.Second
-	TaskStateTransitionTimeout   = 5 * time.Second
-	QueueDispatchTimeout         = 5 * time.Second
-	DefaultLocalPollInterval     = 3 * time.Second
-	DefaultDispatchPollInterval  = 3 * time.Second
-	DefaultWorkerStaleInterval   = 15 * time.Second
-	DefaultWorkerAutoClaimIdle   = 60 * time.Second
+	WaitingTasksQueryTimeout      = 5 * time.Second
+	TaskStateTransitionTimeout    = 5 * time.Second
+	QueueDispatchTimeout          = 5 * time.Second
+	DefaultLocalPollInterval      = 3 * time.Second
+	DefaultDispatchPollInterval   = 3 * time.Second
+	DefaultWorkerStaleInterval    = 15 * time.Second
+	DefaultWorkerAutoClaimIdle    = 60 * time.Second
 	DefaultWorkerAutoClaimCount   = 50
 	DefaultWorkerReadCount        = 10
 	DefaultWorkerReadBlock        = 2 * time.Second
