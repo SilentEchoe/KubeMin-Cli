@@ -44,6 +44,16 @@ type WorkflowRuntimeConfig struct {
 	MaxConcurrentWorkflows int
 }
 
+// CORSConfig configures cross-origin resource sharing for the HTTP API server.
+type CORSConfig struct {
+	AllowedOrigins   []string
+	AllowedMethods   []string
+	AllowedHeaders   []string
+	ExposedHeaders   []string
+	AllowCredentials bool
+	MaxAge           time.Duration
+}
+
 type Config struct {
 	// api server bind address
 	BindAddr string
@@ -87,6 +97,9 @@ type Config struct {
 
 	// WorkflowRuntime configures workflow scheduling behaviour.
 	Workflow WorkflowRuntimeConfig
+
+	// CORS controls cross-origin access to the HTTP APIs.
+	CORS CORSConfig
 }
 
 type RedisCacheConfig struct {
@@ -162,6 +175,14 @@ func NewConfig() *Config {
 			DefaultJobTimeout:        60 * time.Second,
 			MaxConcurrentWorkflows:   DefaultMaxConcurrentWorkflows,
 		},
+		CORS: CORSConfig{
+			AllowedOrigins:   []string{"*"},
+			AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+			AllowedHeaders:   []string{"Content-Type", "Authorization", "Accept", "Origin", "X-Requested-With"},
+			ExposedHeaders:   []string{},
+			AllowCredentials: false,
+			MaxAge:           12 * time.Hour,
+		},
 	}
 }
 
@@ -207,6 +228,9 @@ func (c *Config) Validate() []error {
 	}
 	if c.Workflow.MaxConcurrentWorkflows <= 0 {
 		errs = append(errs, fmt.Errorf("workflow max concurrent executions must be > 0"))
+	}
+	if c.CORS.MaxAge < 0 {
+		errs = append(errs, fmt.Errorf("cors max age must be >= 0"))
 	}
 	// messaging basic checks
 	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
@@ -261,6 +285,13 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.DurationVar(&c.Workflow.WorkerReadBlock, "workflow-worker-read-block", configParameter.Workflow.WorkerReadBlock, "workflow worker stream read block duration")
 	fs.DurationVar(&c.Workflow.DefaultJobTimeout, "workflow-default-job-timeout", configParameter.Workflow.DefaultJobTimeout, "default workflow job timeout")
 	fs.IntVar(&c.Workflow.MaxConcurrentWorkflows, "workflow-max-concurrent", configParameter.Workflow.MaxConcurrentWorkflows, "maximum number of workflow controllers running concurrently")
+	// cors flags
+	fs.StringSliceVar(&c.CORS.AllowedOrigins, "cors-allowed-origins", configParameter.CORS.AllowedOrigins, "allowed origins for CORS requests (use * to allow all)")
+	fs.StringSliceVar(&c.CORS.AllowedMethods, "cors-allowed-methods", configParameter.CORS.AllowedMethods, "allowed HTTP methods for CORS requests")
+	fs.StringSliceVar(&c.CORS.AllowedHeaders, "cors-allowed-headers", configParameter.CORS.AllowedHeaders, "allowed request headers for CORS preflight")
+	fs.StringSliceVar(&c.CORS.ExposedHeaders, "cors-exposed-headers", configParameter.CORS.ExposedHeaders, "response headers exposed to browsers for CORS requests")
+	fs.BoolVar(&c.CORS.AllowCredentials, "cors-allow-credentials", configParameter.CORS.AllowCredentials, "allow browsers to include credentials in CORS requests")
+	fs.DurationVar(&c.CORS.MaxAge, "cors-max-age", configParameter.CORS.MaxAge, "max age for caching CORS preflight responses")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }

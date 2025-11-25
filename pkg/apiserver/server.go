@@ -213,6 +213,16 @@ func (s *restServer) RegisterAPIRoute() {
 	// 初始化中间件
 	s.webContainer.Use(gin.Recovery())
 
+	// Enable CORS for browser clients
+	s.webContainer.Use(middleware.CORS(middleware.CORSOptions{
+		AllowOrigins:     s.cfg.CORS.AllowedOrigins,
+		AllowMethods:     s.cfg.CORS.AllowedMethods,
+		AllowHeaders:     s.cfg.CORS.AllowedHeaders,
+		ExposeHeaders:    s.cfg.CORS.ExposedHeaders,
+		AllowCredentials: s.cfg.CORS.AllowCredentials,
+		MaxAge:           s.cfg.CORS.MaxAge,
+	}))
+
 	// Always enable request logging
 	s.webContainer.Use(middleware.Logging())
 
