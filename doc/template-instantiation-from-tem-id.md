@@ -44,6 +44,7 @@
   - `component.name` 统一替换模板组件的 `name`。
   - 特征中的资源名（例：PVC/Storage 名、Service 名、Deployment 名称前缀）以新组件名为前缀/整体替换，保持命名约定。
   - 若模板包含副本数/计算资源等可调参数，可允许用户覆盖；未提供则沿用模板默认。
+  - 支持显式覆盖：`properties.env` 可用用户输入覆盖模板同名环境变量；`properties.secret` 仅对 `type=secret` 的组件生效，用于覆盖模板的 Secret 数据。
 - 必须重生成：
   - 组件/trait 唯一 ID、内部 UID。
   - 端口号若有冲突需重新分配（保留模板端口偏好，冲突时寻找可用端口）。
@@ -121,6 +122,11 @@
   }
   ```
   验证：调用 `/api/v1/applications/{appID}/components`，检查组件名、traits.storage 的 `name/claimName/sourceName`、Ingress backend 的 `serviceName`、RBAC 的 `serviceAccount/roleName/bindingName` 均替换成 `tenant-a-mysql`。
+- 覆盖规则（单模板多条目不重复克隆）：如果同一个 `Tem.id` 在请求中出现多次，只克隆一套模板组件，后续同模板条目仅用于覆盖匹配的组件（按类型优先匹配），支持：
+  - 组件重命名：同模板多个条目可为不同组件指定新名称。
+  - 环境变量覆盖：`properties.env` 覆盖模板 env。
+  - Secret 覆盖：仅 `type=secret` 组件的 `properties.secret` 会覆盖模板 Secret 数据。
+  未匹配的模板组件按 baseName（若提供）或模板组件名生成新名称。
 - 模板未启用错误：当模板 `tmp_enble=false` 时，同样的克隆请求应返回 400，消息 `template application is not enabled`。
 - 模板缺失或 ID 为空：`Tem.id` 为空应返回 400（`template id is required`）；不存在的 ID 返回 404（`application name is not exist`）。
 - 多组件模板命名：模板包含多个组件（如 `api`、`worker`）时，请求组件名为 `foo-app`，预期实例化后组件名为 `foo-app-api` 与 `foo-app-worker`，并同步重写相关资源名。
@@ -133,4 +139,9 @@
 - 覆盖字段白名单：哪些模板字段允许用户覆盖，是否提供显式的 override 列表。
 - 端口分配策略：端口冲突时的自动分配规则与可配置范围。
 - 幂等键：仅使用应用 `name` 还是允许显式 `idempotencyKey`。
-- 项目/命名空间绑定：顶层 `project` 为空时的默认归属策略。***
+- 项目/命名空间绑定：顶层 `project` 为空时的默认归属策略。
+- 优化提案（待定）：为 `component.Tem` 增加 `overrideMode`（如 `merge|replace|none`）按组件粒度控制合并/替换/禁用覆盖。需明确：
+  - 覆盖范围：`merge` 合并 env/secret/config 等 map，`replace` 整体替换这些字段，`none` 仅克隆模板。
+  - 匹配规则：同一模板多条目按组件类型或显式 target 匹配，避免重复克隆。
+  - 限制校验：合并后对 ConfigMap/Secret 等大小限制做校验，超限时返回错误并提示改用 `replace`，保持行为可预期。
+  - 组件定位：考虑在 `component.Tem` 增加 `target`（指向模板组件名/唯一键），请求侧校验 target 存在且类型匹配；若未提供 target，则保留当前类型匹配策略，但需告知顺序不确定或直接报错。

@@ -49,6 +49,17 @@ type applicationsServiceImpl struct {
 	KubeClient kubernetes.Interface `inject:"kubeClient"`
 }
 
+type componentOverride struct {
+	name       string
+	compType   config.JobType
+	properties apisv1.Properties
+}
+
+type templateRequest struct {
+	baseName  string
+	overrides []componentOverride
+}
+
 func NewApplicationService() ApplicationsService {
 	return &applicationsServiceImpl{}
 }
@@ -177,12 +188,34 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 
 func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespace string, reqComponents []apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
 	components := make([]apisv1.CreateComponentRequest, 0, len(reqComponents))
+	templateOrder := make([]string, 0)
+	templateMap := make(map[string]*templateRequest)
+
 	for _, comp := range reqComponents {
 		if comp.Template == nil || strings.TrimSpace(comp.Template.ID) == "" {
 			components = append(components, comp)
 			continue
 		}
-		clones, err := c.cloneComponentsFromTemplate(ctx, namespace, comp)
+		templateID := strings.TrimSpace(comp.Template.ID)
+		tr, ok := templateMap[templateID]
+		if !ok {
+			tr = &templateRequest{}
+			templateMap[templateID] = tr
+			templateOrder = append(templateOrder, templateID)
+		}
+		if tr.baseName == "" {
+			tr.baseName = strings.TrimSpace(comp.Name)
+		}
+		tr.overrides = append(tr.overrides, componentOverride{
+			name:       strings.TrimSpace(comp.Name),
+			compType:   comp.ComponentType,
+			properties: comp.Properties,
+		})
+	}
+
+	for _, templateID := range templateOrder {
+		tr := templateMap[templateID]
+		clones, err := c.cloneComponentsFromTemplate(ctx, namespace, templateID, tr)
 		if err != nil {
 			return nil, err
 		}
@@ -191,11 +224,10 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 	return components, nil
 }
 
-func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Context, namespace string, reqComp apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
-	if reqComp.Template == nil {
+func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Context, namespace, templateID string, tr *templateRequest) ([]apisv1.CreateComponentRequest, error) {
+	if tr == nil {
 		return nil, nil
 	}
-	templateID := strings.TrimSpace(reqComp.Template.ID)
 	if templateID == "" {
 		return nil, bcode.ErrTemplateIDMissing
 	}
@@ -219,24 +251,58 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		return nil, bcode.ErrTemplateComponentMissing
 	}
 
-	baseName := strings.TrimSpace(reqComp.Name)
+	baseName := strings.TrimSpace(tr.baseName)
 	if baseName == "" {
 		baseName = templateApp.Name
 	}
+
+	type ovState struct {
+		componentOverride
+		used bool
+	}
+	overrides := make([]ovState, len(tr.overrides))
+	for i, o := range tr.overrides {
+		overrides[i] = ovState{componentOverride: o}
+	}
+
+	pickOverride := func(jobType config.JobType) *componentOverride {
+		for i := range overrides {
+			if overrides[i].used {
+				continue
+			}
+			if overrides[i].compType != "" && overrides[i].compType != jobType {
+				continue
+			}
+			overrides[i].used = true
+			return &overrides[i].componentOverride
+		}
+		return nil
+	}
+
 	clones := make([]apisv1.CreateComponentRequest, 0, len(templateComponents))
 	for _, templateComp := range templateComponents {
 		if templateComp == nil {
 			continue
 		}
+		override := pickOverride(templateComp.ComponentType)
+
 		targetName := templateComp.Name
-		if baseName != "" {
+		if override != nil && override.name != "" {
+			targetName = override.name
+		} else if baseName != "" {
 			if len(templateComponents) == 1 {
 				targetName = baseName
 			} else {
 				targetName = fmt.Sprintf("%s-%s", baseName, templateComp.Name)
 			}
 		}
-		clone, err := convertComponentFromTemplate(templateComp, targetName, namespace)
+
+		var overrideProps apisv1.Properties
+		if override != nil {
+			overrideProps = override.properties
+		}
+
+		clone, err := convertComponentFromTemplate(templateComp, targetName, namespace, overrideProps)
 		if err != nil {
 			return nil, err
 		}
@@ -245,7 +311,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 	return clones, nil
 }
 
-func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, namespace string) (*apisv1.CreateComponentRequest, error) {
+func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, namespace string, overrideProps apisv1.Properties) (*apisv1.CreateComponentRequest, error) {
 	var properties apisv1.Properties
 	if err := decodeJSONStruct(templateComp.Properties, &properties); err != nil {
 		return nil, fmt.Errorf("convert template component %s properties: %w", templateComp.Name, err)
@@ -255,6 +321,7 @@ func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newN
 		return nil, fmt.Errorf("convert template component %s traits: %w", templateComp.Name, err)
 	}
 
+	applyPropertyOverrides(&properties, overrideProps, templateComp.ComponentType)
 	rewriteTraitsForTemplate(&traits, templateComp.Name, newName, namespace)
 
 	return &apisv1.CreateComponentRequest{
@@ -280,6 +347,25 @@ func decodeJSONStruct(raw *model.JSONStruct, target interface{}) error {
 		return nil
 	}
 	return json.Unmarshal(data, target)
+}
+
+func applyPropertyOverrides(props *apisv1.Properties, override apisv1.Properties, compType config.JobType) {
+	if len(override.Env) > 0 {
+		if props.Env == nil {
+			props.Env = make(map[string]string, len(override.Env))
+		}
+		for k, v := range override.Env {
+			props.Env[k] = v
+		}
+	}
+	if len(override.Secret) > 0 && compType == config.SecretJob {
+		if props.Secret == nil {
+			props.Secret = make(map[string]string, len(override.Secret))
+		}
+		for k, v := range override.Secret {
+			props.Secret[k] = v
+		}
+	}
 }
 
 func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace string) {

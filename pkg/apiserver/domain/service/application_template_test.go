@@ -82,16 +82,40 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 		Traits:        traitsJSON,
 	}
 
+	templateSecretProps := apisv1.Properties{Secret: map[string]string{"MYSQL_ROOT_PASSWORD": "orig"}}
+	secretPropsJSON, err := model.NewJSONStructByStruct(templateSecretProps)
+	require.NoError(t, err)
+	store.components["mysql-secret"] = &model.ApplicationComponent{
+		Name:          "mysql-secret",
+		AppID:         templateApp.ID,
+		Namespace:     config.DefaultNamespace,
+		ComponentType: config.SecretJob,
+		Properties:    secretPropsJSON,
+	}
+
 	svc := &applicationsServiceImpl{Store: store}
 	tmpEnable := true
 	req := apisv1.CreateApplicationsRequest{
 		Name:  "cloned-app",
 		Alias: "cloned-app",
-		Component: []apisv1.CreateComponentRequest{{
-			Name:          "new-mysql",
-			ComponentType: config.StoreJob,
-			Template:      &apisv1.TemplateRef{ID: templateApp.ID},
-		}},
+		Component: []apisv1.CreateComponentRequest{
+			{
+				Name:          "new-mysql",
+				ComponentType: config.StoreJob,
+				Properties: apisv1.Properties{
+					Env: map[string]string{"a": "override", "NEW": "env"},
+				},
+				Template: &apisv1.TemplateRef{ID: templateApp.ID},
+			},
+			{
+				Name:          "new-mysql-secret",
+				ComponentType: config.SecretJob,
+				Properties: apisv1.Properties{
+					Secret: map[string]string{"MYSQL_ROOT_PASSWORD": "override-secret"},
+				},
+				Template: &apisv1.TemplateRef{ID: templateApp.ID},
+			},
+		},
 		TmpEnble: &tmpEnable,
 	}
 
@@ -100,18 +124,18 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 	require.NotNil(t, resp)
 	require.True(t, resp.TmpEnble)
 
-	var createdComponent *model.ApplicationComponent
+	var createdStore *model.ApplicationComponent
 	for _, comp := range store.components {
-		if comp.AppID == resp.ID {
-			createdComponent = comp
+		if comp.AppID == resp.ID && comp.ComponentType == config.StoreJob {
+			createdStore = comp
 			break
 		}
 	}
-	require.NotNil(t, createdComponent)
-	require.Equal(t, "new-mysql", createdComponent.Name)
+	require.NotNil(t, createdStore)
+	require.Equal(t, "new-mysql", createdStore.Name)
 
 	var clonedTraits apisv1.Traits
-	require.NoError(t, json.Unmarshal([]byte(createdComponent.Traits.JSON()), &clonedTraits))
+	require.NoError(t, json.Unmarshal([]byte(createdStore.Traits.JSON()), &clonedTraits))
 	require.Len(t, clonedTraits.Storage, 1)
 	require.Equal(t, "new-mysql", clonedTraits.Storage[0].Name)
 	require.Equal(t, "new-mysql", clonedTraits.Storage[0].ClaimName)
@@ -127,4 +151,24 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 	require.Equal(t, "mysql", clonedTraits.RBAC[0].RoleName)
 	require.Equal(t, "mysql", clonedTraits.RBAC[0].BindingName)
 	require.Equal(t, config.DefaultNamespace, clonedTraits.RBAC[0].Namespace)
+
+	// env override 生效
+	var clonedProps apisv1.Properties
+	require.NoError(t, json.Unmarshal([]byte(createdStore.Properties.JSON()), &clonedProps))
+	require.Equal(t, "override", clonedProps.Env["a"])
+	require.Equal(t, "env", clonedProps.Env["NEW"])
+
+	// secret 组件被克隆一次，并允许覆盖 secret 值
+	var createdSecret *model.ApplicationComponent
+	for _, comp := range store.components {
+		if comp.AppID == resp.ID && comp.ComponentType == config.SecretJob {
+			createdSecret = comp
+			break
+		}
+	}
+	require.NotNil(t, createdSecret)
+	require.Equal(t, "new-mysql-secret", createdSecret.Name)
+	var secretProps apisv1.Properties
+	require.NoError(t, json.Unmarshal([]byte(createdSecret.Properties.JSON()), &secretProps))
+	require.Equal(t, "override-secret", secretProps.Secret["MYSQL_ROOT_PASSWORD"])
 }
