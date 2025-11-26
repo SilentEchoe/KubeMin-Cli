@@ -18,7 +18,7 @@ type Applications struct {
 	Project     string `json:"project"`     //项目
 	Description string `json:"description"` //详情
 	Icon        string `json:"icon"`        //图标
-	TmpEnble    bool   `json:"tmp_enble"`   // 是否允许作为模板被引用
+	TmpEnable   bool   `json:"tmp_enable"`  // 是否允许作为模板被引用
 	BaseModel
 }
 
@@ -32,7 +32,7 @@ func NewApplications(id, name, namespace, version, alias, project, description, 
 		Project:     project,
 		Description: description,
 		Icon:        icon,
-		TmpEnble:    tmpEnable,
+		TmpEnable:   tmpEnable,
 	}
 }
 

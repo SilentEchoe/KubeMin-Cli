@@ -18,7 +18,7 @@ type ApplicationBase struct {
 	UpdateTime  time.Time `json:"updateTime"`
 	Icon        string    `json:"icon"`
 	WorkflowID  string    `json:"workflow_id"`
-	TmpEnble    bool      `json:"tmp_enble"`
+	TmpEnable   bool      `json:"tmp_enable"`
 }
 
 // ProjectBase project base model
@@ -51,8 +51,8 @@ type CreateApplicationsRequest struct {
 	Component     []CreateComponentRequest    `json:"component"`
 	WorkflowSteps []CreateWorkflowStepRequest `json:"workflow"`
 
-	// TmpEnble 标记该应用是否允许作为模板被引用
-	TmpEnble *bool `json:"tmp_enble,omitempty"`
+	// TmpEnable 标记该应用是否允许作为模板被引用
+	TmpEnable *bool `json:"tmp_enable,omitempty"`
 }
 
 type CreateComponentRequest struct {

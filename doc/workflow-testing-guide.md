@@ -783,6 +783,37 @@ traits:
 - [ ] 错误处理适当
 - [ ] 状态更新正常
 
+## 模板实例化测试 (Tem.id 克隆)
+
+### 测试项 TC013：单次克隆模板（tmp_enable=true）
+- 前置：模板应用已存在且 `tmp_enable=true`，包含 store + secret 组件。
+- 请求示例（覆盖 env/secret）：
+```json
+{
+  "name": "tenant-a-mysql-app",
+  "namespace": "mysql",
+  "alias": "tenant-a-mysql",
+  "version": "1.0.3",
+  "description": "mysql cloned from template",
+  "component": [
+    { "name": "tenant-a-mysql", "type": "store", "Tem": { "id": "tmpl-mysql-id" }, "properties": { "env": { "MYSQL_DATABASE": "demo" } } },
+    { "name": "tenant-a-config", "type": "secret", "properties": { "secret": { "MYSQL_ROOT_PASSWORD": "d3loNWFjTFVjWUR5ZjF1VA==" } }, "Tem": { "id": "tmpl-mysql-id" } }
+  ]
+}
+```
+- 验证：
+  - 只克隆一遍模板，最终组件数与模板一致（不因多条条目倍增）。
+  - 名称/traits 重写：组件按请求名或 baseName，storage/ingress 等随之重写；RBAC 名保持模板值，命名空间对齐组件。
+  - 覆盖：`properties.env` 覆盖模板 env；`properties.secret` 仅对 `type=secret` 组件覆盖模板 Secret。
+  - 模板 `tmp_enable=true` 方可引用，`tmp_enable=false` 返回 400。
+
+### 测试项 TC014：模板禁用/ID 缺失错误
+- 模板 `tmp_enable=false` 或 `Tem.id` 为空/不存在，返回 400/404，错误信息分别为 `template application is not enabled` / `template id is required` / `application name is not exist`。
+
+### 测试项 TC015：同模板多条覆盖匹配
+- 同一 `Tem.id` 多条目仅用于覆盖（类型优先匹配），未匹配的模板组件按 baseName 或模板名生成新名称。
+- 校验组件命名、env/secret 覆盖结果与预期一致，组件数量不重复。
+
 ### 6. 性能测试 (Performance Tests)
 
 #### 6.1 响应时间测试

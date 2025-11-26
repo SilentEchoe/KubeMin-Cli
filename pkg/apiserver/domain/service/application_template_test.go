@@ -16,7 +16,7 @@ import (
 
 func TestCreateApplicationsFromTemplateRequiresEnable(t *testing.T) {
 	store := newInMemoryAppStore()
-	templateApp := &model.Applications{ID: "tmpl-1", Name: "tmpl", TmpEnble: false}
+	templateApp := &model.Applications{ID: "tmpl-1", Name: "tmpl", TmpEnable: false}
 	store.apps[templateApp.ID] = templateApp
 	store.components["tmpl-comp"] = &model.ApplicationComponent{
 		Name:          "tmpl-comp",
@@ -41,7 +41,7 @@ func TestCreateApplicationsFromTemplateRequiresEnable(t *testing.T) {
 
 func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 	store := newInMemoryAppStore()
-	templateApp := &model.Applications{ID: "tmpl-2", Name: "mysql", TmpEnble: true}
+	templateApp := &model.Applications{ID: "tmpl-2", Name: "mysql", TmpEnable: true}
 	store.apps[templateApp.ID] = templateApp
 
 	templateTraits := apisv1.Traits{
@@ -116,13 +116,13 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 				Template: &apisv1.TemplateRef{ID: templateApp.ID},
 			},
 		},
-		TmpEnble: &tmpEnable,
+		TmpEnable: &tmpEnable,
 	}
 
 	resp, err := svc.CreateApplications(context.Background(), req)
 	require.NoError(t, err)
 	require.NotNil(t, resp)
-	require.True(t, resp.TmpEnble)
+	require.True(t, resp.TmpEnable)
 
 	var createdStore *model.ApplicationComponent
 	for _, comp := range store.components {

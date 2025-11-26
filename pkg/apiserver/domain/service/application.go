@@ -75,8 +75,8 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	)
 
 	tmpEnable := false
-	if req.TmpEnble != nil {
-		tmpEnable = *req.TmpEnble
+	if req.TmpEnable != nil {
+		tmpEnable = *req.TmpEnable
 	}
 
 	if req.ID != "" {
@@ -101,6 +101,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		application.Namespace = config.DefaultNamespace
 	}
 
+	//分解所有的组件
 	resolvedComponents, err := c.resolveComponents(ctx, application.Namespace, req.Component)
 	if err != nil {
 		return nil, err
@@ -192,10 +193,12 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 	templateMap := make(map[string]*templateRequest)
 
 	for _, comp := range reqComponents {
+		// 如果该组件没有使用模版，就直接组装这个模版
 		if comp.Template == nil || strings.TrimSpace(comp.Template.ID) == "" {
 			components = append(components, comp)
 			continue
 		}
+		// 以模板 ID 作为键，从 templateMap 中取出该模板的聚合请求，没有则新建 templateRequest 并记录到 templateOrder，用于后续按出现顺序处理。
 		templateID := strings.TrimSpace(comp.Template.ID)
 		tr, ok := templateMap[templateID]
 		if !ok {
@@ -206,6 +209,7 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 		if tr.baseName == "" {
 			tr.baseName = strings.TrimSpace(comp.Name)
 		}
+		// 记录需要覆盖的组件名和类型
 		tr.overrides = append(tr.overrides, componentOverride{
 			name:       strings.TrimSpace(comp.Name),
 			compType:   comp.ComponentType,
@@ -215,6 +219,7 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 
 	for _, templateID := range templateOrder {
 		tr := templateMap[templateID]
+		// 克隆
 		clones, err := c.cloneComponentsFromTemplate(ctx, namespace, templateID, tr)
 		if err != nil {
 			return nil, err
@@ -224,6 +229,7 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 	return components, nil
 }
 
+// cloneComponentsFromTemplate 克隆组件模版
 func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Context, namespace, templateID string, tr *templateRequest) ([]apisv1.CreateComponentRequest, error) {
 	if tr == nil {
 		return nil, nil
@@ -239,7 +245,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		}
 		return nil, err
 	}
-	if !templateApp.TmpEnble {
+	if !templateApp.TmpEnable {
 		return nil, bcode.ErrTemplateNotEnabled
 	}
 
@@ -368,6 +374,7 @@ func applyPropertyOverrides(props *apisv1.Properties, override apisv1.Properties
 	}
 }
 
+// rewriteTraitsForTemplate 通过模版重写特征等元数据
 func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace string) {
 	if traits == nil {
 		return
@@ -449,8 +456,8 @@ func refreshExistingApplication(ctx context.Context, store datastore.DataStore, 
 	if req.NameSpace != "" {
 		application.Namespace = req.NameSpace
 	}
-	if req.TmpEnble != nil {
-		application.TmpEnble = *req.TmpEnble
+	if req.TmpEnable != nil {
+		application.TmpEnable = *req.TmpEnable
 	}
 
 	if err = repository.DelComponentsByAppID(ctx, store, req.ID); err != nil {
