@@ -18,6 +18,7 @@ type ApplicationBase struct {
 	UpdateTime  time.Time `json:"updateTime"`
 	Icon        string    `json:"icon"`
 	WorkflowID  string    `json:"workflow_id"`
+	TmpEnble    bool      `json:"tmp_enble"`
 }
 
 // ProjectBase project base model
@@ -49,6 +50,9 @@ type CreateApplicationsRequest struct {
 	Icon          string                      `json:"icon"`
 	Component     []CreateComponentRequest    `json:"component"`
 	WorkflowSteps []CreateWorkflowStepRequest `json:"workflow"`
+
+	// TmpEnble 标记该应用是否允许作为模板被引用
+	TmpEnble *bool `json:"tmp_enble,omitempty"`
 }
 
 type CreateComponentRequest struct {
@@ -59,6 +63,11 @@ type CreateComponentRequest struct {
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
 	Traits        Traits         `json:"traits"`
+	Template      *TemplateRef   `json:"Tem,omitempty"`
+}
+
+type TemplateRef struct {
+	ID string `json:"id"`
 }
 
 type CreateWorkflowStepRequest struct {

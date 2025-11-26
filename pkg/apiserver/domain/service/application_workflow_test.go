@@ -326,7 +326,14 @@ func (s *inMemoryAppStore) Add(_ context.Context, entity datastore.Entity) error
 	return nil
 }
 
-func (s *inMemoryAppStore) BatchAdd(context.Context, []datastore.Entity) error { return nil }
+func (s *inMemoryAppStore) BatchAdd(ctx context.Context, entities []datastore.Entity) error {
+	for _, entity := range entities {
+		if err := s.Add(ctx, entity); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func (s *inMemoryAppStore) Put(_ context.Context, entity datastore.Entity) error {
 	switch v := entity.(type) {

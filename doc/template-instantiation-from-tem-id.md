@@ -80,6 +80,52 @@
 - 事务性：中途失败时数据库和已创建资源回滚/清理。
 - 标签追踪：新实例包含来源模板标签/注解。
 
+## 测试示例与验证步骤
+- 创建模板应用：调用 `/api/v1/applications` 创建基础模板，设置 `tmp_enble=true`，组件 traits 含存储/Ingress/RBAC 等资源命名，确保模板组件具备镜像与必需字段。
+  ```json
+  {
+    "name": "tmpl-mysql",
+    "alias": "mysql-template",
+    "version": "1.0.0",
+    "project": "demo",
+    "description": "mysql base template",
+    "component": [
+      {
+        "name": "mysql",
+        "type": "store",
+        "image": "mysql:8.0",
+        "namespace": "default",
+        "replicas": 1,
+        "properties": { "ports": [ { "port": 3306, "expose": true } ], "env": { "MYSQL_ROOT_PASSWORD": "changeme" } },
+        "traits": {
+          "storage": [ { "name": "mysql", "type": "persistent", "create": true, "size": "5Gi" } ],
+          "rbac": [ { "serviceAccount": "mysql", "roleName": "mysql", "bindingName": "mysql" } ]
+        }
+      }
+    ],
+    "tmp_enble": true
+  }
+  ```
+- 克隆创建新应用（成功）：请求体中仅提供组件名和 `Tem.id`。期望组件名及存储/Ingress/RBAC/EnvFrom/init/sidecar 中的资源名统一替换为新组件名。
+  ```json
+  {
+    "name": "tenant-a-mysql-app",
+    "alias": "tenant-a-mysql",
+    "version": "1.0.1",
+    "description": "mysql cloned from template",
+    "component": [
+      { "name": "tenant-a-mysql", "type": "store", "Tem": { "id": "tmpl-mysql-id" } }
+    ]
+  }
+  ```
+  验证：调用 `/api/v1/applications/{appID}/components`，检查组件名、traits.storage 的 `name/claimName/sourceName`、Ingress backend 的 `serviceName`、RBAC 的 `serviceAccount/roleName/bindingName` 均替换成 `tenant-a-mysql`。
+- 模板未启用错误：当模板 `tmp_enble=false` 时，同样的克隆请求应返回 400，消息 `template application is not enabled`。
+- 模板缺失或 ID 为空：`Tem.id` 为空应返回 400（`template id is required`）；不存在的 ID 返回 404（`application name is not exist`）。
+- 多组件模板命名：模板包含多个组件（如 `api`、`worker`）时，请求组件名为 `foo-app`，预期实例化后组件名为 `foo-app-api` 与 `foo-app-worker`，并同步重写相关资源名。
+- 幂等/冲突：重复提交相同顶层 `name`（或幂等键）应返回已存在；模板组件缺少必需镜像应报 `the image of the component has not been set..`。
+- 数据库检查：确认 `min_applications.tmp_enble` 新列存在；模板行应为 `true`，克隆出的应用默认为 `false`（除非请求显式设置）。
+- 自动化单测参考：运行 `go test ./pkg/apiserver/domain/service -run Template -count=1` 覆盖模板校验与克隆逻辑（需具备写 Go build 缓存权限）。
+
 ## 待决问题
 - 模板升级策略：模板更新后是否影响已实例化的应用（建议默认不回溯，只记录来源版本）。
 - 覆盖字段白名单：哪些模板字段允许用户覆盖，是否提供显式的 override 列表。

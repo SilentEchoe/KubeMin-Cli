@@ -20,6 +20,7 @@ func ConvertAppModelToBase(app *model.Applications, workflowID string) *apisv1.A
 		Description: app.Description,
 		Icon:        app.Icon,
 		WorkflowID:  workflowID,
+		TmpEnble:    app.TmpEnble,
 	}
 	return appBase
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -62,6 +63,11 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		err         error
 	)
 
+	tmpEnable := false
+	if req.TmpEnble != nil {
+		tmpEnable = *req.TmpEnble
+	}
+
 	if req.ID != "" {
 		application, err = refreshExistingApplication(ctx, c.Store, req)
 		if err != nil {
@@ -77,10 +83,16 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 			req.Project,
 			req.Description,
 			req.Icon,
+			tmpEnable,
 		)
 	}
 	if application.Namespace == "" {
 		application.Namespace = config.DefaultNamespace
+	}
+
+	resolvedComponents, err := c.resolveComponents(ctx, application.Namespace, req.Component)
+	if err != nil {
+		return nil, err
 	}
 
 	if err = repository.CreateApplications(ctx, c.Store, application); err != nil {
@@ -90,7 +102,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		return nil, err
 	}
 
-	components, err := prepareComponents(application.ID, application.Namespace, req.Component)
+	components, err := prepareComponents(application.ID, application.Namespace, resolvedComponents)
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +141,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	workflowName := fmt.Sprintf("%s-%s", req.Name, "workflow")
 	var workflowBody interface{}
 	if len(req.WorkflowSteps) == 0 {
-		workflowBody = convertWorkflowStepByComponent(req.Component)
+		workflowBody = convertWorkflowStepByComponent(resolvedComponents)
 	} else {
 		workflowName = fmt.Sprintf("%s-%s", req.Name, utils.RandStringByNumLowercase(16))
 		workflowBody = convertWorkflowStepsFromRequest(req.WorkflowSteps)
@@ -163,6 +175,185 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	return base, nil
 }
 
+func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespace string, reqComponents []apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
+	components := make([]apisv1.CreateComponentRequest, 0, len(reqComponents))
+	for _, comp := range reqComponents {
+		if comp.Template == nil || strings.TrimSpace(comp.Template.ID) == "" {
+			components = append(components, comp)
+			continue
+		}
+		clones, err := c.cloneComponentsFromTemplate(ctx, namespace, comp)
+		if err != nil {
+			return nil, err
+		}
+		components = append(components, clones...)
+	}
+	return components, nil
+}
+
+func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Context, namespace string, reqComp apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
+	if reqComp.Template == nil {
+		return nil, nil
+	}
+	templateID := strings.TrimSpace(reqComp.Template.ID)
+	if templateID == "" {
+		return nil, bcode.ErrTemplateIDMissing
+	}
+
+	templateApp, err := repository.ApplicationByID(ctx, c.Store, templateID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+	if !templateApp.TmpEnble {
+		return nil, bcode.ErrTemplateNotEnabled
+	}
+
+	templateComponents, err := repository.FindComponentsByAppID(ctx, c.Store, templateApp.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(templateComponents) == 0 {
+		return nil, bcode.ErrTemplateComponentMissing
+	}
+
+	baseName := strings.TrimSpace(reqComp.Name)
+	if baseName == "" {
+		baseName = templateApp.Name
+	}
+	clones := make([]apisv1.CreateComponentRequest, 0, len(templateComponents))
+	for _, templateComp := range templateComponents {
+		if templateComp == nil {
+			continue
+		}
+		targetName := templateComp.Name
+		if baseName != "" {
+			if len(templateComponents) == 1 {
+				targetName = baseName
+			} else {
+				targetName = fmt.Sprintf("%s-%s", baseName, templateComp.Name)
+			}
+		}
+		clone, err := convertComponentFromTemplate(templateComp, targetName, namespace)
+		if err != nil {
+			return nil, err
+		}
+		clones = append(clones, *clone)
+	}
+	return clones, nil
+}
+
+func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, namespace string) (*apisv1.CreateComponentRequest, error) {
+	var properties apisv1.Properties
+	if err := decodeJSONStruct(templateComp.Properties, &properties); err != nil {
+		return nil, fmt.Errorf("convert template component %s properties: %w", templateComp.Name, err)
+	}
+	var traits apisv1.Traits
+	if err := decodeJSONStruct(templateComp.Traits, &traits); err != nil {
+		return nil, fmt.Errorf("convert template component %s traits: %w", templateComp.Name, err)
+	}
+
+	rewriteTraitsForTemplate(&traits, templateComp.Name, newName, namespace)
+
+	return &apisv1.CreateComponentRequest{
+		Name:          newName,
+		ComponentType: templateComp.ComponentType,
+		Image:         templateComp.Image,
+		NameSpace:     namespace,
+		Replicas:      templateComp.Replicas,
+		Properties:    properties,
+		Traits:        traits,
+	}, nil
+}
+
+func decodeJSONStruct(raw *model.JSONStruct, target interface{}) error {
+	if raw == nil {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	if string(data) == "null" {
+		return nil
+	}
+	return json.Unmarshal(data, target)
+}
+
+func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace string) {
+	if traits == nil {
+		return
+	}
+
+	for i := range traits.Storage {
+		storage := &traits.Storage[i]
+		if storage.Name == "" || storage.Name == oldName {
+			storage.Name = newName
+		}
+		if storage.ClaimName == "" || storage.ClaimName == oldName {
+			storage.ClaimName = newName
+		}
+		if storage.SourceName == "" || storage.SourceName == oldName {
+			storage.SourceName = newName
+		}
+	}
+
+	for i := range traits.Ingress {
+		ingress := &traits.Ingress[i]
+		if ingress.Name == "" || ingress.Name == oldName {
+			ingress.Name = newName
+		}
+		if ingress.Namespace == "" {
+			ingress.Namespace = namespace
+		}
+		for j := range ingress.Routes {
+			if ingress.Routes[j].Backend.ServiceName == oldName {
+				ingress.Routes[j].Backend.ServiceName = newName
+			}
+		}
+	}
+
+	for i := range traits.RBAC {
+		policy := &traits.RBAC[i]
+		if policy.ServiceAccount == "" || policy.ServiceAccount == oldName {
+			policy.ServiceAccount = newName
+		}
+		if policy.RoleName == "" || policy.RoleName == oldName {
+			policy.RoleName = newName
+		}
+		if policy.BindingName == "" || policy.BindingName == oldName {
+			policy.BindingName = newName
+		}
+		if policy.Namespace == "" {
+			policy.Namespace = namespace
+		}
+	}
+
+	for i := range traits.EnvFrom {
+		if traits.EnvFrom[i].SourceName == oldName {
+			traits.EnvFrom[i].SourceName = newName
+		}
+	}
+
+	for i := range traits.Init {
+		initTrait := &traits.Init[i]
+		if initTrait.Name == "" || initTrait.Name == oldName {
+			initTrait.Name = fmt.Sprintf("%s-init-%d", newName, i+1)
+		}
+		rewriteTraitsForTemplate(&initTrait.Traits, oldName, newName, namespace)
+	}
+
+	for i := range traits.Sidecar {
+		sidecar := &traits.Sidecar[i]
+		if sidecar.Name == "" || sidecar.Name == oldName {
+			sidecar.Name = fmt.Sprintf("%s-sidecar-%d", newName, i+1)
+		}
+		rewriteTraitsForTemplate(&sidecar.Traits, oldName, newName, namespace)
+	}
+}
+
 func refreshExistingApplication(ctx context.Context, store datastore.DataStore, req apisv1.CreateApplicationsRequest) (*model.Applications, error) {
 	application, err := repository.ApplicationByID(ctx, store, req.ID)
 	if err != nil {
@@ -177,6 +368,9 @@ func refreshExistingApplication(ctx context.Context, store datastore.DataStore, 
 	application.Icon = req.Icon
 	if req.NameSpace != "" {
 		application.Namespace = req.NameSpace
+	}
+	if req.TmpEnble != nil {
+		application.TmpEnble = *req.TmpEnble
 	}
 
 	if err = repository.DelComponentsByAppID(ctx, store, req.ID); err != nil {
