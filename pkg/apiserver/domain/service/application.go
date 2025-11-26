@@ -317,17 +317,11 @@ func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace
 
 	for i := range traits.RBAC {
 		policy := &traits.RBAC[i]
-		if policy.ServiceAccount == "" || policy.ServiceAccount == oldName {
-			policy.ServiceAccount = newName
-		}
-		if policy.RoleName == "" || policy.RoleName == oldName {
-			policy.RoleName = newName
-		}
-		if policy.BindingName == "" || policy.BindingName == oldName {
-			policy.BindingName = newName
-		}
-		if policy.Namespace == "" {
+		// RBAC 资源保持名称不变，但命名空间与组件命名空间对齐（为空则用默认命名空间）。
+		if namespace != "" {
 			policy.Namespace = namespace
+		} else if policy.Namespace == "" {
+			policy.Namespace = config.DefaultNamespace
 		}
 	}
 

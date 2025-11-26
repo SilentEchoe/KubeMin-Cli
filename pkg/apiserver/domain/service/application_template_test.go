@@ -122,7 +122,9 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 	require.Equal(t, "new-mysql", clonedTraits.Ingress[0].Routes[0].Backend.ServiceName)
 
 	require.Len(t, clonedTraits.RBAC, 1)
-	require.Equal(t, "new-mysql", clonedTraits.RBAC[0].ServiceAccount)
-	require.Equal(t, "new-mysql", clonedTraits.RBAC[0].RoleName)
-	require.Equal(t, "new-mysql", clonedTraits.RBAC[0].BindingName)
+	// RBAC 资源名称保持模板值，不强制重写
+	require.Equal(t, "mysql", clonedTraits.RBAC[0].ServiceAccount)
+	require.Equal(t, "mysql", clonedTraits.RBAC[0].RoleName)
+	require.Equal(t, "mysql", clonedTraits.RBAC[0].BindingName)
+	require.Equal(t, config.DefaultNamespace, clonedTraits.RBAC[0].Namespace)
 }
