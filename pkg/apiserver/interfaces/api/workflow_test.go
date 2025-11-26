@@ -106,6 +106,9 @@ func (noopApplicationsService) UpdateApplicationWorkflow(context.Context, string
 func (noopApplicationsService) ListApplicationWorkflows(context.Context, string) ([]*model.Workflow, error) {
 	return nil, nil
 }
+func (noopApplicationsService) ListApplicationComponents(context.Context, string) ([]*model.ApplicationComponent, error) {
+	return nil, nil
+}
 
 type workflowListApplicationService struct {
 	noopApplicationsService

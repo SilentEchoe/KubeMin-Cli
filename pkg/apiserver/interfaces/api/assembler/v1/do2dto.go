@@ -49,6 +49,32 @@ func ConvertWorkflowModelToDTO(workflow *model.Workflow) (*apisv1.ApplicationWor
 	}, nil
 }
 
+func ConvertComponentModelToDTO(component *model.ApplicationComponent) (*apisv1.ApplicationComponent, error) {
+	if component == nil {
+		return nil, nil
+	}
+
+	dto := &apisv1.ApplicationComponent{
+		ID:            component.ID,
+		AppID:         component.AppID,
+		Name:          component.Name,
+		Namespace:     component.Namespace,
+		Image:         component.Image,
+		Replicas:      component.Replicas,
+		ComponentType: component.ComponentType,
+		CreateTime:    component.CreateTime,
+		UpdateTime:    component.UpdateTime,
+	}
+
+	if err := decodeJSONStruct(component.Properties, &dto.Properties); err != nil {
+		return nil, fmt.Errorf("convert component %s properties: %w", component.Name, err)
+	}
+	if err := decodeJSONStruct(component.Traits, &dto.Traits); err != nil {
+		return nil, fmt.Errorf("convert component %s traits: %w", component.Name, err)
+	}
+	return dto, nil
+}
+
 func convertWorkflowSteps(raw *model.JSONStruct) ([]apisv1.WorkflowStepDetail, error) {
 	if raw == nil {
 		return nil, nil
@@ -85,6 +111,20 @@ func convertWorkflowSteps(raw *model.JSONStruct) ([]apisv1.WorkflowStepDetail, e
 		result = append(result, detail)
 	}
 	return result, nil
+}
+
+func decodeJSONStruct(raw *model.JSONStruct, target interface{}) error {
+	if raw == nil {
+		return nil
+	}
+	data, err := json.Marshal(raw)
+	if err != nil {
+		return err
+	}
+	if string(data) == "null" {
+		return nil
+	}
+	return json.Unmarshal(data, target)
 }
 
 func flattenPolicies(policies []model.Policies) []string {

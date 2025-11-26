@@ -40,6 +40,7 @@ type ApplicationsService interface {
 	CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error)
 	UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error)
 	ListApplicationWorkflows(ctx context.Context, appID string) ([]*model.Workflow, error)
+	ListApplicationComponents(ctx context.Context, appID string) ([]*model.ApplicationComponent, error)
 }
 
 type applicationsServiceImpl struct {
@@ -598,6 +599,33 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 		}
 	}
 	return &apisv1.UpdateWorkflowResponse{WorkflowID: target.ID}, nil
+}
+
+func (c *applicationsServiceImpl) ListApplicationComponents(ctx context.Context, appID string) ([]*model.ApplicationComponent, error) {
+	if appID == "" {
+		return nil, bcode.ErrApplicationNotExist
+	}
+	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+	components, err := repository.FindComponentsByAppID(ctx, c.Store, app.ID)
+	if err != nil {
+		return nil, err
+	}
+	if len(components) == 0 {
+		return nil, nil
+	}
+	sort.SliceStable(components, func(i, j int) bool {
+		if components[i] == nil || components[j] == nil {
+			return components[j] != nil
+		}
+		return components[i].UpdateTime.Unix() > components[j].UpdateTime.Unix()
+	})
+	return components, nil
 }
 
 func (c *applicationsServiceImpl) ListApplicationWorkflows(ctx context.Context, appID string) ([]*model.Workflow, error) {

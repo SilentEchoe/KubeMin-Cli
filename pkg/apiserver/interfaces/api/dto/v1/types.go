@@ -195,6 +195,10 @@ type ListApplicationWorkflowsResponse struct {
 	Workflows []*ApplicationWorkflow `json:"workflows"`
 }
 
+type ListApplicationComponentsResponse struct {
+	Components []*ApplicationComponent `json:"components"`
+}
+
 type ApplicationWorkflow struct {
 	ID           string                  `json:"id"`
 	Name         string                  `json:"name"`
@@ -222,4 +226,18 @@ type WorkflowSubStepDetail struct {
 	Name         string         `json:"name"`
 	WorkflowType config.JobType `json:"workflowType,omitempty"`
 	Components   []string       `json:"components,omitempty"`
+}
+
+type ApplicationComponent struct {
+	ID            int            `json:"id"`
+	AppID         string         `json:"appId"`
+	Name          string         `json:"name"`
+	Namespace     string         `json:"namespace"`
+	Image         string         `json:"image,omitempty"`
+	Replicas      int32          `json:"replicas"`
+	ComponentType config.JobType `json:"type"`
+	Properties    Properties     `json:"properties"`
+	Traits        Traits         `json:"traits"`
+	CreateTime    time.Time      `json:"createTime"`
+	UpdateTime    time.Time      `json:"updateTime"`
 }

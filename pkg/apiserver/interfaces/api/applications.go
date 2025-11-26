@@ -24,17 +24,18 @@ func NewApplications() Interface {
 	return &applications{}
 }
 
-func (a *applications) RegisterRoutes(group *gin.RouterGroup) {
-	group.GET("/applications", a.listApplications)
-	group.POST("/applications", a.createApplications)
-	group.GET("/applications/:appID/workflows", a.listApplicationWorkflows)
-	group.PUT("/applications/:appID/workflow", a.updateApplicationWorkflow)
-	group.DELETE("/applications/:appID/resources", a.deleteApplicationResources)
-	group.POST("/applications/:appID/workflow/exec", a.execApplicationWorkflow)
-	group.POST("/applications/:appID/workflow/cancel", a.cancelApplicationWorkflow)
+func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
+	group.GET("/applications", app.listApplications)
+	group.POST("/applications", app.createApplications)
+	group.GET("/applications/:appID/workflows", app.listApplicationWorkflows)
+	group.GET("/applications/:appID/components", app.listApplicationComponents)
+	group.PUT("/applications/:appID/workflow", app.updateApplicationWorkflow)
+	group.DELETE("/applications/:appID/resources", app.deleteApplicationResources)
+	group.POST("/applications/:appID/workflow/exec", app.execApplicationWorkflow)
+	group.POST("/applications/:appID/workflow/cancel", app.cancelApplicationWorkflow)
 }
 
-func (a *applications) createApplications(c *gin.Context) {
+func (app *applications) createApplications(c *gin.Context) {
 	var req apis.CreateApplicationsRequest
 	if err := c.Bind(&req); err != nil {
 		klog.Error(err)
@@ -47,7 +48,7 @@ func (a *applications) createApplications(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, err := a.ApplicationService.CreateApplications(ctx, req)
+	resp, err := app.ApplicationService.CreateApplications(ctx, req)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return
@@ -55,8 +56,8 @@ func (a *applications) createApplications(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (a *applications) listApplications(c *gin.Context) {
-	apps, err := a.ApplicationService.ListApplications(c.Request.Context())
+func (app *applications) listApplications(c *gin.Context) {
+	apps, err := app.ApplicationService.ListApplications(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apps)
 		return
@@ -64,14 +65,14 @@ func (a *applications) listApplications(c *gin.Context) {
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
 }
 
-func (a *applications) listApplicationWorkflows(c *gin.Context) {
+func (app *applications) listApplicationWorkflows(c *gin.Context) {
 	appID := strings.TrimSpace(c.Param("appID"))
 	if appID == "" {
 		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
 		return
 	}
 	ctx := c.Request.Context()
-	workflows, err := a.ApplicationService.ListApplicationWorkflows(ctx, appID)
+	workflows, err := app.ApplicationService.ListApplicationWorkflows(ctx, appID)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return
@@ -94,13 +95,43 @@ func (a *applications) listApplicationWorkflows(c *gin.Context) {
 	c.JSON(http.StatusOK, apis.ListApplicationWorkflowsResponse{Workflows: resp})
 }
 
-func (a *applications) deleteApplicationResources(c *gin.Context) {
+func (app *applications) listApplicationComponents(c *gin.Context) {
 	appID := strings.TrimSpace(c.Param("appID"))
 	if appID == "" {
 		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
 		return
 	}
-	resp, err := a.ApplicationService.CleanupApplicationResources(c.Request.Context(), appID)
+	ctx := c.Request.Context()
+	components, err := app.ApplicationService.ListApplicationComponents(ctx, appID)
+	if err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+	resp := make([]*apis.ApplicationComponent, 0, len(components))
+	for _, comp := range components {
+		if comp == nil {
+			continue
+		}
+		dto, err := assembler.ConvertComponentModelToDTO(comp)
+		if err != nil {
+			klog.Errorf("convert component dto failed appID=%s component=%s: %v", appID, comp.Name, err)
+			bcode.ReturnError(c, err)
+			return
+		}
+		if dto != nil {
+			resp = append(resp, dto)
+		}
+	}
+	c.JSON(http.StatusOK, apis.ListApplicationComponentsResponse{Components: resp})
+}
+
+func (app *applications) deleteApplicationResources(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+	resp, err := app.ApplicationService.CleanupApplicationResources(c.Request.Context(), appID)
 	if err != nil {
 		if resp != nil {
 			c.JSON(http.StatusInternalServerError, resp)
@@ -112,7 +143,7 @@ func (a *applications) deleteApplicationResources(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (a *applications) updateApplicationWorkflow(c *gin.Context) {
+func (app *applications) updateApplicationWorkflow(c *gin.Context) {
 	appID := strings.TrimSpace(c.Param("appID"))
 	if appID == "" {
 		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
@@ -131,7 +162,7 @@ func (a *applications) updateApplicationWorkflow(c *gin.Context) {
 	}
 	ctx := c.Request.Context()
 	klog.Infof("update workflow request received appID=%s workflowId=%s name=%s", appID, req.WorkflowID, req.Name)
-	resp, err := a.ApplicationService.UpdateApplicationWorkflow(ctx, appID, req)
+	resp, err := app.ApplicationService.UpdateApplicationWorkflow(ctx, appID, req)
 	if err != nil {
 		klog.Errorf("update workflow failed appID=%s workflowId=%s error=%v", appID, req.WorkflowID, err)
 		bcode.ReturnError(c, err)
@@ -162,7 +193,7 @@ func normalizeWorkflowSteps(steps []apis.CreateWorkflowStepRequest) {
 	}
 }
 
-func (a *applications) execApplicationWorkflow(c *gin.Context) {
+func (app *applications) execApplicationWorkflow(c *gin.Context) {
 	appID := strings.TrimSpace(c.Param("appID"))
 	if appID == "" {
 		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
@@ -179,7 +210,7 @@ func (a *applications) execApplicationWorkflow(c *gin.Context) {
 		return
 	}
 	ctx := c.Request.Context()
-	resp, err := a.WorkflowService.ExecWorkflowTaskForApp(ctx, appID, req.WorkflowID)
+	resp, err := app.WorkflowService.ExecWorkflowTaskForApp(ctx, appID, req.WorkflowID)
 	if err != nil {
 		bcode.ReturnError(c, err)
 		return
@@ -187,7 +218,7 @@ func (a *applications) execApplicationWorkflow(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (a *applications) cancelApplicationWorkflow(c *gin.Context) {
+func (app *applications) cancelApplicationWorkflow(c *gin.Context) {
 	appID := strings.TrimSpace(c.Param("appID"))
 	if appID == "" {
 		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
@@ -208,7 +239,7 @@ func (a *applications) cancelApplicationWorkflow(c *gin.Context) {
 		user = config.DefaultTaskRevoker
 	}
 	ctx := c.Request.Context()
-	if err := a.WorkflowService.CancelWorkflowTaskForApp(ctx, appID, user, req.TaskID, req.Reason); err != nil {
+	if err := app.WorkflowService.CancelWorkflowTaskForApp(ctx, appID, user, req.TaskID, req.Reason); err != nil {
 		bcode.ReturnError(c, err)
 		return
 	}
