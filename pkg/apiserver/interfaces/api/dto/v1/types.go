@@ -67,7 +67,8 @@ type CreateComponentRequest struct {
 }
 
 type TemplateRef struct {
-	ID string `json:"id"`
+	ID     string `json:"id"`
+	Target string `json:"target,omitempty"` // 目标模板组件名，用于精确匹配
 }
 
 type CreateWorkflowStepRequest struct {

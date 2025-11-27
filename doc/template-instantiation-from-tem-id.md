@@ -17,7 +17,7 @@
   "component": [
     {
       "name": "fnlz2z1lxe85k3me66og",
-      "Tem": { "id": "4tbupjg43ln3yj249l0v0fv8" }
+      "Tem": { "id": "4tbupjg43ln3yj249l0v0fv8", "target": "mysql" }
     }
   ]
 }
@@ -43,8 +43,10 @@
 - 组件级覆盖（按传入组件 `name`）：
   - `component.name` 统一替换模板组件的 `name`。
   - 特征中的资源名（例：PVC/Storage 名、Service 名、Deployment 名称前缀）以新组件名为前缀/整体替换，保持命名约定。
+  - 持久化存储命名：当模板存储名是通用名（如 `data`）或包含模板组件名时，实例化会用请求组件名或顶层应用名作为前缀重写（如 `tenant-a-mysql-app-data`），并同步到 init/sidecar 中同名存储；`claimName`/`sourceName` 仅在显式提供时按映射规则重写，不自动填充默认值。
   - 若模板包含副本数/计算资源等可调参数，可允许用户覆盖；未提供则沿用模板默认。
   - 支持显式覆盖：`properties.env` 可用用户输入覆盖模板同名环境变量；`properties.secret` 仅对 `type=secret` 的组件生效，用于覆盖模板的 Secret 数据。
+  - 精确匹配：`Tem.target`（模板组件名）用于指定要覆盖的模板组件；未提供时按类型优先匹配，可能存在不确定性。
 - 必须重生成：
   - 组件/trait 唯一 ID、内部 UID。
   - 端口号若有冲突需重新分配（保留模板端口偏好，冲突时寻找可用端口）。
@@ -77,6 +79,7 @@
 
 ## 测试要点
 - 正常路径：基于模板成功创建应用，组件名称和存储名被正确替换。
+- 存储重写：持久化存储在主组件及 init/sidecar 中的名称保持一致的重写结果，`claimName`/`sourceName` 仅在声明时跟随重写，不自动补全。
 - 幂等：相同 `name` 或幂等 token 的重复请求只创建一次。
 - 冲突：端口/名称冲突时返回 409，不产生脏资源。
 - 敏感信息：模板中含 Secret 占位符时，实例化要求用户提供或从配置加载；拒绝直接复制明文。
@@ -126,6 +129,7 @@
   - 组件重命名：同模板多个条目可为不同组件指定新名称。
   - 环境变量覆盖：`properties.env` 覆盖模板 env。
   - Secret 覆盖：仅 `type=secret` 组件的 `properties.secret` 会覆盖模板 Secret 数据。
+  - 精确匹配：推荐在 `Tem` 中提供 `target`（模板组件名），确保覆盖应用到指定组件；缺失 target 时按类型匹配并存在不确定性。
   未匹配的模板组件按 baseName（若提供）或模板组件名生成新名称。
 - 模板未启用错误：当模板 `tmp_enable=false` 时，同样的克隆请求应返回 400，消息 `template application is not enabled`。
 - 模板缺失或 ID 为空：`Tem.id` 为空应返回 400（`template id is required`）；不存在的 ID 返回 404（`application name is not exist`）。

@@ -53,11 +53,17 @@ type componentOverride struct {
 	name       string
 	compType   config.JobType
 	properties apisv1.Properties
+	target     string
 }
 
 type templateRequest struct {
 	baseName  string
 	overrides []componentOverride
+}
+
+func lastSegment(name string) string {
+	parts := strings.Split(name, "-")
+	return parts[len(parts)-1]
 }
 
 func NewApplicationService() ApplicationsService {
@@ -102,7 +108,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 
 	//分解所有的组件
-	resolvedComponents, err := c.resolveComponents(ctx, application.Namespace, req.Component)
+	resolvedComponents, err := c.resolveComponents(ctx, application.Namespace, application.Name, req.Component)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +193,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	return base, nil
 }
 
-func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespace string, reqComponents []apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
+func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespace, appName string, reqComponents []apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
 	components := make([]apisv1.CreateComponentRequest, 0, len(reqComponents))
 	templateOrder := make([]string, 0)
 	templateMap := make(map[string]*templateRequest)
@@ -202,18 +208,19 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 		templateID := strings.TrimSpace(comp.Template.ID)
 		tr, ok := templateMap[templateID]
 		if !ok {
-			tr = &templateRequest{}
+			tr = &templateRequest{baseName: strings.TrimSpace(appName)}
 			templateMap[templateID] = tr
 			templateOrder = append(templateOrder, templateID)
 		}
 		if tr.baseName == "" {
-			tr.baseName = strings.TrimSpace(comp.Name)
+			tr.baseName = strings.TrimSpace(appName)
 		}
-		// 记录需要覆盖的组件名和类型
+		// 记录需要覆盖的组件名、类型和目标模板组件
 		tr.overrides = append(tr.overrides, componentOverride{
 			name:       strings.TrimSpace(comp.Name),
 			compType:   comp.ComponentType,
 			properties: comp.Properties,
+			target:     strings.TrimSpace(comp.Template.Target),
 		})
 	}
 
@@ -271,7 +278,19 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		overrides[i] = ovState{componentOverride: o}
 	}
 
-	pickOverride := func(jobType config.JobType) *componentOverride {
+	pickOverride := func(templateName string, jobType config.JobType) (*componentOverride, error) {
+		for i := range overrides {
+			if overrides[i].used {
+				continue
+			}
+			if overrides[i].target != "" && overrides[i].target == templateName {
+				if overrides[i].compType != "" && overrides[i].compType != jobType {
+					return nil, bcode.ErrTemplateTargetNotFound
+				}
+				overrides[i].used = true
+				return &overrides[i].componentOverride, nil
+			}
+		}
 		for i := range overrides {
 			if overrides[i].used {
 				continue
@@ -280,44 +299,67 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 				continue
 			}
 			overrides[i].used = true
-			return &overrides[i].componentOverride
+			return &overrides[i].componentOverride, nil
 		}
-		return nil
+		return nil, nil
 	}
 
-	clones := make([]apisv1.CreateComponentRequest, 0, len(templateComponents))
+	type compPlan struct {
+		templateComp *model.ApplicationComponent
+		targetName   string
+		override     apisv1.Properties
+	}
+	nameMap := make(map[string]string)
+	typeNameMap := make(map[config.JobType]string)
+	plans := make([]compPlan, 0, len(templateComponents))
 	for _, templateComp := range templateComponents {
 		if templateComp == nil {
 			continue
 		}
-		override := pickOverride(templateComp.ComponentType)
+		override, err := pickOverride(templateComp.Name, templateComp.ComponentType)
+		if err != nil {
+			return nil, err
+		}
 
 		targetName := templateComp.Name
 		if override != nil && override.name != "" {
 			targetName = override.name
 		} else if baseName != "" {
-			if len(templateComponents) == 1 {
-				targetName = baseName
-			} else {
-				targetName = fmt.Sprintf("%s-%s", baseName, templateComp.Name)
-			}
+			targetName = fmt.Sprintf("%s-%s", baseName, lastSegment(templateComp.Name))
 		}
 
 		var overrideProps apisv1.Properties
 		if override != nil {
 			overrideProps = override.properties
 		}
+		nameMap[templateComp.Name] = targetName
+		nameMap[fmt.Sprintf("tem-%s", templateComp.Name)] = targetName
+		if _, ok := typeNameMap[templateComp.ComponentType]; !ok {
+			typeNameMap[templateComp.ComponentType] = targetName
+		}
+		plans = append(plans, compPlan{templateComp: templateComp, targetName: targetName, override: overrideProps})
+	}
 
-		clone, err := convertComponentFromTemplate(templateComp, targetName, namespace, overrideProps)
+	clones := make([]apisv1.CreateComponentRequest, 0, len(plans))
+	for _, plan := range plans {
+		clone, err := convertComponentFromTemplate(plan.templateComp, plan.targetName, baseName, namespace, plan.override, nameMap, typeNameMap)
 		if err != nil {
 			return nil, err
 		}
 		clones = append(clones, *clone)
 	}
+	for _, ov := range overrides {
+		if ov.used {
+			continue
+		}
+		if ov.target != "" {
+			return nil, bcode.ErrTemplateTargetNotFound
+		}
+	}
 	return clones, nil
 }
 
-func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, namespace string, overrideProps apisv1.Properties) (*apisv1.CreateComponentRequest, error) {
+func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, baseName, namespace string, overrideProps apisv1.Properties, nameMap map[string]string, typeNameMap map[config.JobType]string) (*apisv1.CreateComponentRequest, error) {
 	var properties apisv1.Properties
 	if err := decodeJSONStruct(templateComp.Properties, &properties); err != nil {
 		return nil, fmt.Errorf("convert template component %s properties: %w", templateComp.Name, err)
@@ -328,7 +370,7 @@ func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newN
 	}
 
 	applyPropertyOverrides(&properties, overrideProps, templateComp.ComponentType)
-	rewriteTraitsForTemplate(&traits, templateComp.Name, newName, namespace)
+	rewriteTraitsForTemplate(&traits, templateComp.Name, newName, baseName, namespace, nameMap, typeNameMap)
 
 	return &apisv1.CreateComponentRequest{
 		Name:          newName,
@@ -375,21 +417,54 @@ func applyPropertyOverrides(props *apisv1.Properties, override apisv1.Properties
 }
 
 // rewriteTraitsForTemplate 通过模版重写特征等元数据
-func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace string) {
+func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, baseName, namespace string, nameMap map[string]string, typeNameMap map[config.JobType]string) {
 	if traits == nil {
 		return
 	}
 
+	rewriteNameCandidate := func(name string) string {
+		if nameMap != nil {
+			if mapped, ok := nameMap[name]; ok {
+				return mapped
+			}
+		}
+		if name == "" {
+			return name
+		}
+		if strings.Contains(name, oldName) {
+			return strings.ReplaceAll(name, oldName, newName)
+		}
+		return name
+	}
+
+	volumePrefix := strings.TrimSpace(baseName)
+	if volumePrefix == "" {
+		volumePrefix = newName
+	}
+
 	for i := range traits.Storage {
 		storage := &traits.Storage[i]
-		if storage.Name == "" || storage.Name == oldName {
-			storage.Name = newName
+		if storage.Type == config.StorageTypePersistent {
+			switch {
+			case storage.Name == "" || storage.Name == oldName:
+				storage.Name = newName
+			case strings.Contains(storage.Name, oldName):
+				storage.Name = strings.ReplaceAll(storage.Name, oldName, newName)
+			case volumePrefix != "" && !(strings.HasPrefix(storage.Name, volumePrefix+"-") || storage.Name == volumePrefix):
+				storage.Name = fmt.Sprintf("%s-%s", volumePrefix, storage.Name)
+			}
+		} else {
+			if storage.Name == "" || storage.Name == oldName {
+				storage.Name = newName
+			} else {
+				storage.Name = rewriteNameCandidate(storage.Name)
+			}
 		}
-		if storage.ClaimName == "" || storage.ClaimName == oldName {
-			storage.ClaimName = newName
+		if storage.ClaimName != "" {
+			storage.ClaimName = rewriteNameCandidate(storage.ClaimName)
 		}
-		if storage.SourceName == "" || storage.SourceName == oldName {
-			storage.SourceName = newName
+		if storage.SourceName != "" {
+			storage.SourceName = rewriteNameCandidate(storage.SourceName)
 		}
 	}
 
@@ -419,8 +494,16 @@ func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace
 	}
 
 	for i := range traits.EnvFrom {
-		if traits.EnvFrom[i].SourceName == oldName {
-			traits.EnvFrom[i].SourceName = newName
+		traits.EnvFrom[i].SourceName = rewriteNameCandidate(traits.EnvFrom[i].SourceName)
+	}
+
+	for i := range traits.Envs {
+		env := &traits.Envs[i]
+		if env.ValueFrom.Secret != nil {
+			env.ValueFrom.Secret.Name = rewriteNameCandidate(env.ValueFrom.Secret.Name)
+		}
+		if env.ValueFrom.Config != nil {
+			env.ValueFrom.Config.Name = rewriteNameCandidate(env.ValueFrom.Config.Name)
 		}
 	}
 
@@ -429,7 +512,7 @@ func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace
 		if initTrait.Name == "" || initTrait.Name == oldName {
 			initTrait.Name = fmt.Sprintf("%s-init-%d", newName, i+1)
 		}
-		rewriteTraitsForTemplate(&initTrait.Traits, oldName, newName, namespace)
+		rewriteTraitsForTemplate(&initTrait.Traits, oldName, newName, baseName, namespace, nameMap, typeNameMap)
 	}
 
 	for i := range traits.Sidecar {
@@ -437,7 +520,7 @@ func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, namespace
 		if sidecar.Name == "" || sidecar.Name == oldName {
 			sidecar.Name = fmt.Sprintf("%s-sidecar-%d", newName, i+1)
 		}
-		rewriteTraitsForTemplate(&sidecar.Traits, oldName, newName, namespace)
+		rewriteTraitsForTemplate(&sidecar.Traits, oldName, newName, baseName, namespace, nameMap, typeNameMap)
 	}
 }
 

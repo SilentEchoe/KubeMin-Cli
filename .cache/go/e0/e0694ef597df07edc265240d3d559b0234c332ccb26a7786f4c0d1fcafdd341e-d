@@ -1,0 +1,10 @@
+./doc.go
+./env.go
+./ingress.go
+./init.go
+./probe.go
+./processor.go
+./rbac.go
+./resources.go
+./sidecar.go
+./storage.go

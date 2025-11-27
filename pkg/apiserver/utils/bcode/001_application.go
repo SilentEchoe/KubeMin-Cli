@@ -26,3 +26,6 @@ var ErrTemplateComponentMissing = NewBcode(400, 10008, "template application has
 
 // ErrTemplateIDMissing template id is required when using Tem
 var ErrTemplateIDMissing = NewBcode(400, 10009, "template id is required")
+
+// ErrTemplateTargetNotFound template target not found or mismatch
+var ErrTemplateTargetNotFound = NewBcode(400, 10010, "template target component not found or type mismatch")
