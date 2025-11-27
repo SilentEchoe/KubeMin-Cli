@@ -1,6 +1,0 @@
-./certificatesigningrequest.go
-./certificatesigningrequestcondition.go
-./certificatesigningrequestspec.go
-./certificatesigningrequeststatus.go
-./clustertrustbundle.go
-./clustertrustbundlespec.go

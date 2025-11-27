@@ -1,5 +1,0 @@
-./extract.go
-./fieldmanager.go
-./gvkparser.go
-./scalehandler.go
-./typeconverter.go

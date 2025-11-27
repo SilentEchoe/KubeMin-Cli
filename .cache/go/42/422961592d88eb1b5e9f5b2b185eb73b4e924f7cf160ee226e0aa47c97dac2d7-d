@@ -1,6 +1,0 @@
-./doc.go
-./eviction.go
-./eviction_expansion.go
-./generated_expansion.go
-./poddisruptionbudget.go
-./policy_client.go

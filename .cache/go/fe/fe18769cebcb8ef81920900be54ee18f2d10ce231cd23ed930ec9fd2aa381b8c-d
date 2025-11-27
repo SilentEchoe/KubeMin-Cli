@@ -1,8 +1,0 @@
-./backoff.go
-./delay.go
-./doc.go
-./error.go
-./loop.go
-./poll.go
-./timer.go
-./wait.go

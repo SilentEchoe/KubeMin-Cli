@@ -1,4 +1,0 @@
-./autoscaling_client.go
-./doc.go
-./generated_expansion.go
-./horizontalpodautoscaler.go

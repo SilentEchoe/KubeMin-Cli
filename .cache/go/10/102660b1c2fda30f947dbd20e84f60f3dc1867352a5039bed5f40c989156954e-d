@@ -1,6 +1,0 @@
-./celdeviceselector.go
-./deviceselector.go
-./devicetaint.go
-./devicetaintrule.go
-./devicetaintrulespec.go
-./devicetaintselector.go

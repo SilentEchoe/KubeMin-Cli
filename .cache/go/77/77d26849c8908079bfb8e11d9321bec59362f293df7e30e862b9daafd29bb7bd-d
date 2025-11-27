@@ -1,6 +1,0 @@
-./doc.go
-./fake_admissionregistration_client.go
-./fake_mutatingwebhookconfiguration.go
-./fake_validatingadmissionpolicy.go
-./fake_validatingadmissionpolicybinding.go
-./fake_validatingwebhookconfiguration.go

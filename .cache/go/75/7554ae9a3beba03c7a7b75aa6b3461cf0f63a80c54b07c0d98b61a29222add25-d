@@ -1,6 +1,0 @@
-./doc.go
-./fake_authorization_client.go
-./fake_localsubjectaccessreview.go
-./fake_selfsubjectaccessreview.go
-./fake_selfsubjectrulesreview.go
-./fake_subjectaccessreview.go

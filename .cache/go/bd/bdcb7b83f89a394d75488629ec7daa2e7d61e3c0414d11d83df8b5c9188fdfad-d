@@ -1,6 +1,0 @@
-./base.go
-./display.go
-./models.go
-./operations.go
-./reader.go
-./writer.go

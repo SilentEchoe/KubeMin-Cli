@@ -1,8 +1,0 @@
-./application.go
-./service.go
-./workflow.go
-./application_cleanup_test.go
-./application_components_test.go
-./application_template_test.go
-./application_workflow_test.go
-./workflow_test.go

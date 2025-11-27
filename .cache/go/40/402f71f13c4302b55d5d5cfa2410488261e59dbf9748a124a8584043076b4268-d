@@ -1,7 +1,0 @@
-./doc.go
-./fake_ingress.go
-./fake_ingressclass.go
-./fake_ipaddress.go
-./fake_networking_client.go
-./fake_networkpolicy.go
-./fake_servicecidr.go

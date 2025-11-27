@@ -1,6 +1,0 @@
-./doc.go
-./fake_deviceclass.go
-./fake_resource_client.go
-./fake_resourceclaim.go
-./fake_resourceclaimtemplate.go
-./fake_resourceslice.go
