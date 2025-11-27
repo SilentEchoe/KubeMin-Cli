@@ -20,6 +20,8 @@
 *.bin
 /bin/
 .gocache
+.cache/
+.*/ # ignore all dot-prefixed directories
 
 
 # Local log files
@@ -29,4 +31,3 @@
 .gocache/
 .buildx-cache/
 /.buildx-cache/
-
