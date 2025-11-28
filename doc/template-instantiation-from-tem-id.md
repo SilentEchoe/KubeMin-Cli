@@ -44,6 +44,7 @@
   - `component.name` 统一替换模板组件的 `name`。
   - 特征中的资源名（例：PVC/Storage 名、Service 名、Deployment 名称前缀）以新组件名为前缀/整体替换，保持命名约定。
   - 持久化存储命名：当模板存储名是通用名（如 `data`）或包含模板组件名时，实例化会用请求组件名或顶层应用名作为前缀重写（如 `tenant-a-mysql-app-data`），并同步到 init/sidecar 中同名存储；`claimName`/`sourceName` 仅在显式提供时按映射规则重写，不自动填充默认值。
+  - 存储创建策略：`create=true` 视为使用 volumeClaimTemplates 风格创建 PVC（按重写后的存储名生成 PVC，并在主容器/init/sidecar 以同名卷挂载，`claimName` 可留空）；`create=false` 表示引用已有 PVC，实例化后依赖重写后的 `name`/显式 `claimName` 绑定现有 PVC，不会创建新卷。
   - 若模板包含副本数/计算资源等可调参数，可允许用户覆盖；未提供则沿用模板默认。
   - 支持显式覆盖：`properties.env` 可用用户输入覆盖模板同名环境变量；`properties.secret` 仅对 `type=secret` 的组件生效，用于覆盖模板的 Secret 数据。
   - 精确匹配：`Tem.target`（模板组件名）用于指定要覆盖的模板组件；未提供时按类型优先匹配，可能存在不确定性。
@@ -80,6 +81,7 @@
 ## 测试要点
 - 正常路径：基于模板成功创建应用，组件名称和存储名被正确替换。
 - 存储重写：持久化存储在主组件及 init/sidecar 中的名称保持一致的重写结果，`claimName`/`sourceName` 仅在声明时跟随重写，不自动补全。
+- 存储创建策略：`create=true` 的模板实例化后应生成新 PVC 并挂载同名卷；`create=false` 的模板实例化后应引用已存在的 PVC（按重写后的 `name`/显式 `claimName`），否则挂载会失败。
 - 幂等：相同 `name` 或幂等 token 的重复请求只创建一次。
 - 冲突：端口/名称冲突时返回 409，不产生脏资源。
 - 敏感信息：模板中含 Secret 占位符时，实例化要求用户提供或从配置加载；拒绝直接复制明文。
@@ -124,7 +126,7 @@
     ]
   }
   ```
-  验证：调用 `/api/v1/applications/{appID}/components`，检查组件名、traits.storage 的 `name/claimName/sourceName`、Ingress backend 的 `serviceName`、RBAC 的 `serviceAccount/roleName/bindingName` 均替换成 `tenant-a-mysql`。
+  验证：调用 `/api/v1/applications/{appID}/components`，检查组件名、traits.storage 的 `name`（以及已声明的 `claimName`/`sourceName`）被重写，Ingress backend 的 `serviceName`、RBAC 的 `serviceAccount/roleName/bindingName` 等按规则替换为新组件名。
 - 覆盖规则（单模板多条目不重复克隆）：如果同一个 `Tem.id` 在请求中出现多次，只克隆一套模板组件，后续同模板条目仅用于覆盖匹配的组件（按类型优先匹配），支持：
   - 组件重命名：同模板多个条目可为不同组件指定新名称。
   - 环境变量覆盖：`properties.env` 覆盖模板 env。
