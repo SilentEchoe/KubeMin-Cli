@@ -26,6 +26,7 @@ func NewApplications() Interface {
 
 func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/applications", app.listApplications)
+	group.GET("/applications/templates", app.listTemplateApplications)
 	group.POST("/applications", app.createApplications)
 	group.GET("/applications/:appID/workflows", app.listApplicationWorkflows)
 	group.GET("/applications/:appID/components", app.listApplicationComponents)
@@ -33,6 +34,7 @@ func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.DELETE("/applications/:appID/resources", app.deleteApplicationResources)
 	group.POST("/applications/:appID/workflow/exec", app.execApplicationWorkflow)
 	group.POST("/applications/:appID/workflow/cancel", app.cancelApplicationWorkflow)
+	group.GET("/workflow/tasks/:taskID/status", app.getWorkflowTaskStatus)
 }
 
 func (app *applications) createApplications(c *gin.Context) {
@@ -60,6 +62,15 @@ func (app *applications) listApplications(c *gin.Context) {
 	apps, err := app.ApplicationService.ListApplications(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, apps)
+		return
+	}
+	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
+}
+
+func (app *applications) listTemplateApplications(c *gin.Context) {
+	apps, err := app.ApplicationService.ListTemplateApplications(c.Request.Context())
+	if err != nil {
+		bcode.ReturnError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, apis.ListApplicationResponse{Applications: apps})
@@ -244,4 +255,19 @@ func (app *applications) cancelApplicationWorkflow(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, apis.CancelWorkflowResponse{TaskID: req.TaskID, Status: string(config.StatusCancelled)})
+}
+
+func (app *applications) getWorkflowTaskStatus(c *gin.Context) {
+	taskID := strings.TrimSpace(c.Param("taskID"))
+	if taskID == "" {
+		bcode.ReturnError(c, bcode.ErrWorkflowTaskNotExist)
+		return
+	}
+	ctx := c.Request.Context()
+	resp, err := app.WorkflowService.GetTaskStatus(ctx, taskID)
+	if err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }

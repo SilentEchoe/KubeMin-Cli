@@ -28,6 +28,7 @@ type fakeWorkflowService struct {
 	cancelCalled       bool
 	lastUser           string
 	lastReason         string
+	taskStatusResp     *apis.TaskStatusResponse
 }
 
 func (f *fakeWorkflowService) ListApplicationWorkflow(context.Context, *model.Applications) error {
@@ -83,6 +84,13 @@ func (f *fakeWorkflowService) MarkTaskStatus(context.Context, string, config.Sta
 	return false, nil
 }
 
+func (f *fakeWorkflowService) GetTaskStatus(context.Context, string) (*apis.TaskStatusResponse, error) {
+	if f.taskStatusResp == nil {
+		return &apis.TaskStatusResponse{TaskID: "task-123", Status: string(config.StatusRunning)}, nil
+	}
+	return f.taskStatusResp, nil
+}
+
 type noopApplicationsService struct{}
 
 func (noopApplicationsService) CreateApplications(context.Context, apis.CreateApplicationsRequest) (*apis.ApplicationBase, error) {
@@ -92,6 +100,9 @@ func (noopApplicationsService) GetApplication(context.Context, string) (*model.A
 	return nil, nil
 }
 func (noopApplicationsService) ListApplications(context.Context) ([]*apis.ApplicationBase, error) {
+	return nil, nil
+}
+func (noopApplicationsService) ListTemplateApplications(context.Context) ([]*apis.ApplicationBase, error) {
 	return nil, nil
 }
 func (noopApplicationsService) DeleteApplication(context.Context, *model.Applications) error {
@@ -118,6 +129,16 @@ type workflowListApplicationService struct {
 
 func (s workflowListApplicationService) ListApplicationWorkflows(context.Context, string) ([]*model.Workflow, error) {
 	return s.workflows, s.err
+}
+
+type templateApplicationService struct {
+	noopApplicationsService
+	templates []*apis.ApplicationBase
+	err       error
+}
+
+func (s templateApplicationService) ListTemplateApplications(context.Context) ([]*apis.ApplicationBase, error) {
+	return s.templates, s.err
 }
 
 func TestExecApplicationWorkflowEndpoint(t *testing.T) {
@@ -193,6 +214,45 @@ func TestCancelApplicationWorkflowEndpoint(t *testing.T) {
 	}
 }
 
+func TestGetWorkflowTaskStatusEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	svc := &fakeWorkflowService{
+		taskStatusResp: &apis.TaskStatusResponse{
+			TaskID:       "task-abc",
+			Status:       string(config.StatusQueued),
+			WorkflowID:   "wf-1",
+			WorkflowName: "deploy",
+			AppID:        "app-1",
+		},
+	}
+	appHandler := &applications{
+		ApplicationService: noopApplicationsService{},
+		WorkflowService:    svc,
+	}
+	r := gin.New()
+	r.GET("/workflow/tasks/:taskID/status", appHandler.getWorkflowTaskStatus)
+
+	req := httptest.NewRequest(http.MethodGet, "/workflow/tasks/task-abc/status", nil)
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.Code)
+	}
+
+	var payload apis.TaskStatusResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if payload.TaskID != "task-abc" || payload.Status != string(config.StatusQueued) {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	if payload.WorkflowID != "wf-1" || payload.WorkflowName != "deploy" || payload.AppID != "app-1" {
+		t.Fatalf("unexpected workflow info: %+v", payload)
+	}
+}
+
 func TestListApplicationWorkflowsEndpoint(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	steps := &model.WorkflowSteps{
@@ -252,6 +312,42 @@ func TestListApplicationWorkflowsEndpoint(t *testing.T) {
 	}
 	if len(payload.Workflows[0].Steps[0].Components) != 1 || payload.Workflows[0].Steps[0].Components[0] != "nginx" {
 		t.Fatalf("unexpected workflow step components: %+v", payload.Workflows[0].Steps[0].Components)
+	}
+}
+
+func TestListTemplateApplicationsEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	appSvc := templateApplicationService{
+		templates: []*apis.ApplicationBase{
+			{ID: "app-tmpl-1", Name: "tmpl-1", TmpEnable: true},
+			{ID: "app-tmpl-2", Name: "tmpl-2", TmpEnable: true},
+		},
+	}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.GET("/applications/templates", appHandler.listTemplateApplications)
+
+	req := httptest.NewRequest(http.MethodGet, "/applications/templates", nil)
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.Code)
+	}
+
+	var payload apis.ListApplicationResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(payload.Applications) != 2 {
+		t.Fatalf("expected 2 templates, got %d", len(payload.Applications))
+	}
+	if payload.Applications[0].ID != "app-tmpl-1" {
+		t.Fatalf("unexpected first template: %+v", payload.Applications[0])
 	}
 }
 

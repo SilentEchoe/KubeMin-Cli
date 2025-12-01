@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -32,6 +33,7 @@ type WorkflowService interface {
 	CancelWorkflowTask(ctx context.Context, userName, taskID, reason string) error
 	CancelWorkflowTaskForApp(ctx context.Context, appID, userName, taskID, reason string) error
 	MarkTaskStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
+	GetTaskStatus(ctx context.Context, taskID string) (*apis.TaskStatusResponse, error)
 }
 
 type workflowServiceImpl struct {
@@ -127,6 +129,28 @@ func (w *workflowServiceImpl) ExecWorkflowTask(ctx context.Context, workflowID s
 		return nil, err
 	}
 	return w.enqueueWorkflowTask(ctx, workflow)
+}
+
+func (w *workflowServiceImpl) GetTaskStatus(ctx context.Context, taskID string) (*apis.TaskStatusResponse, error) {
+	taskID = strings.TrimSpace(taskID)
+	if taskID == "" {
+		return nil, bcode.ErrWorkflowTaskNotExist
+	}
+	task, err := repository.TaskByID(ctx, w.Store, taskID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrWorkflowTaskNotExist
+		}
+		return nil, err
+	}
+	return &apis.TaskStatusResponse{
+		TaskID:       task.TaskID,
+		Status:       string(task.Status),
+		WorkflowID:   task.WorkflowID,
+		WorkflowName: task.WorkflowName,
+		AppID:        task.AppID,
+		Type:         task.Type,
+	}, nil
 }
 
 func (w *workflowServiceImpl) ExecWorkflowTaskForApp(ctx context.Context, appID, workflowID string) (*apis.ExecWorkflowResponse, error) {

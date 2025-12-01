@@ -37,6 +37,7 @@ type ApplicationsService interface {
 	CreateApplications(context.Context, apisv1.CreateApplicationsRequest) (*apisv1.ApplicationBase, error)
 	GetApplication(ctx context.Context, appName string) (*model.Applications, error)
 	ListApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error)
+	ListTemplateApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error)
 	DeleteApplication(ctx context.Context, app *model.Applications) error
 	CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error)
 	UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error)
@@ -750,6 +751,31 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apis
 	var list []*apisv1.ApplicationBase
 	for _, app := range apps {
 		// 这里应该是个WorkflowIds
+		appBase := assembler.ConvertAppModelToBase(app, "")
+		list = append(list, appBase)
+	}
+	sort.Slice(list, func(i, j int) bool {
+		return list[i].UpdateTime.Unix() > list[j].UpdateTime.Unix()
+	})
+	return list, nil
+}
+
+// ListTemplateApplications lists applications marked as templates (tmp_enable=true)
+func (c *applicationsServiceImpl) ListTemplateApplications(ctx context.Context) ([]*apisv1.ApplicationBase, error) {
+	listOptions := datastore.ListOptions{
+		Page:     0,
+		PageSize: 0, // no pagination to ensure all templates returned
+	}
+
+	apps, err := repository.ListApplications(ctx, c.Store, listOptions)
+	if err != nil {
+		return nil, err
+	}
+	var list []*apisv1.ApplicationBase
+	for _, app := range apps {
+		if app == nil || !app.TmpEnable {
+			continue
+		}
 		appBase := assembler.ConvertAppModelToBase(app, "")
 		list = append(list, appBase)
 	}

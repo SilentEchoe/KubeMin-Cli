@@ -201,6 +201,15 @@ type CancelWorkflowResponse struct {
 	Status string `json:"status"`
 }
 
+type TaskStatusResponse struct {
+	TaskID       string                  `json:"taskId"`
+	Status       string                  `json:"status"`
+	WorkflowID   string                  `json:"workflowId,omitempty"`
+	WorkflowName string                  `json:"workflowName,omitempty"`
+	AppID        string                  `json:"appId,omitempty"`
+	Type         config.WorkflowTaskType `json:"type,omitempty"`
+}
+
 type ListApplicationWorkflowsResponse struct {
 	Workflows []*ApplicationWorkflow `json:"workflows"`
 }

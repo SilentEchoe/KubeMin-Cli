@@ -11,3 +11,5 @@ var ErrCreateComponents = NewBcode(400, 20003, "workflow components create failu
 var ErrExecWorkflow = NewBcode(400, 20004, "workflow exec failure")
 
 var ErrWorkflowNotExist = NewBcode(404, 20005, "workflow not found")
+
+var ErrWorkflowTaskNotExist = NewBcode(404, 20006, "workflow task not found")
