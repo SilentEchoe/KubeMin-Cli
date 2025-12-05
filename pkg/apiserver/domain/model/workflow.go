@@ -101,5 +101,8 @@ func (w *Workflow) Index() map[string]interface{} {
 	if w.Name != "" {
 		index["name"] = w.Name
 	}
+	if w.AppID != "" {
+		index["appid"] = w.AppID
+	}
 	return index
 }
