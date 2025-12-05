@@ -73,6 +73,7 @@ func (c *DeployIngressJobCtl) SaveInfo(ctx context.Context) error {
 		WorkflowID:  c.job.WorkflowID,
 		ProductID:   c.job.ProjectID,
 		AppID:       c.job.AppID,
+		TaskID:      c.job.TaskID,
 		Status:      string(c.job.Status),
 		StartTime:   c.job.StartTime,
 		EndTime:     c.job.EndTime,

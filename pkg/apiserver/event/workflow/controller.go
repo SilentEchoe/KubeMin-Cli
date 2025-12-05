@@ -147,7 +147,7 @@ func resolveDefaultJobTimeout(cfg *config.Config) int64 {
 			return seconds
 		}
 	}
-	return config.DefaultJobTaskTimeoutSeconds
+	return int64(config.DefaultJobTaskTimeout)
 }
 
 func (w *WorkflowCtl) mutateTask(mut func(task *model.WorkflowQueue)) {

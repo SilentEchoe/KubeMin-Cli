@@ -16,6 +16,7 @@ type JobInfo struct {
 	WorkflowID  string `json:"workflow_id"`
 	ProductID   string `json:"product_Id"`
 	AppID       string `json:"app_id"`
+	TaskID      string `gorm:"column:taskid" json:"task_id"`
 	Status      string `bson:"status" json:"status"`
 	StartTime   int64  `bson:"start_time" json:"start_time"`
 	EndTime     int64  `bson:"end_time" json:"end_time"`
@@ -34,6 +35,7 @@ type JobTask struct {
 	WorkflowID string `json:"workflow_id"`
 	ProjectID  string `json:"project_id"`
 	AppID      string `json:"app_id"`
+	TaskID     string
 	JobInfo    interface{}
 	JobType    string
 	Status     config.Status
@@ -58,6 +60,12 @@ func (j *JobInfo) ShortTableName() string {
 
 func (j *JobInfo) Index() map[string]interface{} {
 	index := make(map[string]interface{})
+	if j.TaskID != "" {
+		index["taskid"] = j.TaskID
+	}
+	if j.WorkflowID != "" {
+		index["workflow_id"] = j.WorkflowID
+	}
 	return index
 }
 

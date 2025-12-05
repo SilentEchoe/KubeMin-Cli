@@ -223,6 +223,10 @@ func TestGetWorkflowTaskStatusEndpoint(t *testing.T) {
 			WorkflowID:   "wf-1",
 			WorkflowName: "deploy",
 			AppID:        "app-1",
+			Components: []apis.ComponentTaskStatus{
+				{Name: "web", Status: string(config.StatusRunning)},
+				{Name: "db", Status: string(config.StatusWaiting)},
+			},
 		},
 	}
 	appHandler := &applications{
@@ -250,6 +254,15 @@ func TestGetWorkflowTaskStatusEndpoint(t *testing.T) {
 	}
 	if payload.WorkflowID != "wf-1" || payload.WorkflowName != "deploy" || payload.AppID != "app-1" {
 		t.Fatalf("unexpected workflow info: %+v", payload)
+	}
+	if len(payload.Components) != 2 {
+		t.Fatalf("expected 2 components, got %d", len(payload.Components))
+	}
+	if payload.Components[0].Name != "web" || payload.Components[0].Status != string(config.StatusRunning) {
+		t.Fatalf("unexpected first component: %+v", payload.Components[0])
+	}
+	if payload.Components[1].Name != "db" || payload.Components[1].Status != string(config.StatusWaiting) {
+		t.Fatalf("unexpected second component: %+v", payload.Components[1])
 	}
 }
 

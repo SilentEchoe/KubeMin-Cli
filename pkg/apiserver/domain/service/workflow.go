@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -143,6 +144,74 @@ func (w *workflowServiceImpl) GetTaskStatus(ctx context.Context, taskID string) 
 		}
 		return nil, err
 	}
+
+	componentAggregates := make(map[string]*apis.ComponentTaskStatus)
+	jobEntities, err := w.Store.List(ctx, &model.JobInfo{TaskID: taskID}, &datastore.ListOptions{
+		SortBy: []datastore.SortOption{
+			{Key: "updatetime", Order: datastore.SortOrderAscending},
+			{Key: "createtime", Order: datastore.SortOrderAscending},
+		},
+	})
+	if err != nil && !errors.Is(err, datastore.ErrRecordNotExist) {
+		klog.Errorf("list job info for task %s failed: %v", taskID, err)
+	} else {
+		for _, entity := range jobEntities {
+			j, ok := entity.(*model.JobInfo)
+			if !ok {
+				continue
+			}
+			key := strings.ToLower(j.ServiceName)
+			agg, exists := componentAggregates[key]
+			if !exists {
+				agg = &apis.ComponentTaskStatus{
+					Name:      j.ServiceName,
+					Type:      j.Type,
+					Status:    j.Status,
+					Error:     j.Error,
+					StartTime: j.StartTime,
+					EndTime:   j.EndTime,
+				}
+				componentAggregates[key] = agg
+				continue
+			}
+			// Aggregate: prefer the most severe status; capture first error message.
+			agg.Status = chooseAggStatus(agg.Status, j.Status)
+			if agg.Error == "" && j.Error != "" {
+				agg.Error = j.Error
+			}
+			if agg.StartTime == 0 || (j.StartTime != 0 && j.StartTime < agg.StartTime) {
+				agg.StartTime = j.StartTime
+			}
+			if j.EndTime > agg.EndTime {
+				agg.EndTime = j.EndTime
+			}
+		}
+	}
+
+	// Fill in missing components from workflow definition so the caller can see
+	// waiting/queued/cancelled components even before job records exist.
+	if workflow, wfErr := repository.WorkflowByID(ctx, w.Store, task.WorkflowID); wfErr == nil {
+		names := collectWorkflowComponentNames(workflow)
+		defaultStatus := defaultComponentStatus(task.Status)
+		for _, name := range names {
+			key := strings.ToLower(name)
+			if _, exists := componentAggregates[key]; exists {
+				continue
+			}
+			componentAggregates[key] = &apis.ComponentTaskStatus{
+				Name:   name,
+				Status: defaultStatus,
+			}
+		}
+	} else if !errors.Is(wfErr, datastore.ErrRecordNotExist) {
+		klog.V(4).Infof("load workflow %s for task %s failed: %v", task.WorkflowID, taskID, wfErr)
+	}
+
+	componentStatuses := make([]apis.ComponentTaskStatus, 0, len(componentAggregates))
+	for _, cs := range componentAggregates {
+		componentStatuses = append(componentStatuses, *cs)
+	}
+
 	return &apis.TaskStatusResponse{
 		TaskID:       task.TaskID,
 		Status:       string(task.Status),
@@ -150,7 +219,84 @@ func (w *workflowServiceImpl) GetTaskStatus(ctx context.Context, taskID string) 
 		WorkflowName: task.WorkflowName,
 		AppID:        task.AppID,
 		Type:         task.Type,
+		Components:   componentStatuses,
 	}, nil
+}
+
+// chooseAggStatus merges two statuses, preferring failure/timeouts over running, over waiting.
+func chooseAggStatus(current, incoming string) string {
+	priority := func(status string) int {
+		switch config.Status(status) {
+		case config.StatusFailed, config.StatusTimeout, config.StatusReject:
+			return 4
+		case config.StatusCancelled:
+			return 3
+		case config.StatusRunning, config.StatusPrepare, config.StatusDistributed, config.StatusDebugBefore, config.StatusDebugAfter:
+			return 2
+		case config.StatusCompleted, config.StatusPassed:
+			return 1
+		default:
+			return 0
+		}
+	}
+	if priority(incoming) > priority(current) {
+		return incoming
+	}
+	return current
+}
+
+// collectWorkflowComponentNames extracts all unique component names declared in a workflow.
+func collectWorkflowComponentNames(workflow *model.Workflow) []string {
+	if workflow == nil || workflow.Steps == nil {
+		return nil
+	}
+	raw, err := json.Marshal(workflow.Steps)
+	if err != nil {
+		klog.Errorf("marshal workflow steps for %s failed: %v", workflow.ID, err)
+		return nil
+	}
+	var steps model.WorkflowSteps
+	if err := json.Unmarshal(raw, &steps); err != nil {
+		klog.Errorf("unmarshal workflow steps for %s failed: %v", workflow.ID, err)
+		return nil
+	}
+	seen := make(map[string]struct{})
+	var names []string
+	add := func(name string) {
+		if name == "" {
+			return
+		}
+		key := strings.ToLower(name)
+		if _, ok := seen[key]; ok {
+			return
+		}
+		seen[key] = struct{}{}
+		names = append(names, name)
+	}
+	for _, step := range steps.Steps {
+		for _, n := range step.ComponentNames() {
+			add(n)
+		}
+		for _, sub := range step.SubSteps {
+			for _, n := range sub.ComponentNames() {
+				add(n)
+			}
+		}
+	}
+	return names
+}
+
+func defaultComponentStatus(taskStatus config.Status) string {
+	switch taskStatus {
+	case config.StatusCancelled:
+		return string(config.StatusCancelled)
+	case config.StatusFailed, config.StatusTimeout, config.StatusReject:
+		return string(taskStatus)
+	case config.StatusCompleted:
+		return string(config.StatusCompleted)
+	default:
+		return string(config.StatusWaiting)
+	}
 }
 
 func (w *workflowServiceImpl) ExecWorkflowTaskForApp(ctx context.Context, appID, workflowID string) (*apis.ExecWorkflowResponse, error) {

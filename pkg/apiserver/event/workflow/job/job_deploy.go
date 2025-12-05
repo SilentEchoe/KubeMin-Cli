@@ -82,6 +82,7 @@ func (c *DeployJobCtl) SaveInfo(ctx context.Context) error {
 		WorkflowID:  c.job.WorkflowID,
 		ProductID:   c.job.ProjectID,
 		AppID:       c.job.AppID,
+		TaskID:      c.job.TaskID,
 		Status:      string(c.job.Status),
 		StartTime:   c.job.StartTime,
 		EndTime:     c.job.EndTime,
@@ -223,7 +224,7 @@ func getDeploymentStatus(kubeClient kubernetes.Interface, namespace string, name
 		}
 		return nil, err
 	}
-	klog.Infof("newResources: %s, Replicas: %v, ReadyReplicas: %d", deploy.Name, deploy.Spec.Replicas, deploy.Status.ReadyReplicas)
+
 	isOk := false
 	var replicas int32
 	if deploy.Spec.Replicas != nil {
@@ -291,10 +292,11 @@ func GenerateWebService(component *model.ApplicationComponent, properties *model
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  containerName,
-							Image: component.Image,
-							Ports: ContainerPort,
-							Env:   envs,
+							Name:            containerName,
+							Image:           component.Image,
+							Ports:           ContainerPort,
+							Env:             envs,
+							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
 				},

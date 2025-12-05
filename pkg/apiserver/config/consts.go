@@ -83,7 +83,7 @@ const (
 	DefaultWorkerAutoClaimCount   = 50
 	DefaultWorkerReadCount        = 10
 	DefaultWorkerReadBlock        = 2 * time.Second
-	DefaultJobTaskTimeoutSeconds  = 60
+	DefaultJobTaskTimeout         = 20 * time.Minute //超时时间设置为20分钟
 	DefaultMaxConcurrentWorkflows = 10
 )
 

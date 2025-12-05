@@ -133,9 +133,9 @@ func GenerateJobTasks(ctx context.Context, task *model.WorkflowQueue, ds datasto
 	return executions
 }
 
-func NewJobTask(name, namespace, workflowID, projectID, appID string, timeoutSeconds int64) *model.JobTask {
+func NewJobTask(name, namespace, workflowID, projectID, appID, taskID string, timeoutSeconds int64) *model.JobTask {
 	if timeoutSeconds <= 0 {
-		timeoutSeconds = int64(config.DefaultJobTaskTimeoutSeconds)
+		timeoutSeconds = int64(config.DefaultJobTaskTimeout)
 	}
 	return &model.JobTask{
 		Name:       name,
@@ -143,9 +143,18 @@ func NewJobTask(name, namespace, workflowID, projectID, appID string, timeoutSec
 		WorkflowID: workflowID,
 		ProjectID:  projectID,
 		AppID:      appID,
+		TaskID:     taskID,
 		Status:     config.StatusQueued,
 		Timeout:    timeoutSeconds,
 	}
+}
+
+// setDeployTimeout forces deployment-related jobs to use the standard deploy timeout (20 minutes).
+func setDeployTimeout(jobTask *model.JobTask) {
+	if jobTask == nil {
+		return
+	}
+	jobTask.Timeout = config.DeployTimeout
 }
 
 func ParseProperties(ctx context.Context, properties *model.JSONStruct) model.Properties {
@@ -183,10 +192,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			pvcJob.JobType = string(config.JobDeployPVC)
 			pvcJob.JobInfo = pvc
+			setDeployTimeout(pvcJob)
 
 			jobs = append(jobs, pvcJob)
 			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
@@ -204,10 +215,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			ingressJob.JobType = string(config.JobDeployIngress)
 			ingressJob.JobInfo = ingress
+			setDeployTimeout(ingressJob)
 			jobs = append(jobs, ingressJob)
 			klog.Infof("Created Ingress job for component %s: %s", component.Name, ingress.Name)
 		}
@@ -223,10 +236,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployServiceAccount)
 			jobTask.JobInfo = sa.DeepCopy()
+			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ServiceAccount job for component %s: %s/%s", component.Name, ns, sa.Name)
 		}
@@ -242,10 +257,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployRole)
 			jobTask.JobInfo = role.DeepCopy()
+			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created Role job for component %s: %s/%s", component.Name, ns, role.Name)
 		}
@@ -261,10 +278,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployRoleBinding)
 			jobTask.JobInfo = binding.DeepCopy()
+			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created RoleBinding job for component %s: %s/%s", component.Name, ns, binding.Name)
 		}
@@ -275,10 +294,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployClusterRole)
 			jobTask.JobInfo = clusterRole.DeepCopy()
+			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRole job for component %s: %s", component.Name, clusterRole.Name)
 		}
@@ -289,10 +310,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				task.WorkflowID,
 				task.ProjectID,
 				task.AppID,
+				task.TaskID,
 				defaultJobTimeoutSeconds,
 			)
 			jobTask.JobType = string(config.JobDeployClusterRoleBinding)
 			jobTask.JobInfo = clusterBinding.DeepCopy()
+			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRoleBinding job for component %s: %s", component.Name, clusterBinding.Name)
 		}
@@ -337,22 +360,25 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs, defaultJobTimeoutSeconds)
 
 	case config.ConfJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
+		setDeployTimeout(jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 
 	case config.SecretJob:
-		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
+		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
+		setDeployTimeout(jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 	}
 
 	if len(properties.Ports) > 0 {
-		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
+		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		svcJob.JobType = string(config.JobDeployService)
 		svcJob.JobInfo = job.GenerateService(component, &properties)
+		setDeployTimeout(svcJob)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
 	}
 
@@ -393,9 +419,10 @@ func queueServiceJobs(
 		}
 	}
 
-	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, defaultJobTimeoutSeconds)
+	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 	jobTask.JobType = string(jobType)
 	jobTask.JobInfo = result.Service
+	setDeployTimeout(jobTask)
 	appendJob(config.JobPriorityNormal, jobTask)
 }
 

@@ -208,6 +208,16 @@ type TaskStatusResponse struct {
 	WorkflowName string                  `json:"workflowName,omitempty"`
 	AppID        string                  `json:"appId,omitempty"`
 	Type         config.WorkflowTaskType `json:"type,omitempty"`
+	Components   []ComponentTaskStatus   `json:"components,omitempty"`
+}
+
+type ComponentTaskStatus struct {
+	Name      string `json:"name"`
+	Type      string `json:"type,omitempty"`
+	Status    string `json:"status"`
+	Error     string `json:"error,omitempty"`
+	StartTime int64  `json:"startTime,omitempty"`
+	EndTime   int64  `json:"endTime,omitempty"`
 }
 
 type ListApplicationWorkflowsResponse struct {
