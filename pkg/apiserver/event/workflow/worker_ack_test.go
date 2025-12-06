@@ -104,6 +104,10 @@ func (s *stubWorkflowService) MarkTaskStatus(context.Context, string, config.Sta
 	return true, nil
 }
 
+func (s *stubWorkflowService) GetTaskStatus(context.Context, string) (*apis.TaskStatusResponse, error) {
+	return nil, nil
+}
+
 func newWorkflowForAckTests(updateOK bool) *Workflow {
 	steps, _ := model.NewJSONStructByStruct(&model.WorkflowSteps{})
 	store := &workflowAckTestStore{
@@ -140,13 +144,15 @@ func TestProcessDispatchMessageAckOnSuccess(t *testing.T) {
 	require.Equal(t, "task-1", taskID)
 }
 
-func TestProcessDispatchMessageLeavesPendingOnFailure(t *testing.T) {
+func TestProcessDispatchMessageAckOnFailure(t *testing.T) {
+	// In pass/fail system, we always ack messages even on execution failure
+	// Task state is tracked in database, not message queue
 	w := newWorkflowForAckTests(false)
 	payload, err := MarshalTaskDispatch(TaskDispatch{TaskID: "task-1", WorkflowID: "wf-1"})
 	require.NoError(t, err)
 
 	ack, taskID := w.processDispatchMessage(context.Background(), msg.Message{ID: "1-0", Payload: payload})
-	require.False(t, ack)
+	require.True(t, ack) // Always ack - no retry in pass/fail system
 	require.Equal(t, "task-1", taskID)
 }
 

@@ -4,7 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -28,7 +31,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/utils/cache"
 	"KubeMin-Cli/pkg/apiserver/utils/container"
 	"KubeMin-Cli/pkg/apiserver/utils/kube"
-	"os"
 )
 
 // APIServer interface for call api server
@@ -249,8 +251,43 @@ func (s *restServer) RegisterAPIRoute() {
 func (s *restServer) startHTTP(ctx context.Context) error {
 	// Start HTTP appserver
 	klog.Infof("HTTP APIs are being served on: %s, ctx: %s", s.cfg.BindAddr, ctx)
-	server := &http.Server{Addr: s.cfg.BindAddr, Handler: s, ReadHeaderTimeout: 2 * time.Second}
-	return server.ListenAndServe()
+	server := &http.Server{
+		Addr:              s.cfg.BindAddr,
+		Handler:           s,
+		ReadHeaderTimeout: 2 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
+	// Graceful shutdown handler
+	shutdownComplete := make(chan struct{})
+	go func() {
+		<-ctx.Done()
+		klog.Info("HTTP server shutdown initiated")
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		if err := server.Shutdown(shutdownCtx); err != nil {
+			klog.Errorf("HTTP server graceful shutdown error: %v", err)
+			// Force close if graceful shutdown fails
+			if closeErr := server.Close(); closeErr != nil {
+				klog.Errorf("HTTP server force close error: %v", closeErr)
+			}
+		} else {
+			klog.Info("HTTP server graceful shutdown completed")
+		}
+		close(shutdownComplete)
+	}()
+
+	err := server.ListenAndServe()
+	<-shutdownComplete
+
+	// Ignore normal shutdown error
+	if err == http.ErrServerClosed {
+		klog.Info("HTTP server closed normally")
+		return nil
+	}
+	return err
 }
 
 func (s *restServer) Run(ctx context.Context, errChan chan error) error {
@@ -275,11 +312,31 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 		return err
 	}
 
+	// Create cancelable context for graceful shutdown
+	runCtx, runCancel := context.WithCancel(ctx)
+	defer runCancel()
+
+	// Handle OS signals for graceful shutdown
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 	go func() {
-		leaderelection.RunOrDie(ctx, *l)
+		select {
+		case sig := <-sigChan:
+			klog.Infof("received signal %v, initiating graceful shutdown", sig)
+			// Stop workers before canceling context
+			s.stopWorkers()
+			runCancel()
+		case <-ctx.Done():
+			// Parent context canceled
+			s.stopWorkers()
+		}
 	}()
 
-	return s.startHTTP(ctx)
+	go func() {
+		leaderelection.RunOrDie(runCtx, *l)
+	}()
+
+	return s.startHTTP(runCtx)
 }
 
 func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.LeaderElectionConfig, error) {

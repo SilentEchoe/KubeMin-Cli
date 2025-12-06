@@ -42,6 +42,16 @@ type WorkflowRuntimeConfig struct {
 	DefaultJobTimeout time.Duration
 	// MaxConcurrentWorkflows limits how many workflow controllers run in parallel.
 	MaxConcurrentWorkflows int
+	// WorkerMaxReadFailures is the max consecutive read failures before worker exits.
+	// Set to 0 for infinite retries (recommended for resilience).
+	WorkerMaxReadFailures int
+	// WorkerMaxClaimFailures is the max consecutive claim failures before worker exits.
+	// Set to 0 for infinite retries (recommended for resilience).
+	WorkerMaxClaimFailures int
+	// WorkerBackoffMin is the minimum backoff duration for worker retries.
+	WorkerBackoffMin time.Duration
+	// WorkerBackoffMax is the maximum backoff duration for worker retries.
+	WorkerBackoffMax time.Duration
 }
 
 // CORSConfig configures cross-origin resource sharing for the HTTP API server.
@@ -174,6 +184,10 @@ func NewConfig() *Config {
 			WorkerReadBlock:          2 * time.Second,
 			DefaultJobTimeout:        60 * time.Second,
 			MaxConcurrentWorkflows:   DefaultMaxConcurrentWorkflows,
+			WorkerMaxReadFailures:    0, // 0 = infinite retries (resilient)
+			WorkerMaxClaimFailures:   0, // 0 = infinite retries (resilient)
+			WorkerBackoffMin:         200 * time.Millisecond,
+			WorkerBackoffMax:         5 * time.Minute,
 		},
 		CORS: CORSConfig{
 			AllowedOrigins:   []string{"*"},

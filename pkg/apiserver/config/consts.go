@@ -85,6 +85,12 @@ const (
 	DefaultWorkerReadBlock        = 2 * time.Second
 	DefaultJobTaskTimeout         = 20 * time.Minute //超时时间设置为20分钟
 	DefaultMaxConcurrentWorkflows = 10
+
+	// Worker resilience settings
+	DefaultWorkerBackoffMin       = 200 * time.Millisecond // 最小退避时间
+	DefaultWorkerBackoffMax       = 5 * time.Minute        // 最大退避时间
+	DefaultWorkerMaxReadFailures  = 10                     // 连续 10 次失败后退出
+	DefaultWorkerMaxClaimFailures = 10                     // 连续 10 次失败后退出
 )
 
 const (

@@ -63,30 +63,41 @@ func (w *Workflow) Start(ctx context.Context, errChan chan error) {
 	go w.Dispatcher(ctx)
 }
 
+// InitQueue 在服务启动时调用，将所有"运行中"的任务重新入队
+// 因为 Job 是通过 goroutine 执行的，进程重启后所有 goroutine 都会死亡
+// 分布式场景下，Redis Streams 的 AutoClaim 机制会自动处理 pending 消息
 func (w *Workflow) InitQueue(ctx context.Context) {
 	if w.Store == nil {
 		klog.Error("datastore is nil")
 		return
 	}
-	// 从数据库中查找未完成的任务
+
+	// 从数据库中查找所有"运行中"的任务
 	tasks, err := w.WorkflowService.TaskRunning(ctx)
 	if err != nil {
 		klog.Errorf("find task running error: %v", err)
 		return
 	}
-	// 如果重启Queue，则取消所有正在运行的tasks（尽最大努力取消并收集错误）
-	var cancelErrs []error
+
+	if len(tasks) == 0 {
+		klog.Info("InitQueue: no running tasks to re-queue")
+		return
+	}
+
+	// 进程重启，所有 running 的任务都需要重新入队
+	var requeued, failed int
 	for _, task := range tasks {
-		if err := w.WorkflowService.CancelWorkflowTask(ctx, config.DefaultTaskRevoker, task.TaskID, ""); err != nil {
-			klog.Errorf("cancel task %s error: %v", task.TaskID, err)
-			cancelErrs = append(cancelErrs, err)
+		task.Status = config.StatusWaiting
+		if err := w.Store.Put(ctx, task); err != nil {
+			klog.Errorf("re-queue task %s error: %v", task.TaskID, err)
+			failed++
 			continue
 		}
-		klog.Infof("cancel task: %s", task.TaskID)
+		klog.Infof("re-queued task: %s (workflow=%s)", task.TaskID, task.WorkflowName)
+		requeued++
 	}
-	if len(cancelErrs) > 0 {
-		klog.Warningf("cancel running tasks finished with errors: failed=%d total=%d", len(cancelErrs), len(tasks))
-	}
+
+	klog.Infof("InitQueue completed: requeued=%d failed=%d", requeued, failed)
 }
 
 func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueue, concurrency int) {

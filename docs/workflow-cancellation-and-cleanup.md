@@ -22,9 +22,21 @@
 
 ## 对外取消接口
 
-- `POST /workflow/cancel` 新增 `CancelWorkflowRequest`，允许指定 `taskId`、可选 `user` 与 `reason`。
-- API 默认使用 `config.DefaultTaskRevoker` 作为用户，调用 `WorkflowService.CancelWorkflowTask`。
+> **注意**：`/workflow/cancel` 目前返回 501 Not Implemented。请使用以下应用级接口：
+
+- `POST /applications/:appID/workflow/cancel` 允许指定 `taskId`、可选 `user` 与 `reason`。
+- API 默认使用 `config.DefaultTaskRevoker` 作为用户，调用 `WorkflowService.CancelWorkflowTaskForApp`。
 - Service 层同时更新数据库任务状态和 Redis 取消信号，failure 会返回给调用方。
+
+### 可用的工作流接口
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/applications/:appID/workflow` | 创建工作流 |
+| PUT | `/applications/:appID/workflow` | 更新工作流 |
+| POST | `/applications/:appID/workflow/exec` | 执行工作流任务 |
+| POST | `/applications/:appID/workflow/cancel` | 取消工作流任务 |
+| GET | `/workflow/tasks/:taskID/status` | 查询任务状态 |
 
 ## 关键代码路径
 

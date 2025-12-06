@@ -15,12 +15,11 @@ import (
 	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 )
 
-const (
-	workerBackoffMin       = 200 * time.Millisecond
-	workerBackoffMax       = 5 * time.Second
-	workerMaxReadFailures  = 3
-	workerMaxClaimFailures = 3
-)
+// Note: Worker resilience constants are defined in config/consts.go:
+// - config.DefaultWorkerBackoffMin
+// - config.DefaultWorkerBackoffMax
+// - config.DefaultWorkerMaxReadFailures
+// - config.DefaultWorkerMaxClaimFailures
 
 // TaskDispatch is the minimal payload for dispatching a workflow task to a worker.
 type TaskDispatch struct {
@@ -121,37 +120,55 @@ func (w *Workflow) Dispatcher(ctx context.Context) {
 }
 
 // StartWorker subscribes to task dispatch topic and executes tasks.
+// It implements resilient behavior: by default (max failures = 0), it retries indefinitely
+// with exponential backoff instead of exiting on transient errors.
 func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 	w.errChan = errChan
 	group := w.consumerGroup()
 	consumer := w.consumerName()
-	klog.Infof("worker reading stream: %s, group: %s, consumer: %s", w.dispatchTopic(), group, consumer)
+
+	// Get config values with defaults
+	backoffMin := w.workerBackoffMin()
+	backoffMax := w.workerBackoffMax()
+	maxReadFailures := w.workerMaxReadFailures()
+	maxClaimFailures := w.workerMaxClaimFailures()
+
+	klog.Infof("worker starting: stream=%s group=%s consumer=%s maxReadFailures=%d maxClaimFailures=%d",
+		w.dispatchTopic(), group, consumer, maxReadFailures, maxClaimFailures)
+
 	// Ensure consumer group exists once on worker start to avoid per-read overhead.
 	if err := w.Queue.EnsureGroup(ctx, group); err != nil {
 		klog.V(4).Infof("ensure group error: %v", err)
 	}
+
 	staleTicker := time.NewTicker(w.workerStaleInterval())
 	defer staleTicker.Stop()
-	currentDelay := workerBackoffMin
+
+	currentDelay := backoffMin
 	readFailures := 0
 	claimFailures := 0
+
 	for {
 		select {
 		case <-ctx.Done():
+			klog.Info("worker shutting down due to context cancellation")
 			return
 		case <-staleTicker.C:
 			mags, err := w.Queue.AutoClaim(ctx, group, consumer, w.workerAutoClaimMinIdle(), w.workerAutoClaimCount())
 			if err != nil {
-				klog.V(4).Infof("auto-claim error: %v", err)
 				claimFailures++
+				klog.Warningf("auto-claim error (consecutive: %d): %v", claimFailures, err)
 				w.reportWorkerError(fmt.Errorf("auto-claim failed (%d consecutive): %w", claimFailures, err))
-				if claimFailures >= workerMaxClaimFailures {
+
+				// Only exit if maxClaimFailures > 0 and threshold reached
+				if maxClaimFailures > 0 && claimFailures >= maxClaimFailures {
+					klog.Errorf("max claim failures reached (%d), worker exiting", maxClaimFailures)
 					return
 				}
 				continue
 			}
 			claimFailures = 0
-			currentDelay = workerBackoffMin
+			currentDelay = backoffMin
 			var acknowledgements []dispatchAck
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
@@ -164,23 +181,29 @@ func (w *Workflow) StartWorker(ctx context.Context, errChan chan error) {
 		default:
 			mags, err := w.Queue.ReadGroup(ctx, group, consumer, w.workerReadCount(), w.workerReadBlock())
 			if err != nil {
-				klog.V(4).Infof("read group error: %v", err)
-				wait := w.workerBackoffDelay(currentDelay, workerBackoffMin, workerBackoffMax)
+				readFailures++
+				klog.Warningf("read group error (consecutive: %d): %v", readFailures, err)
+				w.reportWorkerError(fmt.Errorf("read group failed (%d consecutive): %w", readFailures, err))
+
+				// Exponential backoff
+				wait := w.workerBackoffDelay(currentDelay, backoffMin, backoffMax)
 				currentDelay = wait
+
 				select {
 				case <-ctx.Done():
 					return
 				case <-time.After(wait):
 				}
-				readFailures++
-				w.reportWorkerError(fmt.Errorf("read group failed (%d consecutive): %w", readFailures, err))
-				if readFailures >= workerMaxReadFailures {
+
+				// Only exit if maxReadFailures > 0 and threshold reached
+				if maxReadFailures > 0 && readFailures >= maxReadFailures {
+					klog.Errorf("max read failures reached (%d), worker exiting", maxReadFailures)
 					return
 				}
 				continue
 			}
 			readFailures = 0
-			currentDelay = workerBackoffMin
+			currentDelay = backoffMin
 			var acknowledgements []dispatchAck
 			for _, m := range mags {
 				if ack, taskID := w.processDispatchMessage(ctx, m); ack {
@@ -281,21 +304,29 @@ func (w *Workflow) reportWorkerError(err error) {
 	w.reportTaskError(err)
 }
 
+// processDispatchMessage processes a single dispatch message.
+// This is a "pass/fail" system - no retries. Failures are logged and the message is acknowledged.
+// Task state is tracked in the database, so operators can see failed tasks there.
 func (w *Workflow) processDispatchMessage(ctx context.Context, m msg.Message) (bool, string) {
 	td, err := UnmarshalTaskDispatch(m.Payload)
 	if err != nil {
-		klog.Errorf("decode dispatch failed: %v", err)
+		// Parse error: log and ack to prevent blocking
+		klog.Errorf("decode dispatch failed: %v, payload: %s", err, string(m.Payload))
 		return true, ""
 	}
+
 	task, err := repository.TaskByID(ctx, w.Store, td.TaskID)
 	if err != nil {
+		// DB error: log and ack
 		klog.Errorf("load task %s failed: %v", td.TaskID, err)
 		return true, td.TaskID
 	}
+
 	if err := w.updateQueueAndRunTask(ctx, task, 1); err != nil {
+		// Execution error: task status is already updated in updateQueueAndRunTask
 		klog.Errorf("run task %s failed: %v", td.TaskID, err)
-		return false, td.TaskID
 	}
+
 	return true, td.TaskID
 }
 

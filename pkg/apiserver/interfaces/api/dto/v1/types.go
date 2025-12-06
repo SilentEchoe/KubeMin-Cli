@@ -13,6 +13,7 @@ type ApplicationBase struct {
 	Name        string    `json:"name"`
 	Alias       string    `json:"alias"`
 	Project     string    `json:"project"`
+	Version     string    `json:"version"`
 	Description string    `json:"description"`
 	CreateTime  time.Time `json:"createTime"`
 	UpdateTime  time.Time `json:"updateTime"`

@@ -108,9 +108,12 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 				continue
 			}
 			stepConcurrency := determineStepConcurrency(stepExec.Mode, len(tasksInPriority), seqLimit)
-			logger.Info("Executing workflow step", "workflowName", workflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency)
+			// Fix: StepByStep mode should stop on first failure (stopOnFailure=true)
+			// Parallel mode continues all jobs even if some fail (stopOnFailure=false)
+			stopOnFailure := !stepExec.Mode.IsParallel()
+			logger.Info("Executing workflow step", "workflowName", workflowName, "step", stepExec.Name, "mode", stepExec.Mode, "priority", priority, "jobCount", len(tasksInPriority), "concurrency", stepConcurrency, "stopOnFailure", stopOnFailure)
 
-			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack, stepExec.Mode.IsParallel())
+			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack, stopOnFailure)
 
 			for _, task := range tasksInPriority {
 				if task.Status != config.StatusCompleted {

@@ -365,18 +365,26 @@ func (w *workflowServiceImpl) CancelWorkflowTaskForApp(ctx context.Context, appI
 }
 
 func (w *workflowServiceImpl) cancelWorkflowTask(ctx context.Context, task *model.WorkflowQueue, userName, reason string) error {
+	// Audit log: record cancel operation with full context
+	klog.Infof("AUDIT: cancel workflow task taskID=%s workflowID=%s workflowName=%s user=%s reason=%s prevStatus=%s",
+		task.TaskID, task.WorkflowID, task.WorkflowName, userName, reason, task.Status)
+
 	task.TaskRevoker = userName
 	task.Status = config.StatusCancelled
 
 	if err := repository.UpdateTask(ctx, w.Store, task); err != nil {
+		klog.Errorf("AUDIT: cancel workflow task failed taskID=%s user=%s error=%v", task.TaskID, userName, err)
 		return err
 	}
 	if reason == "" {
 		reason = fmt.Sprintf("cancelled by %s", userName)
 	}
 	if err := signal.Cancel(ctx, task.TaskID, reason); err != nil {
+		klog.Errorf("AUDIT: signal cancel failed taskID=%s user=%s error=%v", task.TaskID, userName, err)
 		return err
 	}
+
+	klog.Infof("AUDIT: cancel workflow task completed taskID=%s user=%s", task.TaskID, userName)
 	return nil
 }
 
