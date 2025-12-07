@@ -20,6 +20,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
@@ -153,7 +154,12 @@ func (s *restServer) buildIoCContainer() error {
 		return fmt.Errorf("fail to provides the config bean to the container: %w", err)
 	}
 
-	// domain
+	// domain - repository (注入 Repository，依赖 datastore)
+	if err := s.beanContainer.Provides(repository.InitRepositoryBean()...); err != nil {
+		return fmt.Errorf("fail to provides the repository bean to the container: %w", err)
+	}
+
+	// domain - service (注入 Service，可依赖 Repository)
 	services := service.InitServiceBean(s.cfg)
 	for _, svc := range services {
 		if err := s.beanContainer.Provides(svc); err != nil {

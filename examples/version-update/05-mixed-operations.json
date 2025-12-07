@@ -1,0 +1,37 @@
+{
+  "version": "3.0.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "action": "update",
+      "name": "backend",
+      "image": "myapp/backend:v3.0.0",
+      "replicas": 3
+    },
+    {
+      "action": "update",
+      "name": "frontend",
+      "image": "myapp/frontend:v3.0.0"
+    },
+    {
+      "action": "add",
+      "name": "message-queue",
+      "type": "store",
+      "image": "rabbitmq:3-management",
+      "replicas": 1,
+      "properties": {
+        "ports": [
+          {"port": 5672},
+          {"port": 15672}
+        ]
+      }
+    },
+    {
+      "action": "remove",
+      "name": "deprecated-worker"
+    }
+  ],
+  "autoExec": true,
+  "description": "Major architecture refactoring - v3.0.0"
+}
+

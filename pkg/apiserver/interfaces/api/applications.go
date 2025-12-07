@@ -35,6 +35,8 @@ func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/applications/:appID/workflow/exec", app.execApplicationWorkflow)
 	group.POST("/applications/:appID/workflow/cancel", app.cancelApplicationWorkflow)
 	group.GET("/workflow/tasks/:taskID/status", app.getWorkflowTaskStatus)
+	// 版本更新接口
+	group.POST("/applications/:appID/version", app.updateVersion)
 }
 
 func (app *applications) createApplications(c *gin.Context) {
@@ -269,5 +271,46 @@ func (app *applications) getWorkflowTaskStatus(c *gin.Context) {
 		bcode.ReturnError(c, err)
 		return
 	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// updateVersion 更新应用版本
+func (app *applications) updateVersion(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+
+	var req apis.UpdateVersionRequest
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
+		bcode.ReturnError(c, bcode.ErrApplicationConfig)
+		return
+	}
+
+	// 规范化组件名称
+	for i := range req.Components {
+		req.Components[i].Name = strings.ToLower(strings.TrimSpace(req.Components[i].Name))
+	}
+
+	if err := validate.Struct(req); err != nil {
+		bcode.ReturnError(c, err)
+		return
+	}
+
+	ctx := c.Request.Context()
+	klog.Infof("update version request received appID=%s version=%s strategy=%s components=%d",
+		appID, req.Version, req.Strategy, len(req.Components))
+
+	resp, err := app.ApplicationService.UpdateVersion(ctx, appID, req)
+	if err != nil {
+		klog.Errorf("update version failed appID=%s error=%v", appID, err)
+		bcode.ReturnError(c, err)
+		return
+	}
+
+	klog.Infof("update version succeeded appID=%s newVersion=%s taskID=%s",
+		appID, resp.Version, resp.TaskID)
 	c.JSON(http.StatusOK, resp)
 }

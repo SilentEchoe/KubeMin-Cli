@@ -120,6 +120,9 @@ func (noopApplicationsService) ListApplicationWorkflows(context.Context, string)
 func (noopApplicationsService) ListApplicationComponents(context.Context, string) ([]*model.ApplicationComponent, error) {
 	return nil, nil
 }
+func (noopApplicationsService) UpdateVersion(context.Context, string, apis.UpdateVersionRequest) (*apis.UpdateVersionResponse, error) {
+	return nil, nil
+}
 
 type workflowListApplicationService struct {
 	noopApplicationsService
@@ -380,5 +383,209 @@ func TestWorkflowCancelEndpointNotImplemented(t *testing.T) {
 
 	if resp.Code != http.StatusNotImplemented {
 		t.Fatalf("expected 501 status code, got %d", resp.Code)
+	}
+}
+
+// ---- UpdateVersion API Tests ----
+
+type fakeUpdateVersionService struct {
+	noopApplicationsService
+	updateResp *apis.UpdateVersionResponse
+	updateErr  error
+	lastAppID  string
+	lastReq    apis.UpdateVersionRequest
+}
+
+func (f *fakeUpdateVersionService) UpdateVersion(_ context.Context, appID string, req apis.UpdateVersionRequest) (*apis.UpdateVersionResponse, error) {
+	f.lastAppID = appID
+	f.lastReq = req
+	if f.updateErr != nil {
+		return nil, f.updateErr
+	}
+	if f.updateResp != nil {
+		return f.updateResp, nil
+	}
+	return &apis.UpdateVersionResponse{
+		AppID:             appID,
+		Version:           req.Version,
+		PreviousVersion:   "1.0.0",
+		Strategy:          req.Strategy,
+		UpdatedComponents: []string{"backend"},
+	}, nil
+}
+
+func TestUpdateVersionEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	appSvc := &fakeUpdateVersionService{
+		updateResp: &apis.UpdateVersionResponse{
+			AppID:             "app-123",
+			Version:           "2.0.0",
+			PreviousVersion:   "1.0.0",
+			Strategy:          "rolling",
+			TaskID:            "task-456",
+			UpdatedComponents: []string{"backend", "frontend"},
+			AddedComponents:   []string{"cache"},
+			RemovedComponents: []string{"old-worker"},
+		},
+	}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.POST("/applications/:appID/version", appHandler.updateVersion)
+
+	body := `{
+		"version": "2.0.0",
+		"strategy": "rolling",
+		"components": [
+			{"action": "update", "name": "backend", "image": "backend:v2"},
+			{"action": "update", "name": "frontend", "image": "frontend:v2"},
+			{"action": "add", "name": "cache", "type": "store", "image": "redis:7"},
+			{"action": "remove", "name": "old-worker"}
+		],
+		"autoExec": true,
+		"description": "Major version update"
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/applications/app-123/version", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	var payload apis.UpdateVersionResponse
+	if err := json.Unmarshal(resp.Body.Bytes(), &payload); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+
+	if payload.AppID != "app-123" {
+		t.Fatalf("unexpected appId: %s", payload.AppID)
+	}
+	if payload.Version != "2.0.0" {
+		t.Fatalf("unexpected version: %s", payload.Version)
+	}
+	if payload.Strategy != "rolling" {
+		t.Fatalf("unexpected strategy: %s", payload.Strategy)
+	}
+	if payload.TaskID != "task-456" {
+		t.Fatalf("unexpected taskId: %s", payload.TaskID)
+	}
+	if len(payload.UpdatedComponents) != 2 {
+		t.Fatalf("expected 2 updated components, got %d", len(payload.UpdatedComponents))
+	}
+	if len(payload.AddedComponents) != 1 {
+		t.Fatalf("expected 1 added component, got %d", len(payload.AddedComponents))
+	}
+	if len(payload.RemovedComponents) != 1 {
+		t.Fatalf("expected 1 removed component, got %d", len(payload.RemovedComponents))
+	}
+
+	// 验证请求参数
+	if appSvc.lastAppID != "app-123" {
+		t.Fatalf("expected appID app-123, got %s", appSvc.lastAppID)
+	}
+	if appSvc.lastReq.Version != "2.0.0" {
+		t.Fatalf("expected version 2.0.0, got %s", appSvc.lastReq.Version)
+	}
+	if len(appSvc.lastReq.Components) != 4 {
+		t.Fatalf("expected 4 components in request, got %d", len(appSvc.lastReq.Components))
+	}
+}
+
+func TestUpdateVersionEndpointMinimalRequest(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	appSvc := &fakeUpdateVersionService{}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.POST("/applications/:appID/version", appHandler.updateVersion)
+
+	// 最简请求 - 仅更新版本号
+	body := `{"version": "1.1.0"}`
+	req := httptest.NewRequest(http.MethodPost, "/applications/app-1/version", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d, body: %s", resp.Code, resp.Body.String())
+	}
+
+	if appSvc.lastReq.Version != "1.1.0" {
+		t.Fatalf("expected version 1.1.0, got %s", appSvc.lastReq.Version)
+	}
+}
+
+func TestUpdateVersionEndpointMissingAppID(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	appSvc := &fakeUpdateVersionService{}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.POST("/applications/:appID/version", appHandler.updateVersion)
+
+	body := `{"version": "1.1.0"}`
+	// 空的 appID
+	req := httptest.NewRequest(http.MethodPost, "/applications//version", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	// 由于路由不匹配，应该返回 404
+	if resp.Code != http.StatusNotFound {
+		t.Fatalf("expected status 404, got %d", resp.Code)
+	}
+}
+
+func TestUpdateVersionEndpointImageUpdate(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	appSvc := &fakeUpdateVersionService{
+		updateResp: &apis.UpdateVersionResponse{
+			AppID:             "app-1",
+			Version:           "1.1.0",
+			PreviousVersion:   "1.0.0",
+			Strategy:          "rolling",
+			UpdatedComponents: []string{"backend"},
+		},
+	}
+	appHandler := &applications{
+		ApplicationService: appSvc,
+		WorkflowService:    &fakeWorkflowService{},
+	}
+	r := gin.New()
+	r.POST("/applications/:appID/version", appHandler.updateVersion)
+
+	body := `{
+		"version": "1.1.0",
+		"components": [
+			{"name": "backend", "image": "myapp/backend:v1.1.0"}
+		]
+	}`
+	req := httptest.NewRequest(http.MethodPost, "/applications/app-1/version", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp := httptest.NewRecorder()
+
+	r.ServeHTTP(resp, req)
+
+	if resp.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: %d", resp.Code)
+	}
+
+	// 验证组件名称被规范化为小写
+	if len(appSvc.lastReq.Components) != 1 {
+		t.Fatalf("expected 1 component, got %d", len(appSvc.lastReq.Components))
+	}
+	if appSvc.lastReq.Components[0].Image != "myapp/backend:v1.1.0" {
+		t.Fatalf("unexpected image: %s", appSvc.lastReq.Components[0].Image)
 	}
 }

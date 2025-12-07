@@ -43,11 +43,16 @@ type ApplicationsService interface {
 	UpdateApplicationWorkflow(ctx context.Context, appID string, req apisv1.UpdateApplicationWorkflowRequest) (*apisv1.UpdateWorkflowResponse, error)
 	ListApplicationWorkflows(ctx context.Context, appID string) ([]*model.Workflow, error)
 	ListApplicationComponents(ctx context.Context, appID string) ([]*model.ApplicationComponent, error)
+	// UpdateVersion 更新应用版本，支持组件的更新、新增、删除操作
+	UpdateVersion(ctx context.Context, appID string, req apisv1.UpdateVersionRequest) (*apisv1.UpdateVersionResponse, error)
 }
 
 type applicationsServiceImpl struct {
-	Store      datastore.DataStore  `inject:"datastore"`
-	KubeClient kubernetes.Interface `inject:"kubeClient"`
+	KubeClient        kubernetes.Interface               `inject:"kubeClient"`
+	AppRepo           repository.ApplicationRepository   `inject:""`
+	WorkflowRepo      repository.WorkflowRepository      `inject:""`
+	ComponentRepo     repository.ComponentRepository     `inject:""`
+	WorkflowQueueRepo repository.WorkflowQueueRepository `inject:""`
 }
 
 type componentOverride struct {
@@ -87,7 +92,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 
 	if req.ID != "" {
-		application, err = refreshExistingApplication(ctx, c.Store, req)
+		application, err = c.refreshExistingApplication(ctx, req)
 		if err != nil {
 			return nil, err
 		}
@@ -114,7 +119,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		return nil, err
 	}
 
-	if err = repository.CreateApplications(ctx, c.Store, application); err != nil {
+	if err = c.AppRepo.Create(ctx, application); err != nil {
 		if errors.Is(err, datastore.ErrRecordExist) {
 			return nil, bcode.ErrApplicationExist
 		}
@@ -127,24 +132,18 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 
 	// 预清理：删除该应用ID下的所有现有组件，确保幂等性
-	if err = repository.DelComponentsByAppID(ctx, c.Store, application.ID); err != nil {
+	if err = c.ComponentRepo.DeleteByAppID(ctx, application.ID); err != nil {
 		klog.Errorf("Pre-cleanup components for application %s failed: %v", application.ID, err)
 		return nil, bcode.ErrComponentBuild
 	}
 
 	// 批量创建组件
 	if len(components) > 0 {
-		// 转换为Entity接口数组用于批量操作
-		entities := make([]datastore.Entity, len(components))
-		for i, component := range components {
-			entities[i] = component
-		}
-
 		// 使用批量创建，失败时回滚
-		if err = c.Store.BatchAdd(ctx, entities); err != nil {
+		if err = c.ComponentRepo.BatchAdd(ctx, components); err != nil {
 			klog.Errorf("Batch create components for application %s failed: %v", application.ID, err)
 			// 批量创建失败，清理已创建的部分组件
-			if cleanupErr := repository.DelComponentsByAppID(ctx, c.Store, application.ID); cleanupErr != nil {
+			if cleanupErr := c.ComponentRepo.DeleteByAppID(ctx, application.ID); cleanupErr != nil {
 				klog.Errorf("Cleanup components on failure for application %s failed: %v", application.ID, cleanupErr)
 			}
 			return nil, bcode.ErrCreateComponents
@@ -185,7 +184,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		Steps:        workflowStep,
 	}
 
-	if err = repository.CreateWorkflow(ctx, c.Store, workflow); err != nil {
+	if err = c.WorkflowRepo.Create(ctx, workflow); err != nil {
 		klog.Errorf("Create workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
@@ -246,7 +245,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		return nil, bcode.ErrTemplateIDMissing
 	}
 
-	templateApp, err := repository.ApplicationByID(ctx, c.Store, templateID)
+	templateApp, err := c.AppRepo.FindByID(ctx, templateID)
 	if err != nil {
 		if errors.Is(err, datastore.ErrRecordNotExist) {
 			return nil, bcode.ErrApplicationNotExist
@@ -257,7 +256,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		return nil, bcode.ErrTemplateNotEnabled
 	}
 
-	templateComponents, err := repository.FindComponentsByAppID(ctx, c.Store, templateApp.ID)
+	templateComponents, err := c.ComponentRepo.FindByAppID(ctx, templateApp.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -525,8 +524,8 @@ func rewriteTraitsForTemplate(traits *apisv1.Traits, oldName, newName, baseName,
 	}
 }
 
-func refreshExistingApplication(ctx context.Context, store datastore.DataStore, req apisv1.CreateApplicationsRequest) (*model.Applications, error) {
-	application, err := repository.ApplicationByID(ctx, store, req.ID)
+func (c *applicationsServiceImpl) refreshExistingApplication(ctx context.Context, req apisv1.CreateApplicationsRequest) (*model.Applications, error) {
+	application, err := c.AppRepo.FindByID(ctx, req.ID)
 	if err != nil {
 		return nil, bcode.ErrApplicationNotExist
 	}
@@ -544,10 +543,10 @@ func refreshExistingApplication(ctx context.Context, store datastore.DataStore, 
 		application.TmpEnable = *req.TmpEnable
 	}
 
-	if err = repository.DelComponentsByAppID(ctx, store, req.ID); err != nil {
+	if err = c.ComponentRepo.DeleteByAppID(ctx, req.ID); err != nil {
 		return nil, bcode.ErrComponentBuild
 	}
-	if err = repository.DelWorkflowsByAppID(ctx, store, req.ID); err != nil {
+	if err = c.WorkflowRepo.DeleteByAppID(ctx, req.ID); err != nil {
 		return nil, bcode.ErrWorkflowBuild
 	}
 	return application, nil
@@ -744,7 +743,7 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context) ([]*apis
 		PageSize: 10,
 	}
 
-	apps, err := repository.ListApplications(ctx, c.Store, listOptions)
+	apps, err := c.AppRepo.List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -767,7 +766,7 @@ func (c *applicationsServiceImpl) ListTemplateApplications(ctx context.Context) 
 		PageSize: 0, // no pagination to ensure all templates returned
 	}
 
-	apps, err := repository.ListApplications(ctx, c.Store, listOptions)
+	apps, err := c.AppRepo.List(ctx, listOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -787,35 +786,33 @@ func (c *applicationsServiceImpl) ListTemplateApplications(ctx context.Context) 
 
 // GetApplication get application model
 func (c *applicationsServiceImpl) GetApplication(ctx context.Context, appName string) (*model.Applications, error) {
-	var app = model.Applications{
-		Name: appName,
-	}
-	if err := c.Store.Get(ctx, &app); err != nil {
-		if errors.Is(err, datastore.ErrRecordNotExist) {
-			return nil, bcode.ErrApplicationNotExist
-		}
-		return nil, err
-	}
-	return &app, nil
-}
-
-// DeleteApplication delete application
-func (c *applicationsServiceImpl) DeleteApplication(ctx context.Context, app *model.Applications) error {
-	return c.Store.Delete(ctx, app)
-}
-
-func (c *applicationsServiceImpl) CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error) {
-	if appID == "" {
-		return nil, bcode.ErrApplicationNotExist
-	}
-	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	app, err := c.AppRepo.FindByName(ctx, appName)
 	if err != nil {
 		if errors.Is(err, datastore.ErrRecordNotExist) {
 			return nil, bcode.ErrApplicationNotExist
 		}
 		return nil, err
 	}
-	components, err := repository.FindComponentsByAppID(ctx, c.Store, app.ID)
+	return app, nil
+}
+
+// DeleteApplication delete application
+func (c *applicationsServiceImpl) DeleteApplication(ctx context.Context, app *model.Applications) error {
+	return c.AppRepo.Delete(ctx, app)
+}
+
+func (c *applicationsServiceImpl) CleanupApplicationResources(ctx context.Context, appID string) (*apisv1.CleanupApplicationResourcesResponse, error) {
+	if appID == "" {
+		return nil, bcode.ErrApplicationNotExist
+	}
+	app, err := c.AppRepo.FindByID(ctx, appID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+	components, err := c.ComponentRepo.FindByAppID(ctx, app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -902,7 +899,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 	if len(req.Workflow) == 0 {
 		return nil, bcode.ErrWorkflowConfig
 	}
-	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	app, err := c.AppRepo.FindByID(ctx, appID)
 	if err != nil {
 		if errors.Is(err, datastore.ErrRecordNotExist) {
 			return nil, bcode.ErrApplicationNotExist
@@ -910,7 +907,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 		return nil, err
 	}
 
-	components, err := repository.FindComponentsByAppID(ctx, c.Store, app.ID)
+	components, err := c.ComponentRepo.FindByAppID(ctx, app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -929,7 +926,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 		return nil, fmt.Errorf("marshal workflow steps: %w", err)
 	}
 
-	workflows, err := repository.FindWorkflowsByAppID(ctx, c.Store, app.ID)
+	workflows, err := c.WorkflowRepo.FindByAppID(ctx, app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -937,7 +934,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 	targetName := strings.ToLower(strings.TrimSpace(req.Name))
 	var target *model.Workflow
 	if req.WorkflowID != "" {
-		wf, err := repository.WorkflowByID(ctx, c.Store, req.WorkflowID)
+		wf, err := c.WorkflowRepo.FindByID(ctx, req.WorkflowID)
 		if err != nil {
 			if errors.Is(err, datastore.ErrRecordNotExist) {
 				return nil, bcode.ErrWorkflowNotExist
@@ -973,7 +970,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 			Status:       config.StatusCreated,
 		}
 		target.Steps = stepsStruct
-		if err := repository.CreateWorkflow(ctx, c.Store, target); err != nil {
+		if err := c.WorkflowRepo.Create(ctx, target); err != nil {
 			return nil, err
 		}
 	} else {
@@ -984,7 +981,7 @@ func (c *applicationsServiceImpl) UpdateApplicationWorkflow(ctx context.Context,
 			target.Alias = req.Alias
 		}
 		target.Steps = stepsStruct
-		if err := c.Store.Put(ctx, target); err != nil {
+		if err := c.WorkflowRepo.Update(ctx, target); err != nil {
 			return nil, err
 		}
 	}
@@ -995,14 +992,14 @@ func (c *applicationsServiceImpl) ListApplicationComponents(ctx context.Context,
 	if appID == "" {
 		return nil, bcode.ErrApplicationNotExist
 	}
-	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	app, err := c.AppRepo.FindByID(ctx, appID)
 	if err != nil {
 		if errors.Is(err, datastore.ErrRecordNotExist) {
 			return nil, bcode.ErrApplicationNotExist
 		}
 		return nil, err
 	}
-	components, err := repository.FindComponentsByAppID(ctx, c.Store, app.ID)
+	components, err := c.ComponentRepo.FindByAppID(ctx, app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1022,14 +1019,14 @@ func (c *applicationsServiceImpl) ListApplicationWorkflows(ctx context.Context, 
 	if appID == "" {
 		return nil, bcode.ErrApplicationNotExist
 	}
-	app, err := repository.ApplicationByID(ctx, c.Store, appID)
+	app, err := c.AppRepo.FindByID(ctx, appID)
 	if err != nil {
 		if errors.Is(err, datastore.ErrRecordNotExist) {
 			return nil, bcode.ErrApplicationNotExist
 		}
 		return nil, err
 	}
-	workflows, err := repository.FindWorkflowsByAppID(ctx, c.Store, app.ID)
+	workflows, err := c.WorkflowRepo.FindByAppID(ctx, app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -1323,7 +1320,350 @@ func (c *applicationsServiceImpl) rollbackApplicationCreation(ctx context.Contex
 	if application == nil {
 		return
 	}
-	if err := repository.DelComponentsByAppID(ctx, c.Store, application.ID); err != nil {
+	if err := c.ComponentRepo.DeleteByAppID(ctx, application.ID); err != nil {
 		klog.Errorf("cleanup components for application %s failed: %v", application.ID, err)
 	}
+}
+
+// UpdateVersion 更新应用版本，支持组件的更新、新增、删除操作
+func (c *applicationsServiceImpl) UpdateVersion(ctx context.Context, appID string, req apisv1.UpdateVersionRequest) (*apisv1.UpdateVersionResponse, error) {
+	if appID == "" {
+		return nil, bcode.ErrApplicationNotExist
+	}
+
+	// 1. 获取应用信息
+	app, err := c.AppRepo.FindByID(ctx, appID)
+	if err != nil {
+		if errors.Is(err, datastore.ErrRecordNotExist) {
+			return nil, bcode.ErrApplicationNotExist
+		}
+		return nil, err
+	}
+
+	// 2. 获取应用组件
+	components, err := c.ComponentRepo.FindByAppID(ctx, app.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. 构建组件名称映射（用于快速查找）
+	componentMap := make(map[string]*model.ApplicationComponent, len(components))
+	for _, comp := range components {
+		if comp != nil {
+			componentMap[strings.ToLower(comp.Name)] = comp
+		}
+	}
+
+	// 4. 解析更新策略
+	strategy := config.ParseUpdateStrategy(req.Strategy)
+
+	// 5. 保存旧版本号
+	previousVersion := app.Version
+
+	// 6. 使用请求中的版本号（必填字段）
+	newVersion := req.Version
+
+	// 7. 处理组件操作
+	var (
+		updatedComponents = make([]string, 0)
+		addedComponents   = make([]string, 0)
+		removedComponents = make([]string, 0)
+	)
+
+	for _, spec := range req.Components {
+		action := config.ParseComponentAction(spec.Action)
+		compName := strings.ToLower(strings.TrimSpace(spec.Name))
+
+		switch action {
+		case config.ComponentActionUpdate:
+			// 更新现有组件
+			comp, exists := componentMap[compName]
+			if !exists {
+				klog.Warningf("component %s not found for update, skipping", spec.Name)
+				continue
+			}
+			if updated := c.updateComponent(ctx, comp, spec); updated {
+				updatedComponents = append(updatedComponents, spec.Name)
+			}
+
+		case config.ComponentActionAdd:
+			// 新增组件
+			if _, exists := componentMap[compName]; exists {
+				klog.Warningf("component %s already exists, skipping add", spec.Name)
+				continue
+			}
+			if err := c.addComponent(ctx, app, spec); err != nil {
+				klog.Errorf("add component %s failed: %v", spec.Name, err)
+				return nil, bcode.ErrVersionUpdateFailed
+			}
+			addedComponents = append(addedComponents, spec.Name)
+
+		case config.ComponentActionRemove:
+			// 删除组件
+			comp, exists := componentMap[compName]
+			if !exists {
+				klog.Warningf("component %s not found for removal, skipping", spec.Name)
+				continue
+			}
+			if err := c.ComponentRepo.Delete(ctx, comp); err != nil {
+				klog.Errorf("delete component %s failed: %v", spec.Name, err)
+				return nil, bcode.ErrVersionUpdateFailed
+			}
+			removedComponents = append(removedComponents, spec.Name)
+			delete(componentMap, compName)
+		}
+	}
+
+	// 8. 更新应用版本号和描述
+	app.Version = newVersion
+	if req.Description != "" {
+		app.Description = req.Description
+	}
+	if err := c.AppRepo.Update(ctx, app); err != nil {
+		return nil, bcode.ErrVersionUpdateFailed
+	}
+
+	// 9. 更新工作流步骤（如果有组件增删）
+	if len(addedComponents) > 0 || len(removedComponents) > 0 {
+		if err := c.syncWorkflowSteps(ctx, app.ID, componentMap, addedComponents, removedComponents); err != nil {
+			klog.Warningf("sync workflow steps failed: %v", err)
+		}
+	}
+
+	// 10. 构造响应
+	resp := &apisv1.UpdateVersionResponse{
+		AppID:             app.ID,
+		Version:           newVersion,
+		PreviousVersion:   previousVersion,
+		Strategy:          string(strategy),
+		UpdatedComponents: updatedComponents,
+		AddedComponents:   addedComponents,
+		RemovedComponents: removedComponents,
+	}
+
+	// 11. 是否自动执行工作流
+	autoExec := true
+	if req.AutoExec != nil {
+		autoExec = *req.AutoExec
+	}
+
+	hasChanges := len(updatedComponents) > 0 || len(addedComponents) > 0 || len(removedComponents) > 0
+	if autoExec && hasChanges {
+		// 查找默认工作流并执行
+		workflows, err := c.WorkflowRepo.FindByAppID(ctx, app.ID)
+		if err == nil && len(workflows) > 0 {
+			// 使用第一个工作流执行
+			taskID, err := c.execWorkflow(ctx, workflows[0])
+			if err != nil {
+				klog.Warningf("auto exec workflow failed: %v", err)
+			} else {
+				resp.TaskID = taskID
+			}
+		}
+	}
+
+	klog.Infof("AUDIT: update version appID=%s from=%s to=%s strategy=%s updated=%v added=%v removed=%v taskID=%s",
+		app.ID, previousVersion, newVersion, strategy, updatedComponents, addedComponents, removedComponents, resp.TaskID)
+
+	return resp, nil
+}
+
+// updateComponent 更新单个组件的配置
+func (c *applicationsServiceImpl) updateComponent(ctx context.Context, comp *model.ApplicationComponent, spec apisv1.ComponentUpdateSpec) bool {
+	changed := false
+
+	// 更新镜像
+	if spec.Image != "" && spec.Image != comp.Image {
+		comp.Image = spec.Image
+		changed = true
+	}
+
+	// 更新副本数
+	if spec.Replicas != nil && *spec.Replicas != comp.Replicas {
+		comp.Replicas = *spec.Replicas
+		changed = true
+	}
+
+	// 更新环境变量
+	if len(spec.Env) > 0 {
+		if err := c.mergeComponentEnv(comp, spec.Env); err == nil {
+			changed = true
+		}
+	}
+
+	if changed {
+		if err := c.ComponentRepo.Update(ctx, comp); err != nil {
+			klog.Errorf("update component %s failed: %v", comp.Name, err)
+			return false
+		}
+	}
+
+	return changed
+}
+
+// addComponent 新增组件
+func (c *applicationsServiceImpl) addComponent(ctx context.Context, app *model.Applications, spec apisv1.ComponentUpdateSpec) error {
+	replicas := int32(1)
+	if spec.Replicas != nil {
+		replicas = *spec.Replicas
+	}
+
+	component := &model.ApplicationComponent{
+		Name:          spec.Name,
+		AppID:         app.ID,
+		Namespace:     app.Namespace,
+		Image:         spec.Image,
+		Replicas:      replicas,
+		ComponentType: spec.ComponentType,
+	}
+
+	// 设置 Properties
+	if spec.Properties != nil {
+		props, err := model.NewJSONStructByStruct(spec.Properties)
+		if err != nil {
+			return fmt.Errorf("marshal properties: %w", err)
+		}
+		component.Properties = props
+	}
+
+	// 设置 Traits
+	if spec.Traits != nil {
+		traits, err := model.NewJSONStructByStruct(spec.Traits)
+		if err != nil {
+			return fmt.Errorf("marshal traits: %w", err)
+		}
+		component.Traits = traits
+	}
+
+	return c.ComponentRepo.Create(ctx, component)
+}
+
+// mergeComponentEnv 合并组件环境变量
+func (c *applicationsServiceImpl) mergeComponentEnv(comp *model.ApplicationComponent, envUpdates map[string]string) error {
+	if comp.Properties == nil {
+		return nil
+	}
+
+	var props apisv1.Properties
+	if err := decodeJSONStruct(comp.Properties, &props); err != nil {
+		return err
+	}
+
+	if props.Env == nil {
+		props.Env = make(map[string]string)
+	}
+	for k, v := range envUpdates {
+		props.Env[k] = v
+	}
+
+	newProps, err := model.NewJSONStructByStruct(props)
+	if err != nil {
+		return err
+	}
+	comp.Properties = newProps
+	return nil
+}
+
+// syncWorkflowSteps 同步工作流步骤（组件增删后更新工作流）
+func (c *applicationsServiceImpl) syncWorkflowSteps(ctx context.Context, appID string, componentMap map[string]*model.ApplicationComponent, added, removed []string) error {
+	workflows, err := c.WorkflowRepo.FindByAppID(ctx, appID)
+	if err != nil || len(workflows) == 0 {
+		return err
+	}
+
+	// 只更新第一个工作流
+	workflow := workflows[0]
+	if workflow.Steps == nil {
+		return nil
+	}
+
+	var steps model.WorkflowSteps
+	if err := decodeJSONStruct(workflow.Steps, &steps); err != nil {
+		return err
+	}
+
+	// 删除已移除组件的步骤
+	removedSet := make(map[string]struct{}, len(removed))
+	for _, name := range removed {
+		removedSet[strings.ToLower(name)] = struct{}{}
+	}
+
+	filteredSteps := make([]*model.WorkflowStep, 0, len(steps.Steps))
+	for _, step := range steps.Steps {
+		if step == nil {
+			continue
+		}
+		stepName := strings.ToLower(step.Name)
+		if _, shouldRemove := removedSet[stepName]; !shouldRemove {
+			filteredSteps = append(filteredSteps, step)
+		}
+	}
+
+	// 添加新组件的步骤
+	for _, name := range added {
+		newStep := &model.WorkflowStep{
+			Name:         name,
+			WorkflowType: config.JobDeploy,
+			Mode:         config.WorkflowModeStepByStep,
+			Properties: []model.Policies{{
+				Policies: []string{name},
+			}},
+		}
+		filteredSteps = append(filteredSteps, newStep)
+	}
+
+	steps.Steps = filteredSteps
+
+	// 更新工作流
+	newSteps, err := model.NewJSONStructByStruct(&steps)
+	if err != nil {
+		return err
+	}
+	workflow.Steps = newSteps
+
+	return c.WorkflowRepo.Update(ctx, workflow)
+}
+
+// execWorkflow 执行工作流
+func (c *applicationsServiceImpl) execWorkflow(ctx context.Context, workflow *model.Workflow) (string, error) {
+	if workflow == nil || workflow.Steps == nil {
+		return "", fmt.Errorf("invalid workflow")
+	}
+
+	workflowTask := &model.WorkflowQueue{
+		TaskID:              utils.RandStringByNumLowercase(24),
+		AppID:               workflow.AppID,
+		WorkflowID:          workflow.ID,
+		ProjectID:           workflow.ProjectID,
+		WorkflowName:        workflow.Name,
+		WorkflowDisplayName: workflow.Alias,
+		Type:                workflow.WorkflowType,
+		Status:              config.StatusWaiting,
+	}
+
+	if err := c.WorkflowQueueRepo.Create(ctx, workflowTask); err != nil {
+		klog.Errorf("create workflow queue failed: %v", err)
+		return "", err
+	}
+
+	return workflowTask.TaskID, nil
+}
+
+// incrementVersion 递增版本号 (如 1.0.0 -> 1.0.1)
+func incrementVersion(version string) string {
+	if version == "" {
+		return "1.0.1"
+	}
+	parts := strings.Split(version, ".")
+	if len(parts) == 0 {
+		return version + ".1"
+	}
+
+	// 递增最后一位
+	lastIdx := len(parts) - 1
+	var lastNum int
+	fmt.Sscanf(parts[lastIdx], "%d", &lastNum)
+	parts[lastIdx] = fmt.Sprintf("%d", lastNum+1)
+
+	return strings.Join(parts, ".")
 }

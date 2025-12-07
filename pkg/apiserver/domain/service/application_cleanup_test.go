@@ -53,8 +53,9 @@ func TestCleanupApplicationResourcesDeletesWorkload(t *testing.T) {
 	)
 
 	svc := &applicationsServiceImpl{
-		Store:      store,
-		KubeClient: clientset,
+		KubeClient:    clientset,
+		AppRepo:       &mockCleanupAppRepo{store: store},
+		ComponentRepo: &mockCleanupComponentRepo{store: store},
 	}
 
 	resp, err := svc.CleanupApplicationResources(context.Background(), app.ID)

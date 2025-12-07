@@ -1,0 +1,14 @@
+{
+  "version": "2.1.0-canary",
+  "strategy": "canary",
+  "components": [
+    {
+      "name": "frontend",
+      "image": "myapp/frontend:v2.1.0",
+      "replicas": 1
+    }
+  ],
+  "autoExec": true,
+  "description": "Canary release - testing v2.1.0 with 1 replica"
+}
+

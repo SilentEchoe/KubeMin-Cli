@@ -1,0 +1,16 @@
+{
+  "version": "1.2.0",
+  "components": [
+    {
+      "name": "backend",
+      "env": {
+        "LOG_LEVEL": "debug",
+        "FEATURE_FLAG_NEW_UI": "enabled",
+        "DB_POOL_SIZE": "20",
+        "CACHE_TTL": "3600"
+      }
+    }
+  ],
+  "description": "Update environment variables for debugging"
+}
+

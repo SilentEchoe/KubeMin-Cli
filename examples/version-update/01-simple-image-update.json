@@ -1,0 +1,12 @@
+{
+  "version": "1.1.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "name": "backend",
+      "image": "myapp/backend:v1.1.0"
+    }
+  ],
+  "description": "Update backend image to v1.1.0"
+}
+

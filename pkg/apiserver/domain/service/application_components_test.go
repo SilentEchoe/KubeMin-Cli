@@ -36,7 +36,7 @@ func TestListApplicationComponentsReturnsSorted(t *testing.T) {
 		},
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	components, err := svc.ListApplicationComponents(context.Background(), "app-1")
 	require.NoError(t, err)
 	require.Len(t, components, 2)
@@ -46,7 +46,7 @@ func TestListApplicationComponentsReturnsSorted(t *testing.T) {
 
 func TestListApplicationComponentsMissingApp(t *testing.T) {
 	store := newInMemoryAppStore()
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 
 	_, err := svc.ListApplicationComponents(context.Background(), "missing")
 	require.ErrorIs(t, err, bcode.ErrApplicationNotExist)

@@ -16,12 +16,6 @@
 - 测试并发执行和资源竞争情况
 - 验证资源更新和版本管理的正确性
 
-### 次要目标
-- 性能基准测试
-- 边界条件测试
-- 异常情况处理测试
-- 资源清理验证
-
 ## 测试环境要求
 
 ### 基础环境
@@ -432,6 +426,7 @@ curl -X POST \
   
 
 **测试项 TC004: 密钥组件创建**
+
 ```yaml
 # 测试用例
 应用: test-app-004
@@ -770,6 +765,7 @@ traits:
 #### 5.2 命名规范测试
 
 **测试项 TC022: 特殊字符处理**
+
 ```yaml
 # 测试用例
 组件名称: test-app_with.special@chars
@@ -783,9 +779,9 @@ traits:
 - [ ] 错误处理适当
 - [ ] 状态更新正常
 
-## 模板实例化测试 (Tem.id 克隆)
+### 6.模板实例化测试 (Tem.id 克隆)
 
-### 测试项 TC013：单次克隆模板（tmp_enable=true）
+#### 测试项 TC023：单次克隆模板（tmp_enable=true）
 - 前置：模板应用已存在且 `tmp_enable=true`，包含 store + secret 组件。
 - 请求示例（覆盖 env/secret）：
 ```json
@@ -807,223 +803,208 @@ traits:
   - 覆盖：`properties.env` 覆盖模板 env；`properties.secret` 仅对 `type=secret` 组件覆盖模板 Secret。
   - 模板 `tmp_enable=true` 方可引用，`tmp_enable=false` 返回 400。
 
-### 测试项 TC014：模板禁用/ID 缺失错误
+#### 测试项 TC024：模板禁用/ID 缺失错误
 - 模板 `tmp_enable=false` 或 `Tem.id` 为空/不存在，返回 400/404，错误信息分别为 `template application is not enabled` / `template id is required` / `application name is not exist`。
 
-### 测试项 TC015：同模板多条覆盖匹配
+#### 测试项 TC025：同模板多条覆盖匹配
 - 同一 `Tem.id` 多条目仅用于覆盖（类型优先匹配），未匹配的模板组件按 baseName 或模板名生成新名称。
 - 校验组件命名、env/secret 覆盖结果与预期一致，组件数量不重复。
 
-### 6. 性能测试 (Performance Tests)
 
-#### 6.1 响应时间测试
 
-**测试项 PT001: 单组件创建性能**
-```yaml
-# 测试指标
-目标时间: < 5秒
-组件类型: webservice
-复杂度: 基础配置
+### 7.版本更新测试
+
+#### 7.1 简单镜像更新
+
+#### 测试项 TC026：简单镜像更新
+
+准备一个简单的Backend服务
+
+```json
+{
+  "name": "my-backend-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "My backend application",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:1.23",
+      "replicas": 2,
+      "properties": {
+        "ports": [
+          {"port": 8080}
+        ],
+        "env": {
+          "ENV": "production",
+          "LOG_LEVEL": "info"
+        }
+      }
+    }
+  ]
+}
 ```
-**验证点:**
-- [ ] 创建时间记录
-- [ ] API响应时间
-- [ ] 数据库操作时间
-- [ ] Kubernetes API调用时间
-- [ ] 整体性能评估
 
-**测试项 PT002: 批量组件创建性能**
-```yaml
-# 测试指标
-并发数量: 10, 50, 100
-组件类型: 混合
-总时间要求: 线性增长
+响应：
+
+```json
+{
+    "id": "a8h07bwds3f2f4ewzbzyew5c",
+    "name": "my-backend-app",
+    "alias": "",
+    "project": "",
+    "version": "1.0.0",
+    "description": "My backend application",
+    "createTime": "2025-12-07T20:47:56.905968+08:00",
+    "updateTime": "2025-12-07T20:47:56.905968+08:00",
+    "icon": "",
+    "workflow_id": "adw9ccyo7n6f0iorzthrmo34",
+    "tmp_enable": false
+}
 ```
-**验证点:**
-- [ ] 并发执行时间
-- [ ] 资源利用率
-- [ ] 错误率统计
-- [ ] 性能瓶颈识别
-- [ ] 优化建议
 
-#### 6.2 资源使用测试
+1.执行工作流
 
-**测试项 PT003: 内存使用测试**
-```yaml
-# 测试场景
-持续创建/删除组件
-监控内存使用趋势
-检测内存泄漏
+**请求**：`POST /api/v1/applications/a8h07bwds3f2f4ewzbzyew5c/workflow/exec` body:`{"workflowId":"adw9ccyo7n6f0iorzthrmo34"}`
+
+正常返回:
+
+```json
+{
+    "taskId": "80639qtadaz8bogotvmok9vh"
+}
 ```
-**验证点:**
-- [ ] 内存使用稳定
-- [ ] 无内存泄漏
-- [ ] GC正常执行
-- [ ] 资源释放及时
-- [ ] 性能持续稳定
 
-### 7. 集成测试 (Integration Tests)
+使用kubectl get deploy 
 
-#### 7.1 外部系统集成
+```shell
+> kubectl get deploy 
+NAME                                            READY   UP-TO-DATE   AVAILABLE   AGE
+deploy-backend-a8h07bwds3f2f4ewzbzyew5c         2/2     2            2           61s
 
-**测试项 IT001: 完整CI/CD流程**
-```yaml
-# 测试流程
-1. 代码提交触发
-2. 自动构建镜像
-3. 部署到测试环境
-4. 运行自动化测试
-5. 部署到生产环境
-```
-**验证点:**
-- [ ] 流程自动化执行
-- [ ] 错误处理正确
-- [ ] 回滚机制有效
-- [ ] 通知机制正常
-- [ ] 审计日志完整
+> kubectl get po
+NAME                                                             READY   STATUS    RESTARTS   AGE
+deploy-backend-a8h07bwds3f2f4ewzbzyew5c-77c67c9df6-fm95d          1/1     Running   0          46s
+deploy-backend-a8h07bwds3f2f4ewzbzyew5c-77c67c9df6-rxzp8          1/1     Running   0          46s
 
-#### 7.2 监控集成测试
+> kubectl get deploy deploy-backend-a8h07bwds3f2f4ewzbzyew5c -o yaml
 
-**测试项 IT002: 监控指标验证**
-```yaml
-# 测试指标
-部署成功率: > 99%
-平均部署时间: < 30秒
-错误恢复时间: < 5分钟
-资源利用率: < 80%
-```
-**验证点:**
-- [ ] 指标正确收集
-- [ ] 告警机制有效
-- [ ] 仪表板展示正确
-- [ ] 历史数据保存
-- [ ] 性能趋势分析
-
-## 测试执行计划
-
-### 阶段1: 基础功能验证 (1-2天)
-- TC001-TC006: 基础组件CRUD操作
-- 验证基本工作流执行
-- 检查数据库状态一致性
-
-### 阶段2: Trait系统测试 (2-3天)
-- TC007-TC012: 所有trait类型测试
-- 验证trait组合使用
-- 测试递归trait应用
-
-### 阶段3: 复杂场景测试 (2-3天)
-- TC013-TC015: 多组件依赖测试
-- 并行执行验证
-- 性能基准测试
-
-### 阶段4: 异常处理测试 (1-2天)
-- TC016-TC019: 错误处理和回滚
-- 边界条件测试
-- 资源竞争测试
-
-### 阶段5: 性能和集成测试 (1-2天)
-- PT001-PT003: 性能测试
-- IT001-IT002: 集成测试
-- 整体稳定性验证
-
-## 测试数据准备
-
-### 测试应用模板
-```yaml
-# 基础webservice模板
-apiVersion: core.kubemin.io/v1alpha1
-kind: Application
-metadata:
-  name: test-webservice-{timestamp}
+....
 spec:
-  components:
-    - name: nginx-test
-      type: webservice
-      properties:
-        image: nginx:1.21
-        replicas: 3
+      containers:
+      - env:
+        - name: ENV
+          value: production
+        - name: LOG_LEVEL
+          value: info
+        image: nginx:1.23 #符合已部署的镜像
+        imagePullPolicy: IfNotPresent
+        name: backend
         ports:
-          - port: 80
-            expose: true
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+...
 ```
 
-### 测试工具脚本
-```bash
-#!/bin/bash
-# 批量创建测试应用
-for i in {1..10}; do
-  sed "s/{timestamp}/$(date +%s)/g" test-template.yaml | \
-  kubectl apply -f -
-done
+
+
+2.更新镜像版本，现在将 backend 组件的镜像从 `v1.0.0` 更新到 `v1.2.0`：
+
+**请求**：`POST /api/v1/applications/a8h07bwds3f2f4ewzbzyew5c/version`
+
+```
+{
+  "version": "1.2.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "name": "backend",
+      "image": "nginx:latest"
+    }
+  ],
+  "description": "Update backend image to v1.2.0"
+}
 ```
 
-## 成功标准
+正常返回：
 
-### 功能正确性
-- 所有测试用例通过率 > 95%
-- 关键路径测试通过率 = 100%
-- 错误处理覆盖率 > 90%
-
-### 性能指标
-- 单组件创建时间 < 5秒
-- 批量组件创建线性增长
-- 内存使用稳定无泄漏
-
-### 稳定性要求
-- 连续运行24小时无异常
-- 并发测试无数据竞争
-- 异常恢复时间 < 5分钟
-
-## 问题追踪
-
-### 问题分类
-- **P0**: 阻塞性问题，影响基本功能
-- **P1**: 严重问题，影响重要功能
-- **P2**: 一般问题，影响用户体验
-- **P3**: 优化建议，非功能性问题
-
-### 问题记录模板
 ```
-问题ID: KBT-{YYYYMMDD}-{序号}
-严重程度: P0-P3
-测试项: TCxxx
-问题描述:
-复现步骤:
-期望结果:
-实际结果:
-影响范围:
-解决方案:
+{
+    "appId": "a8h07bwds3f2f4ewzbzyew5c",
+    "version": "1.2.0",
+    "previousVersion": "1.0.0",
+    "strategy": "rolling",
+    "taskId": "1esnitda8cxi85u4clapfn89",
+    "updatedComponents": [
+        "backend"
+    ]
+}
 ```
 
-## 测试报告
+验证镜像是否发生改变：
 
-### 日报内容
-- 当日执行测试项
-- 发现问题统计
-- 性能指标数据
-- 阻塞问题列表
-- 明日测试计划
+```yaml
+> kubectl get deploy deploy-backend-a8h07bwds3f2f4ewzbzyew5c -o yaml
+...
+spec:
+      containers:
+      - env:
+        - name: ENV
+          value: production
+        - name: LOG_LEVEL
+          value: info
+        image: nginx:latest
+        imagePullPolicy: IfNotPresent
+        name: backend
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      
+      
+> kubectl get po deploy-backend-a8h07bwds3f2f4ewzbzyew5c-77c67c9df6-fm95d -o yaml
+...
+spec:
+  containers:
+  - env:
+    - name: ENV
+      value: production
+    - name: LOG_LEVEL
+      value: info
+    image: nginx:latest
+    imagePullPolicy: IfNotPresent
+    name: backend
+    ports:
+    - containerPort: 8080
+      protocol: TCP
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-txlz8
+      readOnly: true
+```
 
-### 最终报告
-- 测试执行总结
-- 问题统计分析
-- 性能评估结果
-- 稳定性验证结论
-- 改进建议
 
-## 持续改进
 
-### 测试优化
-- 根据执行结果优化测试用例
-- 完善自动化测试脚本
-- 改进测试数据管理
-- 提升测试执行效率
 
-### 流程改进
-- 优化测试执行流程
-- 完善问题追踪机制
-- 加强代码审查流程
-- 提升持续集成效率
 
 ---
 

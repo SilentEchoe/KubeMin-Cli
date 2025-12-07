@@ -1,0 +1,11 @@
+{
+  "version": "1.0.1",
+  "components": [
+    {
+      "name": "backend",
+      "replicas": 5
+    }
+  ],
+  "description": "Scale backend to 5 replicas"
+}
+

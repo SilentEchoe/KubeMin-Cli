@@ -172,3 +172,64 @@ var StorageTypeMapping = map[string]string{
 	StorageTypeConfig:      VolumeTypeConfigMap,
 	StorageTypeSecret:      VolumeTypeSecret,
 }
+
+// UpdateStrategy 版本更新策略类型
+type UpdateStrategy string
+
+const (
+	// UpdateStrategyRolling 滚动更新（默认）- 逐步替换Pod，保证服务可用性
+	UpdateStrategyRolling UpdateStrategy = "rolling"
+
+	// UpdateStrategyRecreate 重建更新 - 先删除所有旧Pod，再创建新Pod
+	UpdateStrategyRecreate UpdateStrategy = "recreate"
+
+	// UpdateStrategyCanary 金丝雀更新 - 先更新部分Pod，验证后再全量更新
+	UpdateStrategyCanary UpdateStrategy = "canary"
+
+	// UpdateStrategyBlueGreen 蓝绿部署 - 创建新版本，切换流量后销毁旧版本
+	UpdateStrategyBlueGreen UpdateStrategy = "blue-green"
+)
+
+// ParseUpdateStrategy 解析更新策略，默认返回滚动更新
+func ParseUpdateStrategy(strategy string) UpdateStrategy {
+	switch UpdateStrategy(strategy) {
+	case UpdateStrategyRecreate:
+		return UpdateStrategyRecreate
+	case UpdateStrategyCanary:
+		return UpdateStrategyCanary
+	case UpdateStrategyBlueGreen:
+		return UpdateStrategyBlueGreen
+	case UpdateStrategyRolling:
+		return UpdateStrategyRolling
+	default:
+		return UpdateStrategyRolling
+	}
+}
+
+// ComponentAction 组件操作类型
+type ComponentAction string
+
+const (
+	// ComponentActionUpdate 更新组件（默认）
+	ComponentActionUpdate ComponentAction = "update"
+
+	// ComponentActionAdd 新增组件
+	ComponentActionAdd ComponentAction = "add"
+
+	// ComponentActionRemove 删除组件
+	ComponentActionRemove ComponentAction = "remove"
+)
+
+// ParseComponentAction 解析组件操作类型，默认返回更新
+func ParseComponentAction(action string) ComponentAction {
+	switch ComponentAction(action) {
+	case ComponentActionAdd:
+		return ComponentActionAdd
+	case ComponentActionRemove:
+		return ComponentActionRemove
+	case ComponentActionUpdate:
+		return ComponentActionUpdate
+	default:
+		return ComponentActionUpdate
+	}
+}

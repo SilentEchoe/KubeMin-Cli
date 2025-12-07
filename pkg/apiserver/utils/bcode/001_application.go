@@ -29,3 +29,21 @@ var ErrTemplateIDMissing = NewBcode(400, 10009, "template id is required")
 
 // ErrTemplateTargetNotFound template target not found or mismatch
 var ErrTemplateTargetNotFound = NewBcode(400, 10010, "template target component not found or type mismatch")
+
+// ErrVersionUpdateFailed version update operation failed
+var ErrVersionUpdateFailed = NewBcode(500, 10011, "version update failed")
+
+// ErrInvalidUpdateStrategy invalid update strategy
+var ErrInvalidUpdateStrategy = NewBcode(400, 10012, "invalid update strategy")
+
+// ErrComponentNotFound component not found in application
+var ErrComponentNotFound = NewBcode(404, 10013, "component not found in application")
+
+// ErrNoComponentsToUpdate no components available for update
+var ErrNoComponentsToUpdate = NewBcode(400, 10014, "no components available for update")
+
+// ErrComponentAlreadyExists component already exists when trying to add
+var ErrComponentAlreadyExists = NewBcode(400, 10015, "component already exists")
+
+// ErrInvalidComponentAction invalid component action type
+var ErrInvalidComponentAction = NewBcode(400, 10016, "invalid component action, must be update, add, or remove")

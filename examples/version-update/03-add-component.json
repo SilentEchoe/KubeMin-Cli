@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "components": [
+    {
+      "action": "add",
+      "name": "redis-cache",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [
+          {"port": 6379}
+        ]
+      },
+      "traits": {
+        "resources": {
+          "cpu": "100m",
+          "memory": "256Mi"
+        }
+      }
+    }
+  ],
+  "description": "Add Redis cache component"
+}
+

@@ -3,13 +3,17 @@ package template
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"os"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
+	"time"
 
-	"github.com/KubeMin-Cli/KubeMin-Cli/pkg/apiserver/domain/model"
-	"github.com/KubeMin-Cli/KubeMin-Cli/pkg/apiserver/utils"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // Engine 模板引擎接口
@@ -738,12 +742,6 @@ func isZeroValue(v interface{}) bool {
 	return false
 }
 
-// Import required packages at the top
-import (
-	"os"
-	"time"
-	"math/rand"
-)
 
 // GenerateRandomString 生成随机字符串
 func GenerateRandomString(length int) string {
@@ -755,10 +753,6 @@ func GenerateRandomString(length int) string {
 	return string(b)
 }
 
-// Import time package for timestamp function
-import (
-	"time"
-)
 
 // Update timestamp function to use current time
 func init() {
@@ -1318,8 +1312,6 @@ func (c *InMemoryTemplateCache) Clear() {
 	c.cache = make(map[string]*cacheEntry)
 }
 
-// Import sync package
-import "sync"
 
 // TemplateMetrics 模板指标
 type TemplateMetrics struct {

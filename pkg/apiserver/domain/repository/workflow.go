@@ -11,6 +11,164 @@ import (
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 )
 
+// ---- Workflow Repository Interface ----
+
+// WorkflowRepository defines the interface for workflow data operations.
+type WorkflowRepository interface {
+	FindByID(ctx context.Context, workflowID string) (*model.Workflow, error)
+	Create(ctx context.Context, workflow *model.Workflow) error
+	Update(ctx context.Context, workflow *model.Workflow) error
+	Delete(ctx context.Context, workflow *model.Workflow) error
+	DeleteByAppID(ctx context.Context, appID string) error
+	FindByAppID(ctx context.Context, appID string) ([]*model.Workflow, error)
+}
+
+type workflowRepository struct {
+	Store datastore.DataStore `inject:"datastore"`
+}
+
+// NewWorkflowRepository creates a new WorkflowRepository.
+// Dependencies are injected via struct tags.
+func NewWorkflowRepository() WorkflowRepository {
+	return &workflowRepository{}
+}
+
+func (r *workflowRepository) FindByID(ctx context.Context, workflowID string) (*model.Workflow, error) {
+	return WorkflowByID(ctx, r.Store, workflowID)
+}
+
+func (r *workflowRepository) Create(ctx context.Context, workflow *model.Workflow) error {
+	return CreateWorkflow(ctx, r.Store, workflow)
+}
+
+func (r *workflowRepository) Update(ctx context.Context, workflow *model.Workflow) error {
+	return r.Store.Put(ctx, workflow)
+}
+
+func (r *workflowRepository) Delete(ctx context.Context, workflow *model.Workflow) error {
+	return DelWorkflow(ctx, r.Store, workflow)
+}
+
+func (r *workflowRepository) DeleteByAppID(ctx context.Context, appID string) error {
+	return DelWorkflowsByAppID(ctx, r.Store, appID)
+}
+
+func (r *workflowRepository) FindByAppID(ctx context.Context, appID string) ([]*model.Workflow, error) {
+	return FindWorkflowsByAppID(ctx, r.Store, appID)
+}
+
+// ---- Component Repository Interface ----
+
+// ComponentRepository defines the interface for component data operations.
+type ComponentRepository interface {
+	Create(ctx context.Context, component *model.ApplicationComponent) error
+	Update(ctx context.Context, component *model.ApplicationComponent) error
+	Delete(ctx context.Context, component *model.ApplicationComponent) error
+	BatchAdd(ctx context.Context, components []*model.ApplicationComponent) error
+	DeleteByAppID(ctx context.Context, appID string) error
+	FindByAppID(ctx context.Context, appID string) ([]*model.ApplicationComponent, error)
+	FindByName(ctx context.Context, appID, name string) (*model.ApplicationComponent, error)
+}
+
+type componentRepository struct {
+	Store datastore.DataStore `inject:"datastore"`
+}
+
+// NewComponentRepository creates a new ComponentRepository.
+// Dependencies are injected via struct tags.
+func NewComponentRepository() ComponentRepository {
+	return &componentRepository{}
+}
+
+func (r *componentRepository) Create(ctx context.Context, component *model.ApplicationComponent) error {
+	return CreateComponents(ctx, r.Store, component)
+}
+
+func (r *componentRepository) Update(ctx context.Context, component *model.ApplicationComponent) error {
+	return r.Store.Put(ctx, component)
+}
+
+func (r *componentRepository) Delete(ctx context.Context, component *model.ApplicationComponent) error {
+	return r.Store.Delete(ctx, component)
+}
+
+func (r *componentRepository) BatchAdd(ctx context.Context, components []*model.ApplicationComponent) error {
+	entities := make([]datastore.Entity, len(components))
+	for i, comp := range components {
+		entities[i] = comp
+	}
+	return r.Store.BatchAdd(ctx, entities)
+}
+
+func (r *componentRepository) DeleteByAppID(ctx context.Context, appID string) error {
+	return DelComponentsByAppID(ctx, r.Store, appID)
+}
+
+func (r *componentRepository) FindByAppID(ctx context.Context, appID string) ([]*model.ApplicationComponent, error) {
+	return FindComponentsByAppID(ctx, r.Store, appID)
+}
+
+func (r *componentRepository) FindByName(ctx context.Context, appID, name string) (*model.ApplicationComponent, error) {
+	components, err := r.FindByAppID(ctx, appID)
+	if err != nil {
+		return nil, err
+	}
+	for _, comp := range components {
+		if comp != nil && comp.Name == name {
+			return comp, nil
+		}
+	}
+	return nil, datastore.ErrRecordNotExist
+}
+
+// ---- Workflow Queue Repository Interface ----
+
+// WorkflowQueueRepository defines the interface for workflow queue operations.
+type WorkflowQueueRepository interface {
+	Create(ctx context.Context, queue *model.WorkflowQueue) error
+	Update(ctx context.Context, task *model.WorkflowQueue) error
+	FindByID(ctx context.Context, taskID string) (*model.WorkflowQueue, error)
+	FindWaiting(ctx context.Context) ([]*model.WorkflowQueue, error)
+	FindRunning(ctx context.Context) ([]*model.WorkflowQueue, error)
+	UpdateStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error)
+}
+
+type workflowQueueRepository struct {
+	Store datastore.DataStore `inject:"datastore"`
+}
+
+// NewWorkflowQueueRepository creates a new WorkflowQueueRepository.
+// Dependencies are injected via struct tags.
+func NewWorkflowQueueRepository() WorkflowQueueRepository {
+	return &workflowQueueRepository{}
+}
+
+func (r *workflowQueueRepository) Create(ctx context.Context, queue *model.WorkflowQueue) error {
+	return CreateWorkflowQueue(ctx, r.Store, queue)
+}
+
+func (r *workflowQueueRepository) Update(ctx context.Context, task *model.WorkflowQueue) error {
+	return UpdateTask(ctx, r.Store, task)
+}
+
+func (r *workflowQueueRepository) FindByID(ctx context.Context, taskID string) (*model.WorkflowQueue, error) {
+	return TaskByID(ctx, r.Store, taskID)
+}
+
+func (r *workflowQueueRepository) FindWaiting(ctx context.Context) ([]*model.WorkflowQueue, error) {
+	return WaitingTasks(ctx, r.Store)
+}
+
+func (r *workflowQueueRepository) FindRunning(ctx context.Context) ([]*model.WorkflowQueue, error) {
+	return TaskRunning(ctx, r.Store)
+}
+
+func (r *workflowQueueRepository) UpdateStatus(ctx context.Context, taskID string, from, to config.Status) (bool, error) {
+	return UpdateTaskStatus(ctx, r.Store, taskID, from, to)
+}
+
+// ---- Original Functions (kept for backward compatibility) ----
+
 func WorkflowByID(ctx context.Context, store datastore.DataStore, workflowID string) (*model.Workflow, error) {
 	var workflow = &model.Workflow{
 		ID: workflowID,
@@ -137,8 +295,12 @@ func WaitingTasks(ctx context.Context, store datastore.DataStore) (list []*model
 	if err != nil {
 		return nil, err
 	}
-	for _, policy := range queues {
-		wq := policy.(*model.WorkflowQueue)
+	for _, entity := range queues {
+		wq, ok := entity.(*model.WorkflowQueue)
+		if !ok {
+			klog.Warningf("unexpected workflow queue entity type: %T", entity)
+			continue
+		}
 		list = append(list, wq)
 	}
 	return
@@ -170,8 +332,12 @@ func TaskRunning(ctx context.Context, store datastore.DataStore) (list []*model.
 	if err != nil {
 		return nil, err
 	}
-	for _, v := range tasks {
-		task := v.(*model.WorkflowQueue)
+	for _, entity := range tasks {
+		task, ok := entity.(*model.WorkflowQueue)
+		if !ok {
+			klog.Warningf("unexpected workflow queue entity type: %T", entity)
+			continue
+		}
 		list = append(list, task)
 	}
 	return

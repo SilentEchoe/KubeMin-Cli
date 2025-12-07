@@ -25,7 +25,7 @@ func TestCreateApplicationsFromTemplateRequiresEnable(t *testing.T) {
 		ComponentType: config.StoreJob,
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.CreateApplicationsRequest{
 		Name: "new-app",
 		Component: []apisv1.CreateComponentRequest{{
@@ -116,7 +116,7 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 		Properties:    configPropsJSON,
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	tmpEnable := true
 	req := apisv1.CreateApplicationsRequest{
 		Name:  "cloned-app",
@@ -242,7 +242,7 @@ func TestCreateApplicationsFromTemplateRewritesPersistentStorageNames(t *testing
 		Traits:        traitsJSON,
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.CreateApplicationsRequest{
 		Name: "tenant-a-mysql-app",
 		Component: []apisv1.CreateComponentRequest{

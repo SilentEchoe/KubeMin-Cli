@@ -27,7 +27,7 @@ func TestUpdateApplicationWorkflowCreatesWorkflow(t *testing.T) {
 	store.components["mysql-primary"] = &model.ApplicationComponent{Name: "mysql-primary", AppID: "app-1"}
 	store.components["mysql-replica"] = &model.ApplicationComponent{Name: "mysql-replica", AppID: "app-1"}
 	store.components["dashboard"] = &model.ApplicationComponent{Name: "dashboard", AppID: "app-1"}
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Name:  "custom-flow",
@@ -71,7 +71,7 @@ func TestUpdateApplicationWorkflowUpdatesExisting(t *testing.T) {
 	store.workflows[existing.ID] = existing
 	store.components["dashboard"] = &model.ApplicationComponent{Name: "dashboard", AppID: "app-1"}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		WorkflowID: "wf-1",
@@ -110,7 +110,7 @@ func TestUpdateApplicationWorkflowCreatesNewWhenWorkflowIDMissing(t *testing.T) 
 	}
 	store.workflows[existing.ID] = existing
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Name: "custom-flow",
 		Workflow: []apisv1.CreateWorkflowStepRequest{
@@ -146,7 +146,7 @@ func TestUpdateApplicationWorkflowInheritsMetadata(t *testing.T) {
 		Description: "legacy-desc",
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Name: "another-flow",
 		Workflow: []apisv1.CreateWorkflowStepRequest{
@@ -174,7 +174,7 @@ func TestUpdateApplicationWorkflowDefaultsMetadataFromApp(t *testing.T) {
 	}
 	store.components["nginx"] = &model.ApplicationComponent{Name: "nginx", AppID: "app-1"}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Workflow: []apisv1.CreateWorkflowStepRequest{
 			{Name: "deploy-nginx", Components: []string{"nginx"}},
@@ -205,7 +205,7 @@ func TestUpdateApplicationWorkflowGeneratesUniqueName(t *testing.T) {
 		ProjectID: "proj-1",
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Workflow: []apisv1.CreateWorkflowStepRequest{
 			{Name: "deploy-nginx", Components: []string{"nginx"}},
@@ -230,7 +230,7 @@ func TestUpdateApplicationWorkflowMissingComponent(t *testing.T) {
 	}
 	store.components["config"] = &model.ApplicationComponent{Name: "config", AppID: "app-1"}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 
 	req := apisv1.UpdateApplicationWorkflowRequest{
 		Name: "bad-flow",
@@ -269,7 +269,7 @@ func TestListApplicationWorkflows(t *testing.T) {
 		},
 	}
 
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	list, err := svc.ListApplicationWorkflows(context.Background(), "app-1")
 	require.NoError(t, err)
 	require.Len(t, list, 2)
@@ -279,7 +279,7 @@ func TestListApplicationWorkflows(t *testing.T) {
 
 func TestListApplicationWorkflowsMissingApp(t *testing.T) {
 	store := newInMemoryAppStore()
-	svc := &applicationsServiceImpl{Store: store}
+	svc := newMockServiceWithStore(store)
 	_, err := svc.ListApplicationWorkflows(context.Background(), "missing")
 	require.Error(t, err)
 	require.True(t, errors.Is(err, bcode.ErrApplicationNotExist))
@@ -362,7 +362,17 @@ func (s *inMemoryAppStore) Put(_ context.Context, entity datastore.Entity) error
 	return nil
 }
 
-func (s *inMemoryAppStore) Delete(context.Context, datastore.Entity) error { return nil }
+func (s *inMemoryAppStore) Delete(_ context.Context, entity datastore.Entity) error {
+	switch v := entity.(type) {
+	case *model.Applications:
+		delete(s.apps, v.ID)
+	case *model.Workflow:
+		delete(s.workflows, v.ID)
+	case *model.ApplicationComponent:
+		delete(s.components, v.Name)
+	}
+	return nil
+}
 
 func (s *inMemoryAppStore) DeleteByFilter(context.Context, datastore.Entity, *datastore.FilterOptions) error {
 	return nil

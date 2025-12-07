@@ -271,3 +271,79 @@ type ApplicationComponent struct {
 	CreateTime    time.Time      `json:"createTime"`
 	UpdateTime    time.Time      `json:"updateTime"`
 }
+
+// UpdateVersionRequest 版本更新请求
+type UpdateVersionRequest struct {
+	// Version 新版本号（必填）
+	Version string `json:"version" validate:"required"`
+
+	// Strategy 更新策略：rolling（默认）、recreate、canary、blue-green
+	Strategy string `json:"strategy,omitempty"`
+
+	// Components 要更新的组件列表（可选，不填则仅更新版本号）
+	Components []ComponentUpdateSpec `json:"components,omitempty"`
+
+	// AutoExec 是否自动执行工作流，默认 true
+	AutoExec *bool `json:"autoExec,omitempty"`
+
+	// Description 更新说明
+	Description string `json:"description,omitempty"`
+}
+
+// ComponentUpdateSpec 组件更新规格
+type ComponentUpdateSpec struct {
+	// Action 操作类型：update（默认）、add、remove
+	Action string `json:"action,omitempty"`
+
+	// Name 组件名称
+	Name string `json:"name" validate:"required"`
+
+	// 以下字段仅在 action 为 update 或 add 时有效
+
+	// Image 新镜像地址（可选）
+	Image string `json:"image,omitempty"`
+
+	// Replicas 新副本数（可选）
+	Replicas *int32 `json:"replicas,omitempty"`
+
+	// Env 环境变量覆盖（可选，合并更新）
+	Env map[string]string `json:"env,omitempty"`
+
+	// 以下字段仅在 action 为 add 时需要
+
+	// ComponentType 组件类型（新增时必填）
+	ComponentType config.JobType `json:"type,omitempty"`
+
+	// Properties 组件属性（新增时可选）
+	Properties *Properties `json:"properties,omitempty"`
+
+	// Traits 组件特性（新增时可选）
+	Traits *Traits `json:"traits,omitempty"`
+}
+
+// UpdateVersionResponse 版本更新响应
+type UpdateVersionResponse struct {
+	// AppID 应用ID
+	AppID string `json:"appId"`
+
+	// Version 新版本号
+	Version string `json:"version"`
+
+	// PreviousVersion 更新前版本号
+	PreviousVersion string `json:"previousVersion"`
+
+	// Strategy 使用的更新策略
+	Strategy string `json:"strategy"`
+
+	// TaskID 工作流任务ID（如果触发了工作流执行）
+	TaskID string `json:"taskId,omitempty"`
+
+	// UpdatedComponents 已更新的组件名称列表
+	UpdatedComponents []string `json:"updatedComponents,omitempty"`
+
+	// AddedComponents 新增的组件名称列表
+	AddedComponents []string `json:"addedComponents,omitempty"`
+
+	// RemovedComponents 已删除的组件名称列表
+	RemovedComponents []string `json:"removedComponents,omitempty"`
+}
