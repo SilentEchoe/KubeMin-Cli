@@ -3,12 +3,21 @@
 
 package cache
 
+import "github.com/redis/go-redis/v9"
+
+// ICache defines the interface for cache operations.
+// Implementations include MemCache (in-memory) and RedisICache (Redis-backed).
 type ICache interface {
 	Store(key string, data string) error
 	Load(key string) (string, error)
 	List() ([]string, error)
 	Exists(key string) bool
 	IsCacheDisabled() bool
+	// GetRedisClient returns the underlying Redis client if available.
+	// Returns nil for non-Redis implementations (e.g., MemCache).
+	// This method enables dependency injection for components that need
+	// direct Redis access (e.g., distributed locks, cancellation signals).
+	GetRedisClient() *redis.Client
 }
 
 type CacheType string

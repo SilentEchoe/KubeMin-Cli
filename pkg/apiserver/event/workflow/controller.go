@@ -27,6 +27,9 @@ type WorkflowCtl struct {
 	prefix                   string
 	ack                      func()
 	defaultJobTimeoutSeconds int64
+	// ctx holds the workflow execution context for use in callbacks like updateWorkflowTask.
+	// This avoids using context.Background() which would break tracing and cancellation.
+	ctx context.Context
 }
 
 func NewWorkflowController(workflowTask *model.WorkflowQueue, client kubernetes.Interface, store datastore.DataStore, cfg *config.Config) *WorkflowCtl {
@@ -49,7 +52,13 @@ func (w *WorkflowCtl) updateWorkflowTask() {
 		klog.Infof("workflow %s, task %s, status %s: task already done, skipping update", taskSnapshot.WorkflowName, taskSnapshot.TaskID, taskSnapshot.Status)
 		return
 	}
-	if err := w.Store.Put(context.Background(), &taskSnapshot); err != nil {
+	// Use the stored context to preserve tracing and cancellation signals.
+	// Falls back to context.Background() if ctx is not set (e.g., during initialization).
+	ctx := w.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if err := w.Store.Put(ctx, &taskSnapshot); err != nil {
 		klog.Errorf("update task status error for workflow %s, task %s: %v", taskSnapshot.WorkflowName, taskSnapshot.TaskID, err)
 	}
 }
@@ -73,6 +82,9 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 	)
 	ctx = klog.NewContext(ctx, logger)
 	ctx = job.WithTaskMetadata(ctx, taskMeta.TaskID)
+
+	// Store context for use in callbacks (e.g., updateWorkflowTask)
+	w.ctx = ctx
 
 	// 将工作流的状态更改为运行中
 	w.mutateTask(func(task *model.WorkflowQueue) {

@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/redis/go-redis/v9"
 	"k8s.io/klog/v2"
 )
 
@@ -74,6 +75,12 @@ func (m *MemCache) Exists(key string) bool {
 
 func (m *MemCache) IsCacheDisabled() bool {
 	return m.noCache
+}
+
+// GetRedisClient returns nil for MemCache since it doesn't use Redis.
+// This method satisfies the ICache interface for dependency injection.
+func (m *MemCache) GetRedisClient() *redis.Client {
+	return nil
 }
 
 // expired 确定是否过期（ttl<=0 表示不过期）

@@ -198,7 +198,7 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 			klog.Infof("timeout waiting for job %s", targetName)
 			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait deployment %s timeout", targetName))
 		case <-ticker.C:
-			newResources, err := getDeploymentStatus(c.client, c.job.Namespace, targetName)
+			newResources, err := getDeploymentStatus(ctx, c.client, c.job.Namespace, targetName)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
 				return fmt.Errorf("wait deployment %s error: %w", targetName, err)
@@ -213,9 +213,9 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 	}
 }
 
-func getDeploymentStatus(kubeClient kubernetes.Interface, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
+func getDeploymentStatus(ctx context.Context, kubeClient kubernetes.Interface, namespace string, name string) (deployInfo *model.JobDeployInfo, err error) {
 	klog.Infof("%s-%s", namespace, name)
-	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(context.TODO(), name, metav1.GetOptions{})
+	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Deployment 不存在，处理这种情况

@@ -62,14 +62,21 @@ func NewRedisICache(cli *redis.Client, noCache bool, ttl time.Duration, prefix s
 	return &RedisICache{cli: cli, noCache: noCache, ttl: ttl, keyPrefix: prefix}
 }
 
+// defaultOpTimeout is the default timeout for Redis cache operations.
+const defaultOpTimeout = 5 * time.Second
+
 func (c *RedisICache) key(k string) string { return c.keyPrefix + k }
 
 func (c *RedisICache) Store(key string, data string) error {
-	return c.cli.Set(context.Background(), c.key(key), data, c.ttl).Err()
+	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
+	defer cancel()
+	return c.cli.Set(ctx, c.key(key), data, c.ttl).Err()
 }
 
 func (c *RedisICache) Load(key string) (string, error) {
-	val, err := c.cli.Get(context.Background(), c.key(key)).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
+	defer cancel()
+	val, err := c.cli.Get(ctx, c.key(key)).Result()
 	if err == redis.Nil {
 		return "", nil
 	}
@@ -84,7 +91,9 @@ func (c *RedisICache) List() ([]string, error) {
 		out    []string
 	)
 	pattern := c.keyPrefix + "*"
-	ctx := context.Background()
+	// Use a longer timeout for List as it may involve multiple SCAN iterations
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 	for {
 		keys, next, err := c.cli.Scan(ctx, cursor, pattern, 100).Result()
 		if err != nil {
@@ -113,8 +122,15 @@ func (c *RedisICache) List() ([]string, error) {
 }
 
 func (c *RedisICache) Exists(key string) bool {
-	n, err := c.cli.Exists(context.Background(), c.key(key)).Result()
+	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
+	defer cancel()
+	n, err := c.cli.Exists(ctx, c.key(key)).Result()
 	return err == nil && n == 1
 }
 
 func (c *RedisICache) IsCacheDisabled() bool { return c.noCache }
+
+// GetRedisClient returns the underlying Redis client for dependency injection.
+// This allows components like distributed locks and cancellation signals to
+// obtain the Redis client through the ICache interface instead of global variables.
+func (c *RedisICache) GetRedisClient() *redis.Client { return c.cli }

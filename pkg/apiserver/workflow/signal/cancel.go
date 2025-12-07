@@ -109,8 +109,15 @@ func (r *localCancelRegistry) cancel(taskID, reason string) {
 
 // Watch establishes a cancellation watcher for the given workflow task. When Redis
 // is not configured, the context is returned unchanged and cleanup becomes a no-op.
+// Note: This function uses the global Redis client. For dependency injection in tests,
+// use WatchWithClient instead.
 func Watch(ctx context.Context, taskID string) (*CancelWatcher, context.Context, context.CancelFunc, error) {
-	cli := cache.GetGlobalRedisClient()
+	return WatchWithClient(ctx, taskID, cache.GetGlobalRedisClient())
+}
+
+// WatchWithClient is like Watch but accepts an explicit Redis client for dependency injection.
+// This variant enables unit testing with mock Redis clients.
+func WatchWithClient(ctx context.Context, taskID string, cli *redis.Client) (*CancelWatcher, context.Context, context.CancelFunc, error) {
 	if cli == nil {
 		// No redis available; fall back to an in-memory registry.
 		state := &cancelState{}
@@ -169,8 +176,14 @@ func Watch(ctx context.Context, taskID string) (*CancelWatcher, context.Context,
 
 // Cancel marks the workflow task as cancelled. Running watchers will detect the
 // marker and cancel their contexts.
+// Note: This function uses the global Redis client. For dependency injection in tests,
+// use CancelWithClient instead.
 func Cancel(ctx context.Context, taskID, reason string) error {
-	cli := cache.GetGlobalRedisClient()
+	return CancelWithClient(ctx, taskID, reason, cache.GetGlobalRedisClient())
+}
+
+// CancelWithClient is like Cancel but accepts an explicit Redis client for dependency injection.
+func CancelWithClient(ctx context.Context, taskID, reason string, cli *redis.Client) error {
 	if cli == nil {
 		localCancelRegistryInstance.cancel(taskID, extractCancelReason(cancelMarker(reason)))
 		return nil
