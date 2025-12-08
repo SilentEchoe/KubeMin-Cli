@@ -143,7 +143,7 @@ func applyTraitsRecursive(component *model.ApplicationComponent, workload runtim
 	traitsVal := reflect.ValueOf(traits).Elem()
 	var allResults []*TraitResult
 
-	// Create a map for quick lookup of excluded traits.
+	// TmpCreate a map for quick lookup of excluded traits.
 	excludeMap := make(map[string]bool)
 	for _, t := range excludeTraits {
 		excludeMap[t] = true
@@ -334,7 +334,7 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 		}
 	}
 
-	// Create a map of all containers (main, init, sidecar) for easy lookup.
+	// TmpCreate a map of all containers (main, init, sidecar) for easy lookup.
 	containerMap := make(map[string]*corev1.Container)
 	for i := range podTemplate.Spec.Containers {
 		containerMap[podTemplate.Spec.Containers[i].Name] = &podTemplate.Spec.Containers[i]

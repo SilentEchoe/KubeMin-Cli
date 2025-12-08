@@ -185,7 +185,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 	}
 
 	if err = c.WorkflowRepo.Create(ctx, workflow); err != nil {
-		klog.Errorf("Create workflow err: %v", err)
+		klog.Errorf("TmpCreate workflow err: %v", err)
 		return nil, bcode.ErrCreateWorkflow
 	}
 

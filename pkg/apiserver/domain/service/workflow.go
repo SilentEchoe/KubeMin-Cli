@@ -88,7 +88,7 @@ func (w *workflowServiceImpl) CreateWorkflowTask(ctx context.Context, req apis.C
 		err = repository.CreateComponents(ctx, w.Store, nComponent)
 		if err != nil {
 			w.rollbackWorkflowCreation(ctx, workflow)
-			klog.Errorf("Create Components err: %s", err)
+			klog.Errorf("TmpCreate Components err: %s", err)
 			return nil, bcode.ErrCreateComponents
 		}
 	}

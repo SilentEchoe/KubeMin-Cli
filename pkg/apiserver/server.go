@@ -318,7 +318,7 @@ func (s *restServer) Run(ctx context.Context, errChan chan error) error {
 		return err
 	}
 
-	// Create cancelable context for graceful shutdown
+	// TmpCreate cancelable context for graceful shutdown
 	runCtx, runCancel := context.WithCancel(ctx)
 	defer runCancel()
 

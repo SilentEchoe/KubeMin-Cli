@@ -74,7 +74,7 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				Spec:       pvcSpec,
 			}
 
-			if vol.Create {
+			if vol.TmpCreate {
 				claimName := wfNaming.PVCName(vol.Name, ctx.Component.AppID)
 				templatePVC := basePVC.DeepCopy()
 				templatePVC.Name = claimName

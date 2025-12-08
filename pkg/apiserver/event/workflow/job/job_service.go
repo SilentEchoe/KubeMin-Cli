@@ -308,7 +308,7 @@ func (c *DeployServiceJobCtl) ApplyService(ctx context.Context, svc *applyv1.Ser
 			// 如果不存在，则创建
 			appliedSvc, err := c.client.CoreV1().Services(coreService.Namespace).Create(ctx, coreService, metav1.CreateOptions{})
 			if err != nil {
-				klog.Errorf("Create failed: %v", err)
+				klog.Errorf("TmpCreate failed: %v", err)
 				return nil, fmt.Errorf("create service failed: %w", err)
 			}
 			klog.InfoS("Service created", "namespace", appliedSvc.Namespace, "name", appliedSvc.Name)

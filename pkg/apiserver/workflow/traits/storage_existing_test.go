@@ -13,9 +13,9 @@ import (
 func TestStorageProcessor_ExistingPVCUsesGivenName(t *testing.T) {
 	storageProcessor := &StorageProcessor{}
 	pvcTrait := spec.StorageTraitSpec{
-		Type:   "persistent",
-		Name:   "shared-cache",
-		Create: false,
+		Type:      "persistent",
+		Name:      "shared-cache",
+		TmpCreate: false,
 	}
 	ctx := &TraitContext{
 		Component: &model.ApplicationComponent{

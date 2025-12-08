@@ -74,7 +74,7 @@ func TestStorageProcessor_DuplicateInput(t *testing.T) {
 	allStorageTraits = append(allStorageTraits, traits.Sidecar[0].Traits.Storage...)
 	allStorageTraits = append(allStorageTraits, traits.Init[0].Traits.Storage...)
 
-	// 2. Create the processor and the context
+	// 2. TmpCreate the processor and the context
 	storageProcessor := &StorageProcessor{}
 	ctx := &TraitContext{
 		Component: &model.ApplicationComponent{

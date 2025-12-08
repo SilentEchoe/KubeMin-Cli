@@ -49,7 +49,7 @@ func TestCreateApplicationsFromTemplateClonesTraitsAndNames(t *testing.T) {
 			Name:       "mysql",
 			ClaimName:  "mysql",
 			SourceName: "tem-mysql-config",
-			Create:     true,
+			TmpCreate:  true,
 			Size:       "1Gi",
 			Type:       config.StorageTypePersistent,
 		}},
@@ -208,7 +208,7 @@ func TestCreateApplicationsFromTemplateRewritesPersistentStorageNames(t *testing
 		Storage: []spec.StorageTraitSpec{{
 			Name:      "data",
 			Type:      config.StorageTypePersistent,
-			Create:    true,
+			TmpCreate: true,
 			Size:      "1Gi",
 			MountPath: "/var/lib/mysql",
 		}},

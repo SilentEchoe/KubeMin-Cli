@@ -89,7 +89,7 @@ type Entity interface {
 	Index() map[string]interface{}
 }
 
-// NewEntity Create a new object based on the input type
+// NewEntity TmpCreate a new object based on the input type
 func NewEntity(in Entity) (Entity, error) {
 	if in == nil {
 		return nil, ErrNilEntity

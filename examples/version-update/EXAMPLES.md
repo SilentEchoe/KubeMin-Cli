@@ -31,3 +31,5 @@ curl -X POST "http://localhost:8080/api/v1/applications/${APP_ID}/version" \
 - 组件名称会自动转换为小写
 - `autoExec` 默认为 `true`，会自动触发工作流执行
 
+
+

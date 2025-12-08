@@ -74,7 +74,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 	))
 	defer span.End()
 
-	// 2. Create a logger with the traceID and put it in the context
+	// 2. TmpCreate a logger with the traceID and put it in the context
 	logger := klog.FromContext(ctx).WithValues(
 		"traceID", span.SpanContext().TraceID().String(),
 		"workflowName", workflowName,
