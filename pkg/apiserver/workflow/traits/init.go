@@ -48,8 +48,9 @@ func (i *InitProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			envVars = append(envVars, corev1.EnvVar{Name: k, Value: v})
 		}
 
-		// Recursively apply nested traits, excluding the 'init' trait itself to prevent infinite loops.
-		nestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &initTrait.Traits, []string{"init"})
+		// Recursively apply nested traits, excluding 'init' and 'sidecar' to prevent infinite loops
+		// and semantically meaningless nesting (init containers cannot have sidecars).
+		nestedResult, err := applyTraitsRecursive(ctx.Component, ctx.Workload, &initTrait.Traits, []string{"init", "sidecar"})
 		if err != nil {
 			return nil, fmt.Errorf("failed to process nested traits for init container %s: %w", initContainerName, err)
 		}
