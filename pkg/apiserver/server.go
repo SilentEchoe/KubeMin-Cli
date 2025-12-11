@@ -195,11 +195,19 @@ func (s *restServer) dispatchTopic() string {
 // buildQueue constructs the messaging queue based on config.
 // It returns a usable Queue in all cases, falling back to NoopQueue on failures.
 func (s *restServer) buildQueue(streamKey string) msg.Queue {
-	if strings.ToLower(s.cfg.Messaging.Type) != "redis" {
+	msgType := strings.ToLower(s.cfg.Messaging.Type)
+	switch msgType {
+	case "redis":
+		return s.buildRedisQueue(streamKey)
+	case "kafka":
+		return s.buildKafkaQueue(streamKey)
+	default:
 		return &msg.NoopQueue{}
 	}
+}
 
-	// Reuse shared redis client from factory
+// buildRedisQueue constructs a Redis Streams queue.
+func (s *restServer) buildRedisQueue(streamKey string) msg.Queue {
 	rcli, err := clients.EnsureRedis(s.cfg.Cache)
 	if err != nil {
 		klog.Warningf("init redis client failed, falling back to noop: %v", err)
@@ -215,6 +223,34 @@ func (s *restServer) buildQueue(streamKey string) msg.Queue {
 		return &msg.NoopQueue{}
 	}
 	return rq
+}
+
+// buildKafkaQueue constructs a Kafka queue.
+func (s *restServer) buildKafkaQueue(topic string) msg.Queue {
+	// Validate and initialize Kafka connection
+	kafkaCfg := clients.KafkaConfig{
+		Brokers: s.cfg.Messaging.KafkaBrokers,
+	}
+	_, err := clients.EnsureKafka(kafkaCfg)
+	if err != nil {
+		klog.Warningf("init kafka client failed, falling back to noop: %v", err)
+		return &msg.NoopQueue{}
+	}
+
+	// Build Kafka queue configuration
+	queueCfg := msg.KafkaConfig{
+		Brokers:         s.cfg.Messaging.KafkaBrokers,
+		Topic:           topic,
+		GroupID:         s.cfg.Messaging.KafkaGroupID,
+		AutoOffsetReset: s.cfg.Messaging.KafkaAutoOffsetReset,
+	}
+
+	kq, err := msg.NewKafkaQueue(queueCfg)
+	if err != nil {
+		klog.Warningf("init kafka queue failed, falling back to noop: %v", err)
+		return &msg.NoopQueue{}
+	}
+	return kq
 }
 
 func (s *restServer) RegisterAPIRoute() {

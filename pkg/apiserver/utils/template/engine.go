@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // Engine 模板引擎接口
@@ -36,11 +35,11 @@ type Engine interface {
 
 // RenderResult 模板渲染结果
 type RenderResult struct {
-	Name       string                      `json:"name"`
-	Components []model.ComponentTemplate   `json:"components"`
-	Workflow   *model.TemplateWorkflow     `json:"workflow,omitempty"`
-	Parameters map[string]interface{}      `json:"parameters"`
-	Metadata   map[string]interface{}      `json:"metadata,omitempty"`
+	Name       string                    `json:"name"`
+	Components []model.ComponentTemplate `json:"components"`
+	Workflow   *model.TemplateWorkflow   `json:"workflow,omitempty"`
+	Parameters map[string]interface{}    `json:"parameters"`
+	Metadata   map[string]interface{}    `json:"metadata,omitempty"`
 }
 
 // templateEngine 模板引擎实现
@@ -187,7 +186,7 @@ func (e *templateEngine) registerBuiltinFuncs() {
 		}
 
 		// 如果第一个参数为空或零值，返回第二个参数
-		if utils.IsZeroValue(args[0]) {
+		if isZeroValue(args[0]) {
 			return args[1], nil
 		}
 		return args[0], nil
@@ -208,7 +207,7 @@ func (e *templateEngine) registerBuiltinFuncs() {
 			return "", nil
 		}
 
-		return utils.GenerateRandomString(length), nil
+		return GenerateRandomString(length), nil
 	}
 
 	// 时间函数
@@ -305,22 +304,29 @@ func (e *templateEngine) RenderComponents(components model.TemplateComponents, p
 		// 渲染Traits
 		var renderedTraits map[string]interface{}
 		if len(compTemplate.Traits) > 0 {
-			renderedTraits, err = e.renderInterface(compTemplate.Traits, parameters)
+			traitsResult, err := e.renderInterface(compTemplate.Traits, parameters)
 			if err != nil {
 				return nil, fmt.Errorf("渲染组件[%d]Traits失败: %v", i, err)
+			}
+			if traitsResult != nil {
+				renderedTraits, _ = traitsResult.(map[string]interface{})
 			}
 		}
 
 		// 应用命名规则
+		nameStr, _ := renderedName.(string)
 		if components.NamingRules != nil {
-			renderedName = e.applyNamingRules(renderedName, components.NamingRules)
+			nameStr = e.applyNamingRules(nameStr, components.NamingRules)
 		}
 
+		// 处理属性类型断言
+		propsMap, _ := renderedProps.(map[string]interface{})
+
 		renderedComp := model.ComponentTemplate{
-			Name:          renderedName.(string),
+			Name:          nameStr,
 			Type:          compTemplate.Type,
 			Description:   compTemplate.Description,
-			Properties:    renderedProps.(map[string]interface{}),
+			Properties:    propsMap,
 			Traits:        renderedTraits,
 			Conditions:    compTemplate.Conditions,
 			Validation:    compTemplate.Validation,
@@ -686,7 +692,7 @@ func (e *templateEngine) parseArgument(arg string, parameters map[string]interfa
 
 	// 如果是字符串字面值（被引号包围）
 	if (strings.HasPrefix(arg, "'") && strings.HasSuffix(arg, "'")) ||
-	   (strings.HasPrefix(arg, "\"") && strings.HasSuffix(arg, "\"")) {
+		(strings.HasPrefix(arg, "\"") && strings.HasSuffix(arg, "\"")) {
 		return arg[1 : len(arg)-1]
 	}
 
@@ -742,7 +748,6 @@ func isZeroValue(v interface{}) bool {
 	return false
 }
 
-
 // GenerateRandomString 生成随机字符串
 func GenerateRandomString(length int) string {
 	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -752,7 +757,6 @@ func GenerateRandomString(length int) string {
 	}
 	return string(b)
 }
-
 
 // Update timestamp function to use current time
 func init() {
@@ -851,7 +855,12 @@ func (t *StringTemplate) Render(ctx *TemplateContext) (interface{}, error) {
 		allParams["meta."+k] = v
 	}
 
-	return engine.renderString(t.Template, allParams)
+	// 类型断言获取具体的模板引擎实现
+	te, ok := engine.(*templateEngine)
+	if !ok {
+		return nil, fmt.Errorf("invalid template engine type")
+	}
+	return te.renderString(t.Template, allParams)
 }
 
 // Error definitions
@@ -954,10 +963,10 @@ type TemplateFilter struct {
 
 // TemplateStatistics 模板统计信息
 type TemplateStatistics struct {
-	TotalCount       int64  `json:"total_count"`
-	ActiveCount      int64  `json:"active_count"`
-	PublicCount      int64  `json:"public_count"`
-	SystemCount      int64  `json:"system_count"`
+	TotalCount       int64      `json:"total_count"`
+	ActiveCount      int64      `json:"active_count"`
+	PublicCount      int64      `json:"public_count"`
+	SystemCount      int64      `json:"system_count"`
 	PopularTags      []TagCount `json:"popular_tags"`
 	MostUsedTemplate string     `json:"most_used_template"`
 }
@@ -971,24 +980,24 @@ type TagCount struct {
 // TemplateRecommendations 模板推荐
 type TemplateRecommendations struct {
 	ByCategory   map[string][]*model.Template `json:"by_category"`
-	ByUsage      []*model.Template           `json:"by_usage"`
-	ByPopularity []*model.Template           `json:"by_popularity"`
+	ByUsage      []*model.Template            `json:"by_usage"`
+	ByPopularity []*model.Template            `json:"by_popularity"`
 }
 
 // TemplateSharing 模板分享
 type TemplateSharing struct {
-	TemplateID    string   `json:"template_id"`
-	SharedBy      string   `json:"shared_by"`
-	SharedWith    []string `json:"shared_with"`
-	Permissions   []string `json:"permissions"` // read, write, execute
-	ExpiryTime    *time.Time `json:"expiry_time,omitempty"`
-	SharedAt      time.Time `json:"shared_at"`
+	TemplateID  string     `json:"template_id"`
+	SharedBy    string     `json:"shared_by"`
+	SharedWith  []string   `json:"shared_with"`
+	Permissions []string   `json:"permissions"` // read, write, execute
+	ExpiryTime  *time.Time `json:"expiry_time,omitempty"`
+	SharedAt    time.Time  `json:"shared_at"`
 }
 
 // TemplateImportExport 模板导入导出
 type TemplateImportExport struct {
-	Format    string           `json:"format"` // json, yaml
-	Templates []*model.Template `json:"templates"`
+	Format    string                 `json:"format"` // json, yaml
+	Templates []*model.Template      `json:"templates"`
 	Metadata  map[string]interface{} `json:"metadata"`
 }
 
@@ -1004,46 +1013,46 @@ type TemplateBackup struct {
 
 // TemplateSearchResult 模板搜索结果
 type TemplateSearchResult struct {
-	Templates    []*model.Template `json:"templates"`
-	TotalCount   int64             `json:"total_count"`
-	SearchTime   int64             `json:"search_time_ms"`
-	Suggestions  []string          `json:"suggestions,omitempty"`
-	RelatedTags  []string          `json:"related_tags,omitempty"`
+	Templates   []*model.Template `json:"templates"`
+	TotalCount  int64             `json:"total_count"`
+	SearchTime  int64             `json:"search_time_ms"`
+	Suggestions []string          `json:"suggestions,omitempty"`
+	RelatedTags []string          `json:"related_tags,omitempty"`
 }
 
 // TemplateUsageAnalytics 模板使用分析
 type TemplateUsageAnalytics struct {
-	TemplateID      string                 `json:"template_id"`
-	UsageCount      int64                  `json:"usage_count"`
-	SuccessRate     float64                `json:"success_rate"`
-	AverageTime     int64                  `json:"average_time_ms"`
-	PopularParams   map[string]interface{} `json:"popular_params"`
-	CommonErrors    []string               `json:"common_errors"`
-	UserFeedback    *UserFeedbackStats     `json:"user_feedback"`
+	TemplateID    string                 `json:"template_id"`
+	UsageCount    int64                  `json:"usage_count"`
+	SuccessRate   float64                `json:"success_rate"`
+	AverageTime   int64                  `json:"average_time_ms"`
+	PopularParams map[string]interface{} `json:"popular_params"`
+	CommonErrors  []string               `json:"common_errors"`
+	UserFeedback  *UserFeedbackStats     `json:"user_feedback"`
 }
 
 // UserFeedbackStats 用户反馈统计
 type UserFeedbackStats struct {
-	TotalRatings  int64   `json:"total_ratings"`
-	AverageRating float64 `json:"average_rating"`
+	TotalRatings  int64    `json:"total_ratings"`
+	AverageRating float64  `json:"average_rating"`
 	Comments      []string `json:"comments"`
 }
 
 // TemplateComparison 模板对比
 type TemplateComparison struct {
-	TemplateA *model.Template        `json:"template_a"`
-	TemplateB *model.Template        `json:"template_b"`
+	TemplateA   *model.Template      `json:"template_a"`
+	TemplateB   *model.Template      `json:"template_b"`
 	Differences []TemplateDifference `json:"differences"`
 	Similarity  float64              `json:"similarity"`
 }
 
 // TemplateDifference 模板差异
 type TemplateDifference struct {
-	Field      string      `json:"field"`
-	Type       string      `json:"type"` // added, removed, modified
-	OldValue   interface{} `json:"old_value,omitempty"`
-	NewValue   interface{} `json:"new_value,omitempty"`
-	Path       string      `json:"path,omitempty"`
+	Field    string      `json:"field"`
+	Type     string      `json:"type"` // added, removed, modified
+	OldValue interface{} `json:"old_value,omitempty"`
+	NewValue interface{} `json:"new_value,omitempty"`
+	Path     string      `json:"path,omitempty"`
 }
 
 // TemplateCloning 模板克隆
@@ -1057,13 +1066,13 @@ type TemplateCloning struct {
 
 // TemplateMigration 模板迁移
 type TemplateMigration struct {
-	ID               string    `json:"id"`
-	SourceVersion    string    `json:"source_version"`
-	TargetVersion    string    `json:"target_version"`
-	MigrationSteps   []MigrationStep `json:"migration_steps"`
-	RollbackSteps    []MigrationStep `json:"rollback_steps"`
-	Compatibility    CompatibilityInfo `json:"compatibility"`
-	CreatedAt        time.Time `json:"created_at"`
+	ID             string            `json:"id"`
+	SourceVersion  string            `json:"source_version"`
+	TargetVersion  string            `json:"target_version"`
+	MigrationSteps []MigrationStep   `json:"migration_steps"`
+	RollbackSteps  []MigrationStep   `json:"rollback_steps"`
+	Compatibility  CompatibilityInfo `json:"compatibility"`
+	CreatedAt      time.Time         `json:"created_at"`
 }
 
 // MigrationStep 迁移步骤
@@ -1098,42 +1107,42 @@ type TemplateDeploymentResult struct {
 	ApplicationID  string                 `json:"application_id,omitempty"`
 	Errors         []string               `json:"errors,omitempty"`
 	Warnings       []string               `json:"warnings,omitempty"`
-	RenderedOutput *RenderResult           `json:"rendered_output,omitempty"`
+	RenderedOutput *RenderResult          `json:"rendered_output,omitempty"`
 	Preview        map[string]interface{} `json:"preview,omitempty"`
 }
 
 // TemplateFieldMapping 模板字段映射
 type TemplateFieldMapping struct {
-	SourceField string `json:"source_field"`
-	TargetField string `json:"target_field"`
-	Transform   string `json:"transform,omitempty"`
+	SourceField string      `json:"source_field"`
+	TargetField string      `json:"target_field"`
+	Transform   string      `json:"transform,omitempty"`
 	Default     interface{} `json:"default,omitempty"`
-	Required    bool   `json:"required"`
+	Required    bool        `json:"required"`
 }
 
 // TemplateFieldValidation 模板字段验证
 type TemplateFieldValidation struct {
-	Field      string         `json:"field"`
-	Rules      []ValidationRule `json:"rules"`
-	Messages   map[string]string `json:"messages,omitempty"`
+	Field    string            `json:"field"`
+	Rules    []ValidationRule  `json:"rules"`
+	Messages map[string]string `json:"messages,omitempty"`
 }
 
 // ValidationRule 验证规则
 type ValidationRule struct {
-	Type     string      `json:"type"` // required, pattern, range, custom
-	Value    interface{} `json:"value,omitempty"`
-	Message  string      `json:"message,omitempty"`
+	Type    string      `json:"type"` // required, pattern, range, custom
+	Value   interface{} `json:"value,omitempty"`
+	Message string      `json:"message,omitempty"`
 }
 
 // TemplateRenderingOptions 模板渲染选项
 type TemplateRenderingOptions struct {
-	StrictMode        bool                   `json:"strict_mode"`
-	PreserveUnknown   bool                   `json:"preserve_unknown"`
-	CustomFunctions   map[string]TemplateFunc `json:"custom_functions,omitempty"`
-	ValidationMode    string                 `json:"validation_mode"` // strict, warning, none
-	NamingStrategy    string                 `json:"naming_strategy"` // kebab-case, snake_case, camelCase
-	GenerateIDs       bool                   `json:"generate_ids"`
-	TimestampFormat   string                 `json:"timestamp_format"`
+	StrictMode      bool                    `json:"strict_mode"`
+	PreserveUnknown bool                    `json:"preserve_unknown"`
+	CustomFunctions map[string]TemplateFunc `json:"custom_functions,omitempty"`
+	ValidationMode  string                  `json:"validation_mode"` // strict, warning, none
+	NamingStrategy  string                  `json:"naming_strategy"` // kebab-case, snake_case, camelCase
+	GenerateIDs     bool                    `json:"generate_ids"`
+	TimestampFormat string                  `json:"timestamp_format"`
 }
 
 // DefaultRenderingOptions 默认渲染选项
@@ -1191,16 +1200,16 @@ type TemplateBuilder struct {
 func NewTemplateBuilder(name string) *TemplateBuilder {
 	return &TemplateBuilder{
 		template: &model.Template{
-			ID:          utils.GenerateRandomString(24),
-			Name:        name,
-			Parameters:  model.TemplateParameters{},
-			Components:  model.TemplateComponents{},
-			Workflow:    model.TemplateWorkflow{},
-			IsPublic:    false,
-			IsSystem:    false,
-			Status:      model.TemplateStatusActive,
-			CreatedAt:   time.Now(),
-			UpdatedAt:   time.Now(),
+			ID:         GenerateRandomString(24),
+			Name:       name,
+			Parameters: model.TemplateParameters{},
+			Components: model.TemplateComponents{},
+			Workflow:   model.TemplateWorkflow{},
+			IsPublic:   false,
+			IsSystem:   false,
+			Status:     model.TemplateStatusActive,
+			CreatedAt:  time.Now(),
+			UpdatedAt:  time.Now(),
 		},
 	}
 }
@@ -1261,8 +1270,8 @@ type InMemoryTemplateCache struct {
 }
 
 type cacheEntry struct {
-	template  *model.Template
-	expireAt  time.Time
+	template *model.Template
+	expireAt time.Time
 }
 
 // NewInMemoryTemplateCache 创建内存缓存
@@ -1312,7 +1321,6 @@ func (c *InMemoryTemplateCache) Clear() {
 	c.cache = make(map[string]*cacheEntry)
 }
 
-
 // TemplateMetrics 模板指标
 type TemplateMetrics struct {
 	RenderCount       int64   `json:"render_count"`
@@ -1332,15 +1340,15 @@ type TemplateAnalyticsCollector interface {
 
 // DefaultTemplateAnalyticsCollector 默认分析收集器
 type DefaultTemplateAnalyticsCollector struct {
-	mu        sync.RWMutex
-	metrics   map[string]*TemplateMetrics
+	mu            sync.RWMutex
+	metrics       map[string]*TemplateMetrics
 	globalMetrics *TemplateMetrics
 }
 
 // NewDefaultTemplateAnalyticsCollector 创建默认收集器
 func NewDefaultTemplateAnalyticsCollector() TemplateAnalyticsCollector {
 	return &DefaultTemplateAnalyticsCollector{
-		metrics: make(map[string]*TemplateMetrics),
+		metrics:       make(map[string]*TemplateMetrics),
 		globalMetrics: &TemplateMetrics{},
 	}
 }

@@ -129,8 +129,20 @@ type RedisCacheConfig struct {
 type MessagingConfig struct {
 	Type          string // noop|redis|kafka
 	ChannelPrefix string
+
+	// Redis-specific configuration
 	// RedisStreamMaxLen sets XADD MAXLEN to cap stream length (<=0 disables).
 	RedisStreamMaxLen int64
+
+	// Kafka-specific configuration
+	// KafkaBrokers is a list of Kafka broker addresses (e.g., "localhost:9092").
+	KafkaBrokers []string
+	// KafkaGroupID is the consumer group ID for Kafka consumers.
+	// Defaults to "kubemin-workflow-workers" if not set.
+	KafkaGroupID string
+	// KafkaAutoOffsetReset determines where to start consuming when no offset exists.
+	// Valid values: "earliest" (default) or "latest".
+	KafkaAutoOffsetReset string
 }
 
 func NewConfig() *Config {
@@ -140,7 +152,7 @@ func NewConfig() *Config {
 			ID:       uuid.New().String(),
 			LockName: "apiserver-lock",
 			//Duration:  time.Second * 5,
-			Duration:  time.Minute * 60,
+			Duration:  time.Minute * 60, //debug code
 			Namespace: NAMESPACE,
 		},
 		Datastore: datastore.Config{
@@ -243,13 +255,28 @@ func (c *Config) Validate() []error {
 	if c.Workflow.MaxConcurrentWorkflows <= 0 {
 		errs = append(errs, fmt.Errorf("workflow max concurrent executions must be > 0"))
 	}
-	if c.CORS.MaxAge < 0 {
-		errs = append(errs, fmt.Errorf("cors max age must be >= 0"))
-	}
 	// messaging basic checks
-	switch strings.ToLower(strings.TrimSpace(c.Messaging.Type)) {
-	case "", "noop", "redis", "kafka":
-		// ok
+	msgType := strings.ToLower(strings.TrimSpace(c.Messaging.Type))
+	switch msgType {
+	case "", "noop":
+		// Local mode: no external queue dependency, uses direct DB polling
+	case "redis":
+		// Redis mode: reuses RedisCacheConfig for connection settings
+		if strings.TrimSpace(c.Cache.CacheHost) == "" {
+			errs = append(errs, fmt.Errorf("redis cache host cannot be empty when messaging type is redis"))
+		}
+		if c.Cache.CacheProt <= 0 {
+			errs = append(errs, fmt.Errorf("redis cache port must be > 0 when messaging type is redis"))
+		}
+	case "kafka":
+		// Kafka mode: requires Kafka-specific configuration
+		if len(c.Messaging.KafkaBrokers) == 0 {
+			errs = append(errs, fmt.Errorf("kafka brokers cannot be empty when messaging type is kafka"))
+		}
+		offsetReset := strings.ToLower(strings.TrimSpace(c.Messaging.KafkaAutoOffsetReset))
+		if offsetReset != "" && offsetReset != "earliest" && offsetReset != "latest" {
+			errs = append(errs, fmt.Errorf("kafka auto offset reset must be 'earliest' or 'latest', got: %s", c.Messaging.KafkaAutoOffsetReset))
+		}
 	default:
 		errs = append(errs, fmt.Errorf("unsupported messaging type: %s", c.Messaging.Type))
 	}
@@ -280,6 +307,10 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.StringVar(&c.Messaging.Type, "msg-type", configParameter.Messaging.Type, "messaging broker type: noop|redis|kafka")
 	fs.StringVar(&c.Messaging.ChannelPrefix, "msg-channel-prefix", configParameter.Messaging.ChannelPrefix, "messaging channel prefix for topics")
 	fs.Int64Var(&c.Messaging.RedisStreamMaxLen, "msg-redis-maxlen", configParameter.Messaging.RedisStreamMaxLen, "redis streams XADD MAXLEN cap (<=0 to disable)")
+	// kafka-specific flags
+	fs.StringSliceVar(&c.Messaging.KafkaBrokers, "msg-kafka-brokers", configParameter.Messaging.KafkaBrokers, "kafka broker addresses (e.g., localhost:9092)")
+	fs.StringVar(&c.Messaging.KafkaGroupID, "msg-kafka-group-id", configParameter.Messaging.KafkaGroupID, "kafka consumer group ID (default: kubemin-workflow-workers)")
+	fs.StringVar(&c.Messaging.KafkaAutoOffsetReset, "msg-kafka-offset-reset", configParameter.Messaging.KafkaAutoOffsetReset, "kafka auto offset reset strategy: earliest|latest (default: earliest)")
 	// cache-specific flags
 	fs.StringVar(&c.Cache.CacheType, "cache-type", configParameter.Cache.CacheType, "cache backend type (redis|memory)")
 	fs.StringVar(&c.Cache.CacheHost, "cache-host", configParameter.Cache.CacheHost, "cache host for redis backend")
@@ -299,13 +330,6 @@ func (c *Config) AddFlags(fs *pflag.FlagSet, configParameter *Config) {
 	fs.DurationVar(&c.Workflow.WorkerReadBlock, "workflow-worker-read-block", configParameter.Workflow.WorkerReadBlock, "workflow worker stream read block duration")
 	fs.DurationVar(&c.Workflow.DefaultJobTimeout, "workflow-default-job-timeout", configParameter.Workflow.DefaultJobTimeout, "default workflow job timeout")
 	fs.IntVar(&c.Workflow.MaxConcurrentWorkflows, "workflow-max-concurrent", configParameter.Workflow.MaxConcurrentWorkflows, "maximum number of workflow controllers running concurrently")
-	// cors flags
-	fs.StringSliceVar(&c.CORS.AllowedOrigins, "cors-allowed-origins", configParameter.CORS.AllowedOrigins, "allowed origins for CORS requests (use * to allow all)")
-	fs.StringSliceVar(&c.CORS.AllowedMethods, "cors-allowed-methods", configParameter.CORS.AllowedMethods, "allowed HTTP methods for CORS requests")
-	fs.StringSliceVar(&c.CORS.AllowedHeaders, "cors-allowed-headers", configParameter.CORS.AllowedHeaders, "allowed request headers for CORS preflight")
-	fs.StringSliceVar(&c.CORS.ExposedHeaders, "cors-exposed-headers", configParameter.CORS.ExposedHeaders, "response headers exposed to browsers for CORS requests")
-	fs.BoolVar(&c.CORS.AllowCredentials, "cors-allow-credentials", configParameter.CORS.AllowCredentials, "allow browsers to include credentials in CORS requests")
-	fs.DurationVar(&c.CORS.MaxAge, "cors-max-age", configParameter.CORS.MaxAge, "max age for caching CORS preflight responses")
 	// profiling flags live in the profiling package; wire them here for convenience
 	profiling.AddFlags(fs)
 }
