@@ -38,6 +38,9 @@ func (w *waitingTaskStore) IsExist(context.Context, datastore.Entity) (bool, err
 func (w *waitingTaskStore) IsExistByCondition(context.Context, string, map[string]interface{}, interface{}) (bool, error) {
 	return false, nil
 }
+func (w *waitingTaskStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return true, nil
+}
 
 func TestWaitingTasksUsesFIFOSort(t *testing.T) {
 	store := &waitingTaskStore{}

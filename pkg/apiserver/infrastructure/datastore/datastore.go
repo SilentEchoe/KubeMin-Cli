@@ -181,4 +181,9 @@ type DataStore interface {
 
 	//IsExistByCondition 多条件判断实体是否存在
 	IsExistByCondition(ctx context.Context, table string, cond map[string]interface{}, dest interface{}) (bool, error)
+
+	// CompareAndSwap performs an atomic compare-and-swap update.
+	// It updates the entity only if the current value of conditionField matches conditionValue.
+	// Returns (true, nil) if update succeeded, (false, nil) if condition not met, or (false, error) on failure.
+	CompareAndSwap(ctx context.Context, entity Entity, conditionField string, conditionValue interface{}, updates map[string]interface{}) (bool, error)
 }

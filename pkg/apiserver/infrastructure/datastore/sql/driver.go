@@ -349,3 +349,31 @@ func (m *Driver) Count(ctx context.Context, entity datastore.Entity, filterOptio
 	}
 	return count, nil
 }
+
+// CompareAndSwap performs an atomic compare-and-swap update.
+// It updates the entity only if the current value of conditionField matches conditionValue.
+// Returns (true, nil) if update succeeded, (false, nil) if condition not met.
+func (m *Driver) CompareAndSwap(ctx context.Context, entity datastore.Entity, conditionField string, conditionValue interface{}, updates map[string]interface{}) (bool, error) {
+	if entity.PrimaryKey() == "" {
+		return false, datastore.ErrPrimaryEmpty
+	}
+	if entity.TableName() == "" {
+		return false, datastore.ErrTableNameEmpty
+	}
+
+	// Add update_time to updates
+	updates["update_time"] = time.Now()
+
+	// Build the query with primary key and condition
+	result := m.Client.WithContext(ctx).
+		Model(entity).
+		Where(_toColumnName(conditionField)+" = ?", conditionValue).
+		Updates(updates)
+
+	if result.Error != nil {
+		return false, datastore.NewDBError(result.Error)
+	}
+
+	// RowsAffected > 0 means the condition matched and update succeeded
+	return result.RowsAffected > 0, nil
+}

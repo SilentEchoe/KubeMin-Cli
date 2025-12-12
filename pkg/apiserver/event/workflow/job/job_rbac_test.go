@@ -150,3 +150,6 @@ func (*noopStore) IsExist(context.Context, datastore.Entity) (bool, error) { ret
 func (*noopStore) IsExistByCondition(context.Context, string, map[string]interface{}, interface{}) (bool, error) {
 	return false, nil
 }
+func (*noopStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return true, nil
+}

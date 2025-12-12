@@ -63,6 +63,9 @@ func (s *workflowAckTestStore) IsExist(context.Context, datastore.Entity) (bool,
 func (s *workflowAckTestStore) IsExistByCondition(context.Context, string, map[string]interface{}, interface{}) (bool, error) {
 	return false, nil
 }
+func (s *workflowAckTestStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return true, nil
+}
 
 type stubWorkflowService struct {
 	updateOK bool

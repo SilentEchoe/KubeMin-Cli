@@ -354,20 +354,30 @@ func TaskByID(ctx context.Context, store datastore.DataStore, taskID string) (*m
 	return task, nil
 }
 
+// UpdateTaskStatus performs an atomic compare-and-swap to update task status.
+// It only updates if the current status matches 'from' (when from is not empty).
+// Returns (true, nil) if update succeeded, (false, nil) if condition not met or task not found.
 func UpdateTaskStatus(ctx context.Context, store datastore.DataStore, taskID string, from, to config.Status) (bool, error) {
 	task := &model.WorkflowQueue{TaskID: taskID}
-	if err := store.Get(ctx, task); err != nil {
-		if errors.Is(err, datastore.ErrRecordNotExist) {
-			return false, nil
+
+	// If no from condition, use simple Put (backward compatible)
+	if from == "" {
+		if err := store.Get(ctx, task); err != nil {
+			if errors.Is(err, datastore.ErrRecordNotExist) {
+				return false, nil
+			}
+			return false, err
 		}
-		return false, err
+		task.Status = to
+		if err := store.Put(ctx, task); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
-	if from != "" && task.Status != from {
-		return false, nil
+
+	// Atomic CAS: UPDATE ... WHERE task_id = ? AND status = ?
+	updates := map[string]interface{}{
+		"status": to,
 	}
-	task.Status = to
-	if err := store.Put(ctx, task); err != nil {
-		return false, err
-	}
-	return true, nil
+	return store.CompareAndSwap(ctx, task, "status", from, updates)
 }
