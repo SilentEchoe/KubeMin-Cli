@@ -14,10 +14,11 @@ const (
 )
 
 const (
-	LabelCli         = "kube-min-cli"
-	LabelAppID       = "kube-min-cli-appId"
-	LabelComponentID = "kube-min-cli-componentId"
-	LabelStorageRole = "storage.kubemin.cli/pvc-role"
+	LabelCli           = "kube-min-cli"
+	LabelAppID         = "kube-min-cli-appId"
+	LabelComponentID   = "kube-min-cli-componentId"
+	LabelComponentName = "kube-min-cli-componentName"
+	LabelStorageRole   = "storage.kubemin.cli/pvc-role"
 )
 
 type JobRunPolicy string
@@ -118,6 +119,16 @@ const (
 	StatusDebugAfter     Status = "debug_after"                    //调试之后
 	StatusUnstable       Status = "unstable"                       //不稳定
 	StatusManualApproval Status = "wait_for_manual_error_handling" //等待手动错误处理
+)
+
+// ComponentStatus 组件运行时状态（由 Informer 同步）
+type ComponentStatus string
+
+const (
+	ComponentStatusRunning ComponentStatus = "Running" // 运行中（所有副本就绪）
+	ComponentStatusPending ComponentStatus = "Pending" // 部分副本就绪或正在启动
+	ComponentStatusFailed  ComponentStatus = "Failed"  // 失败
+	ComponentStatusUnknown ComponentStatus = "Unknown" // 未知状态
 )
 
 const (

@@ -20,12 +20,15 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"KubeMin-Cli/pkg/apiserver/config"
+	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
 	"KubeMin-Cli/pkg/apiserver/domain/service"
 	"KubeMin-Cli/pkg/apiserver/event"
+	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
 	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api"
 	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
@@ -41,16 +44,17 @@ type APIServer interface {
 
 // restServer rest server
 type restServer struct {
-	webContainer   *gin.Engine
-	beanContainer  *container.Container
-	cfg            config.Config
-	dataStore      datastore.DataStore
-	cache          cache.ICache
-	KubeClient     kubernetes.Interface `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
-	KubeConfig     *rest.Config         `inject:"kubeConfig"`
-	Queue          msg.Queue            `inject:"queue"`
-	workersStarted bool
-	workersCancel  context.CancelFunc
+	webContainer    *gin.Engine
+	beanContainer   *container.Container
+	cfg             config.Config
+	dataStore       datastore.DataStore
+	cache           cache.ICache
+	KubeClient      kubernetes.Interface `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
+	KubeConfig      *rest.Config         `inject:"kubeConfig"`
+	Queue           msg.Queue            `inject:"queue"`
+	InformerManager *informer.Manager    // Informer 管理器，用于 List-Watch 机制
+	workersStarted  bool
+	workersCancel   context.CancelFunc
 }
 
 // New create api server with config data
@@ -148,6 +152,19 @@ func (s *restServer) buildIoCContainer() error {
 	if err := s.beanContainer.ProvideWithName("kubeConfig", kubeConfig); err != nil {
 		return fmt.Errorf("fail to provides the kubeConfig bean to the container: %w", err)
 	}
+
+	// 初始化 Informer Manager（只监听 KubeMin 管理的资源以减少内存消耗）
+	s.InformerManager = informer.NewManager(
+		kubeClient,
+		informer.WithResyncPeriod(30*time.Second),
+		informer.WithLabelSelector(config.LabelAppID), // 只监听带有 kube-min-cli-appId 标签的资源
+	)
+	// 设置全局等待器，供 Job 控制器使用
+	job.SetGlobalWaiter(s.InformerManager.GetWaiter())
+
+	// 设置状态同步回调，将组件运行状态同步到数据库
+	s.InformerManager.GetWaiter().SetStatusSyncFunc(s.syncComponentStatus)
+	klog.Info("Informer manager initialized with label selector filter and status sync")
 
 	// provide config for downstream components that need it (inject by type)
 	if err := s.beanContainer.Provides(&s.cfg); err != nil {
@@ -448,6 +465,16 @@ func (s *restServer) stopWorkers() {
 // It starts leader-scoped services, ensures queue readiness, reconciles worker role,
 // and spawns watchers for ongoing adjustments.
 func (s *restServer) onStartedLeading(ctx context.Context, errChan chan error) {
+	// 启动 Informer Manager（List-Watch 机制）
+	if s.InformerManager != nil {
+		if err := s.InformerManager.Start(ctx); err != nil {
+			klog.Errorf("Failed to start informer manager: %v (will fallback to polling)", err)
+			// 不阻塞启动，允许 fallback 到轮询模式
+		} else {
+			klog.Info("Informer manager started successfully")
+		}
+	}
+
 	// Start event service (leader lifecycle)
 	go event.StartEventWorker(ctx, errChan)
 
@@ -516,4 +543,43 @@ func (s *restServer) startReplicaWatcher(ctx context.Context, errChan chan error
 			}
 		}
 	}()
+}
+
+// syncComponentStatus 同步组件运行状态到数据库
+func (s *restServer) syncComponentStatus(update *informer.ComponentStatusUpdate) {
+	if s.dataStore == nil || update == nil || update.ComponentID == 0 {
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	// 通过 List 查询组件
+	query := &model.ApplicationComponent{AppID: update.AppID}
+	entities, err := s.dataStore.List(ctx, query, &datastore.ListOptions{})
+	if err != nil {
+		klog.V(4).Infof("Failed to list components for app %s: %v", update.AppID, err)
+		return
+	}
+
+	// 找到匹配的组件并更新
+	for _, entity := range entities {
+		component, ok := entity.(*model.ApplicationComponent)
+		if !ok || component.ID != update.ComponentID {
+			continue
+		}
+
+		// 更新状态字段
+		component.Status = string(update.Status)
+		component.ReadyReplicas = update.ReadyReplicas
+
+		if err := s.dataStore.Put(ctx, component); err != nil {
+			klog.V(4).Infof("Failed to update component %d status: %v", update.ComponentID, err)
+			return
+		}
+
+		klog.V(4).Infof("Component %s (id=%d) status synced: %s, ready=%d/%d",
+			update.ComponentName, update.ComponentID, update.Status, update.ReadyReplicas, update.Replicas)
+		return
+	}
 }

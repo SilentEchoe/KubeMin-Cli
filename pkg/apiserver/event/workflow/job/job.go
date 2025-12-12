@@ -19,6 +19,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
 	"KubeMin-Cli/pkg/apiserver/workflow/signal"
 )
 
@@ -366,9 +367,10 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 
 func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
 	labels := map[string]string{
-		config.LabelCli:         fmt.Sprintf("%s-%s", c.AppID, c.Name),
-		config.LabelComponentID: fmt.Sprintf("%d", c.ID),
-		config.LabelAppID:       c.AppID,
+		config.LabelCli:           fmt.Sprintf("%s-%s", c.AppID, c.Name),
+		config.LabelComponentID:   fmt.Sprintf("%d", c.ID),
+		config.LabelAppID:         c.AppID,
+		config.LabelComponentName: c.Name,
 	}
 	if p != nil {
 		for k, v := range p.Labels {
@@ -376,4 +378,23 @@ func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]
 		}
 	}
 	return labels
+}
+
+// globalWaiter 全局资源等待器（由 Informer Manager 初始化）
+var globalWaiter *informer.ResourceReadyWaiter
+
+// SetGlobalWaiter 设置全局等待器（在 server 启动时调用）
+func SetGlobalWaiter(w *informer.ResourceReadyWaiter) {
+	globalWaiter = w
+	klog.V(2).Info("Global resource waiter has been set")
+}
+
+// GetGlobalWaiter 获取全局等待器
+func GetGlobalWaiter() *informer.ResourceReadyWaiter {
+	return globalWaiter
+}
+
+// IsWaiterEnabled 检查 waiter 是否已启用
+func IsWaiterEnabled() bool {
+	return globalWaiter != nil
 }

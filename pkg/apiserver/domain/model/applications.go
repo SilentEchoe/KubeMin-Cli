@@ -74,6 +74,9 @@ type ApplicationComponent struct {
 	ComponentType config.JobType `json:"componentType"`
 	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"`
 	Traits        *JSONStruct    `json:"traits" gorm:"serializer:json"`
+	// 运行时状态（由 Informer 同步）
+	Status        string `json:"status"`        // Running/Pending/Failed/Unknown
+	ReadyReplicas int32  `json:"readyReplicas"` // 就绪副本数
 	BaseModel
 }
 

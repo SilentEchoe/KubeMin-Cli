@@ -25,7 +25,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "my-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-my-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "1"},
+			Labels:    map[string]string{config.LabelCli: "test-app-my-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "1", config.LabelComponentName: "my-configmap"},
 			Data: map[string]string{
 				"key1": "value1",
 				"key2": "value2",
@@ -74,7 +74,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "nil-props-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "3"},
+			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "3", config.LabelComponentName: "nil-props-configmap"},
 			Data:      nil,
 		}
 		actual := GenerateConfigMap(component, nil)
@@ -97,7 +97,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "empty-configmap",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-empty-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "4"},
+			Labels:    map[string]string{config.LabelCli: "test-app-empty-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "4", config.LabelComponentName: "empty-configmap"},
 			Data:      map[string]string{},
 		}
 		actual := GenerateConfigMap(component, properties)
@@ -119,7 +119,7 @@ func TestGenerateConfigMap(t *testing.T) {
 		expected := &model.ConfigMapInput{
 			Name:      "no-namespace-configmap",
 			Namespace: config.DefaultNamespace,
-			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "5"},
+			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-configmap", config.LabelAppID: "test-app", config.LabelComponentID: "5", config.LabelComponentName: "no-namespace-configmap"},
 			Data:      map[string]string{"key": "value"},
 		}
 		actual := GenerateConfigMap(component, properties)

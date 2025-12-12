@@ -16,6 +16,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
 )
@@ -150,7 +151,32 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 }
 
 func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
-	timeout := time.After(config.DeployTimeout * time.Second)
+	targetName := buildStoreSeverName(c.job.Name, c.job.AppID)
+	timeout := time.Duration(c.timeout()) * time.Second
+
+	// 优先使用 Informer 事件驱动
+	waiter := GetGlobalWaiter()
+	if waiter != nil {
+		klog.V(4).Infof("Using informer-based wait for statefulset %s/%s", c.job.Namespace, targetName)
+		err := waiter.WaitForStatefulSetReady(ctx, c.job.Namespace, targetName, timeout)
+		if err != nil {
+			// 转换 WaitError 为 StatusError
+			if we, ok := err.(*informer.WaitError); ok {
+				return NewStatusError(we.Status, we.Err)
+			}
+			return err
+		}
+		return nil
+	}
+
+	// Fallback: 如果 Informer 未初始化，使用轮询方式
+	klog.V(4).Infof("Waiter not initialized, falling back to polling for statefulset %s/%s", c.job.Namespace, targetName)
+	return c.waitPolling(ctx)
+}
+
+// waitPolling 使用轮询方式等待 StatefulSet 就绪（作为 fallback）
+func (c *DeployStatefulSetJobCtl) waitPolling(ctx context.Context) error {
+	timeout := time.After(time.Duration(c.timeout()) * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
@@ -220,6 +246,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      statefulSetName,
 			Namespace: component.Namespace,
+			Labels:    labels, // 设置 StatefulSet 自身的 labels，供 Informer 过滤和状态同步
 		},
 		Spec: appsv1.StatefulSetSpec{
 			Replicas: &component.Replicas,

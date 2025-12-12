@@ -25,7 +25,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "my-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-my-secret", config.LabelAppID: "test-app", config.LabelComponentID: "1"},
+			Labels:    map[string]string{config.LabelCli: "test-app-my-secret", config.LabelAppID: "test-app", config.LabelComponentID: "1", config.LabelComponentName: "my-secret"},
 			Data: map[string]string{
 				"username": "admin",
 				"password": "password123",
@@ -75,7 +75,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "nil-props-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-secret", config.LabelAppID: "test-app", config.LabelComponentID: "3"},
+			Labels:    map[string]string{config.LabelCli: "test-app-nil-props-secret", config.LabelAppID: "test-app", config.LabelComponentID: "3", config.LabelComponentName: "nil-props-secret"},
 			Data:      nil,
 		}
 		actual := GenerateSecret(component, nil)
@@ -98,7 +98,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "empty-secret",
 			Namespace: "default",
-			Labels:    map[string]string{config.LabelCli: "test-app-empty-secret", config.LabelAppID: "test-app", config.LabelComponentID: "4"},
+			Labels:    map[string]string{config.LabelCli: "test-app-empty-secret", config.LabelAppID: "test-app", config.LabelComponentID: "4", config.LabelComponentName: "empty-secret"},
 			Data:      map[string]string{},
 		}
 		actual := GenerateSecret(component, properties)
@@ -120,7 +120,7 @@ func TestGenerateSecret(t *testing.T) {
 		expected := &model.SecretInput{
 			Name:      "no-namespace-secret",
 			Namespace: config.DefaultNamespace,
-			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-secret", config.LabelAppID: "test-app", config.LabelComponentID: "5"},
+			Labels:    map[string]string{config.LabelCli: "test-app-no-namespace-secret", config.LabelAppID: "test-app", config.LabelComponentID: "5", config.LabelComponentName: "no-namespace-secret"},
 			Data:      map[string]string{"key": "value"},
 		}
 		actual := GenerateSecret(component, properties)
