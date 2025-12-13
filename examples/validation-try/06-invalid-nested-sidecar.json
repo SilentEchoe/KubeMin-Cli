@@ -1,0 +1,47 @@
+{
+  "_comment": "This request will fail validation due to nested sidecar (forbidden)",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1,
+      "traits": {
+        "sidecar": [
+          {
+            "name": "logging-sidecar",
+            "image": "fluent/fluentd:v1.14",
+            "traits": {
+              "sidecar": [
+                {
+                  "name": "nested-sidecar",
+                  "image": "busybox:latest"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "component[0].traits.sidecar[0].traits.sidecar[0]",
+      "code": "NESTED_TRAIT_FORBIDDEN",
+      "message": "sidecar trait cannot be nested inside another init or sidecar trait"
+    }
+  ]
+}
+
+

@@ -1,0 +1,38 @@
+{
+  "_comment": "This request will fail validation due to duplicate component names",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1
+    },
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "httpd:latest",
+      "nameSpace": "default",
+      "replicas": 1
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "component[1].name",
+      "code": "DUPLICATE_COMPONENT",
+      "message": "duplicate component name: backend"
+    }
+  ]
+}
+
+

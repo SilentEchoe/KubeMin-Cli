@@ -1,0 +1,40 @@
+{
+  "_comment": "This request will fail validation due to invalid probe configuration (missing probe method)",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1,
+      "traits": {
+        "probes": [
+          {
+            "type": "liveness",
+            "initialDelaySeconds": 30,
+            "periodSeconds": 10
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "component[0].traits.probes[0]",
+      "code": "INVALID_PROBE_CONFIG",
+      "message": "probe must specify exactly one of exec, httpGet, or tcpSocket"
+    }
+  ]
+}
+
+

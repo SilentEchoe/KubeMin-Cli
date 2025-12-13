@@ -235,4 +235,3 @@ var (
 	_ Locker = (*MemoryLocker)(nil)
 	_ Mutex  = (*MemoryMutex)(nil)
 )
-

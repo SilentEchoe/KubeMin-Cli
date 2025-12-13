@@ -63,5 +63,3 @@ func (h *health) readinessCheck(c *gin.Context) {
 		"status": "ready",
 	})
 }
-
-

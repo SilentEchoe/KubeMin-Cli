@@ -361,8 +361,8 @@ func (m *Driver) CompareAndSwap(ctx context.Context, entity datastore.Entity, co
 		return false, datastore.ErrTableNameEmpty
 	}
 
-	// Add update_time to updates
-	updates["update_time"] = time.Now()
+	// Add updatetime to updates (using lowercase as per SQLNamer convention)
+	updates["updatetime"] = time.Now()
 
 	// Build the query with primary key and condition
 	result := m.Client.WithContext(ctx).

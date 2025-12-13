@@ -257,4 +257,3 @@ func (w *ResourceReadyWaiter) syncStatusToDB(labels map[string]string, replicas,
 	// 异步调用回调，避免阻塞 Informer
 	go w.statusSyncFunc(update)
 }
-

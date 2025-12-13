@@ -391,6 +391,11 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 
 	// Handle AdditionalObjects, with special logic for PVCs.
 	var remainingObjects []client.Object
+	// Track PVC names that are converted to volumeClaimTemplates (for StatefulSets)
+	// These should be removed from podTemplate.Spec.Volumes since volumeClaimTemplates
+	// automatically create volumes with the template name.
+	pvcTemplateNames := make(map[string]bool)
+
 	for _, obj := range result.AdditionalObjects {
 		// Check if the object is a PVC.
 		pvc, isPvc := obj.(*corev1.PersistentVolumeClaim)
@@ -403,15 +408,17 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 		// Check if the PVC has the template annotation.
 		anno := pvc.GetAnnotations()
 		if anno != nil && anno[config.LabelStorageRole] == "template" {
-			// This is a PVC template. It should be applied to a Service.
+			// This is a PVC template. It should be applied to a StatefulSet.
 			if sts, isSts := workload.(*appsv1.StatefulSet); isSts {
-				// It's a template for our Service. Add it to the templates list.
+				// It's a template for our StatefulSet. Add it to the templates list.
 				// The namespace MUST be removed from the template's metadata.
 				pvc.Namespace = ""
 				sts.Spec.VolumeClaimTemplates = append(sts.Spec.VolumeClaimTemplates, *pvc)
-				// The template is now part of the Service, so we don't keep it as a standalone object.
+				// Track this PVC name so we can remove the corresponding volume entry
+				pvcTemplateNames[pvc.Name] = true
+				// The template is now part of the StatefulSet, so we don't keep it as a standalone object.
 			} else {
-				// This is an error case: a template was requested for a non-Service workload.
+				// This is an error case: a template was requested for a non-StatefulSet workload.
 				klog.Warningf("Component %s requested a PVC template for a workload of type %T, which is not supported. The PVC will be ignored.", mainContainerName, workload)
 			}
 		} else {
@@ -421,6 +428,22 @@ func applyTraitResultToWorkload(result *TraitResult, workload runtime.Object, ma
 	}
 	// The list of additional objects now only contains the standalone objects.
 	result.AdditionalObjects = remainingObjects
+
+	// For StatefulSets with volumeClaimTemplates, remove the corresponding volumes from
+	// podTemplate.Spec.Volumes. StatefulSets automatically create volumes from volumeClaimTemplates,
+	// so explicit volume entries referencing the PVC would be incorrect.
+	if len(pvcTemplateNames) > 0 {
+		var filteredVolumes []corev1.Volume
+		for _, vol := range podTemplate.Spec.Volumes {
+			// Check if this volume references a PVC that was converted to a volumeClaimTemplate
+			if vol.PersistentVolumeClaim != nil && pvcTemplateNames[vol.PersistentVolumeClaim.ClaimName] {
+				klog.V(3).Infof("Removing volume %q from pod spec as it's now a volumeClaimTemplate", vol.Name)
+				continue
+			}
+			filteredVolumes = append(filteredVolumes, vol)
+		}
+		podTemplate.Spec.Volumes = filteredVolumes
+	}
 
 	return nil
 }

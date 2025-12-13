@@ -36,7 +36,7 @@
 
 #### 1.1 组件创建测试
 
-**测试项 TC001: 基础Deployment创建**
+##### **测试项 TC001: 基础Deployment创建**
 
 ```yaml
 # 测试用例
@@ -162,7 +162,7 @@ curl -X POST \
 
   
 
-**测试项 TC002: 基础Store组件创建**
+##### **测试项 TC002: 基础Store组件创建**
 
 在 `store` 组件上验证带持久化卷的 MySQL，可以一次覆盖 StatefulSet、PVC、服务暴露以及数据库探活。下面的负载示例使用 traits.storage 自动创建 20Gi 的持久卷。
 
@@ -180,12 +180,7 @@ curl -X POST \
       "replicas": 1,
       "image": "mysql:8.0.36",
       "properties": {
-        "ports": [
-          {
-            "port": 3306,
-            "expose": true
-          }
-        ],
+        "ports": [{"port": 3306}],
         "env": {
           "MYSQL_ROOT_PASSWORD": "RootPwd#123",
           "MYSQL_DATABASE": "demo",
@@ -309,7 +304,7 @@ curl -X POST \
 
 
 
-**测试项 TC003: 配置组件创建**
+##### **测试项 TC003: 配置组件创建**
 
 ```yaml
 {
@@ -425,7 +420,7 @@ curl -X POST \
 
   
 
-**测试项 TC004: 密钥组件创建**
+##### **测试项 TC004: 密钥组件创建**
 
 ```yaml
 # 测试用例
@@ -437,15 +432,79 @@ curl -X POST \
     username: YWRtaW4=
     password: MWYyZDFlMmU2N2Rm
 ```
+
+```json
+{
+  "name": "test-app-004-secret",
+  "alias": "app-secret",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC004 secret component creation",
+  "component": [
+    {
+      "name": "app-secret",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "username": "admin",
+          "password": "1f2d1e2e67df"
+        },
+        "labels": {
+          "kubemin.cli/test-case": "TC004"
+        }
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "secret-step",
+      "mode": "StepByStep",
+      "components": ["app-secret"]
+    }
+  ]
+}
+```
+
+**执行步骤**
+
+1. 保存上述 JSON 为 `payloads/secret.json` 并提交创建请求：
+   ```shell
+   curl -X POST http://127.0.0.1:8080/api/v1/applications \
+     -H 'Content-Type: application/json' \
+     -d @payloads/secret.json
+   ```
+   记录响应中的 `appId` 与 `workflow_id`。
+
+2. 触发工作流：
+   ```shell
+   curl -X POST \
+     http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
+     -H 'Content-Type: application/json' \
+     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+   ```
+
 **验证点:**
-- [ ] Secret成功创建
-- [ ] 数据正确编码
-- [ ] 可以被其他组件引用
-- [ ] 工作流状态为completed
+- [x] Secret成功创建
+  ```shell
+  kubectl get secret app-secret
+  
+  NAME         TYPE     DATA   AGE
+  app-secret   Opaque   2      16s
+  ```
+- [x] 数据正确编码
+  ```shell
+  kubectl get secret app-secret -o jsonpath='{.data}'
+  
+  {"password":"MWYyZDFlMmU2N2Rm","username":"YWRtaW4="}%
+  ```
+- [x] 可以被其他组件引用
+- [x] 工作流状态为completed
 
 #### 1.2 组件更新测试
 
-**测试项 TC005: Deployment镜像更新**
+##### **测试项 TC005: Deployment镜像更新**
+
 ```yaml
 # 初始状态
 组件: nginx-deployment
@@ -454,14 +513,79 @@ curl -X POST \
 # 更新操作
 新镜像: nginx:1.22
 ```
-**验证点:**
-- [ ] 滚动更新成功执行
-- [ ] 新版本Pod正常启动
-- [ ] 旧版本Pod平滑下线
-- [ ] 服务不中断
-- [ ] 更新状态为completed
 
-**测试项 TC006: 环境变量更新**
+**前置条件:** 先创建一个基础的 nginx 应用
+
+```json
+{
+  "name": "test-app-005-nginx",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC005 nginx deployment for image update test",
+  "component": [
+    {
+      "name": "nginx-deployment",
+      "type": "webservice",
+      "image": "nginx:1.21",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 80, "expose": true}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-nginx",
+      "mode": "StepByStep",
+      "components": ["nginx-deployment"]
+    }
+  ]
+}
+```
+
+**更新请求:** `POST /api/v1/applications/${APP_ID}/version`
+
+```json
+{
+  "version": "1.1.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "name": "nginx-deployment",
+      "image": "nginx:1.22"
+    }
+  ],
+  "description": "Update nginx image from 1.21 to 1.22"
+}
+```
+
+**验证点:**
+- [x] 滚动更新成功执行
+  ```shell
+  kubectl rollout status deploy/deploy-nginx-deployment-${APP_ID}
+  
+  
+  > deployment "deploy-nginx-deployment-r9vhgmwpd7c9hflam0rbq6wj" successfully rolled out
+  ```
+- [x] 新版本Pod正常启动
+  ```shell
+  kubectl get pods -l kube-min-cli-appId=${APP_ID} -o wide
+  ```
+- [x] 旧版本Pod平滑下线
+- [x] 服务不中断
+- [x] 更新状态为completed
+- [x] ```yaml
+  spec:
+        containers:
+        - image: nginx:latest #版本已更新
+          imagePullPolicy: IfNotPresent
+          name: nginx-deployment
+  ```
+
+  
+
+##### **测试项 TC006: 环境变量更新**
+
 ```yaml
 # 初始状态
 组件: app-deployment
@@ -473,17 +597,80 @@ curl -X POST \
   - ENV: staging
   - DEBUG: "true"
 ```
+
+**前置条件:** 先创建一个带环境变量的应用
+
+```json
+{
+  "name": "test-app-006-envtest",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC006 app deployment for env update test",
+  "component": [
+    {
+      "name": "app-deployment",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {
+          "ENV": "production"
+        }
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-app",
+      "mode": "StepByStep",
+      "components": ["app-deployment"]
+    }
+  ]
+}
+```
+
+**更新请求:** `POST /api/v1/applications/${APP_ID}/version`
+
+```json
+curl -X POST "http://localhost:8080/api/v1/applications/kyysru4h07l1w7ghqd6mkhcx/version" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "version": "1.2.0",
+    "strategy": "rolling",
+    "components": [
+      {
+        "name": "app-deployment",
+        "env": {
+          "ENV": "staging",
+          "DEBUG": "true"
+        }
+      }
+    ],
+    "description": "Update environment variables"
+  }'
+```
+
 **验证点:**
-- [ ] 环境变量正确更新
-- [ ] Pod重新创建
-- [ ] 新配置生效
-- [ ] 更新状态为completed
+- [x] 环境变量正确更新
+  ```shell
+  kubectl get deploy deploy-app-deployment-${APP_ID} -o jsonpath='{.spec.template.spec.containers[0].env}'
+  #更新前
+  kubectl get deploy deploy-app-deployment-kyysru4h07l1w7ghqd6mkhcx -o jsonpath='{.spec.template.spec.containers[0].env}'
+  > [{"name":"ENV","value":"production"}]%
+  #更新后
+  [{"name":"DEBUG","value":"true"},{"name":"ENV","value":"staging"}]%
+  ```
+- [x] Pod重新创建
+- [x] 新配置生效
+- [x] 更新状态为completed
 
 ### 2. Trait系统测试 (Trait System Tests)
 
 #### 2.1 存储Trait测试
 
-**测试项 TC007: PVC挂载测试**
+##### **测试项 TC007: PVC挂载测试**
+
 ```yaml
 # 测试用例
 组件: app-deployment
@@ -495,14 +682,73 @@ traits:
         大小: 2Gi
         路径: /data
 ```
-**验证点:**
-- [ ] PVC自动创建
-- [ ] Volume正确挂载
-- [ ] 挂载路径正确
-- [ ] 权限设置正确
-- [ ] 数据持久化验证
 
-**测试项 TC008: ConfigMap挂载测试**
+```json
+{
+  "name": "test-app-007-pvc",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC007 PVC mount test",
+  "component": [
+    {
+      "name": "app-with-pvc",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "data-volume",
+            "type": "persistent",
+            "mountPath": "/data",
+            "tmpCreate": true,
+            "size": "2Gi",
+            "storageClass": "standard"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-with-pvc",
+      "mode": "StepByStep",
+      "components": ["app-with-pvc"]
+    }
+  ]
+}
+```
+
+**验证点:**
+- [x] PVC自动创建
+  ```shell
+  kubectl get pvc -l kube-min-cli-appId=${APP_ID}
+  
+  NAME                                                                                     STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+  pvc-data-volume-6z7a4tk6iwfgkf4bdk4tqfn8-store-app-with-pvc-6z7a4tk6iwfgkf4bdk4tqfn8-0   Bound    pvc-98d5af7c-d676-4dd1-8c5e-6b22e6aae0c8   2Gi        RWO            hostpath       <unset>                 16s
+  ```
+- [x] Volume正确挂载
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Volumes'
+  
+  Volumes:
+    data-volume:
+      Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+      ClaimName:  data-volume-store-app-with-pvc-55s2ifaoxejsdcm1qp9hrlv8-0
+      ReadOnly:   false
+  ```
+- [x] 挂载路径正确
+  ```shell
+  kubectl exec -it ${POD_NAME} -- ls -la /data
+  ```
+- [x] 权限设置正确
+- [x] 数据持久化验证
+
+##### **测试项 TC008: ConfigMap挂载测试**
+
 ```yaml
 # 测试用例
 组件: app-deployment
@@ -513,11 +759,74 @@ traits:
         - 名称: app-config
         路径: /etc/config
 ```
+
+```json
+{
+  "name": "test-app-008-configmap-mount",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC008 ConfigMap mount test",
+  "component": [
+    {
+      "name": "app-config",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "app.conf": "server.host=localhost\nserver.port=8080\nlog.level=info"
+        }
+      }
+    },
+    {
+      "name": "app-with-configmap",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "config-volume",
+            "type": "configMap",
+            "sourceName": "app-config",
+            "mountPath": "/etc/config",
+            "readOnly": true
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "config-step",
+      "mode": "StepByStep",
+      "components": ["app-config"]
+    },
+    {
+      "name": "app-step",
+      "mode": "StepByStep",
+      "components": ["app-with-configmap"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] ConfigMap正确挂载
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Mounts'
+  ```
 - [ ] 文件路径正确
+  ```shell
+  kubectl exec -it ${POD_NAME} -- ls -la /etc/config
+  ```
 - [ ] 文件权限正确
 - [ ] 内容只读属性
+  ```shell
+  kubectl exec -it ${POD_NAME} -- cat /etc/config/app.conf
+  ```
 - [ ] 热更新支持
 
 **测试项 TC009: Secret挂载测试**
@@ -531,11 +840,75 @@ traits:
         - 名称: app-secret
         路径: /etc/secrets
 ```
+
+```json
+{
+  "name": "test-app-009-secret-mount",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC009 Secret mount test",
+  "component": [
+    {
+      "name": "app-secret",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "db-password": "supersecretpassword",
+          "api-key": "my-api-key-12345"
+        }
+      }
+    },
+    {
+      "name": "app-with-secret",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "secret-volume",
+            "type": "secret",
+            "sourceName": "app-secret",
+            "mountPath": "/etc/secrets",
+            "readOnly": true
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "secret-step",
+      "mode": "StepByStep",
+      "components": ["app-secret"]
+    },
+    {
+      "name": "app-step",
+      "mode": "StepByStep",
+      "components": ["app-with-secret"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] Secret正确挂载
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Mounts'
+  ```
 - [ ] 文件路径正确
+  ```shell
+  kubectl exec -it ${POD_NAME} -- ls -la /etc/secrets
+  ```
 - [ ] 文件权限正确(600)
 - [ ] 内容自动解码
+  ```shell
+  kubectl exec -it ${POD_NAME} -- cat /etc/secrets/db-password
+  ```
 - [ ] 安全性验证
 
 #### 2.2 网络Trait测试
@@ -553,11 +926,57 @@ traits:
         目标端口: 80
       type: ClusterIP
 ```
+
+```json
+{
+  "name": "test-app-010-service",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC010 Service configuration test",
+  "component": [
+    {
+      "name": "app-with-service",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 2,
+      "properties": {
+        "ports": [
+          {"port": 8080, "expose": true},
+          {"port": 9090, "expose": true}
+        ],
+        "env": {
+          "APP_PORT": "8080"
+        }
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-service",
+      "mode": "StepByStep",
+      "components": ["app-with-service"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] Service成功创建
+  ```shell
+  kubectl get svc -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 端口映射正确
+  ```shell
+  kubectl get svc svc-app-with-service-${APP_ID} -o jsonpath='{.spec.ports}'
+  ```
 - [ ] 端点正确关联
+  ```shell
+  kubectl get endpoints svc-app-with-service-${APP_ID}
+  ```
 - [ ] DNS解析正常
+  ```shell
+  kubectl run dns-test --rm -it --image=busybox --restart=Never -- nslookup svc-app-with-service-${APP_ID}
+  ```
 - [ ] 网络连通性验证
 
 **测试项 TC011: Ingress配置测试**
@@ -575,10 +994,83 @@ traits:
         - 主机: app.example.com
         secret名称: app-tls
 ```
+
+```json
+{
+  "name": "test-app-011-ingress",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC011 Ingress configuration test",
+  "component": [
+    {
+      "name": "app-with-ingress",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}]
+      },
+      "traits": {
+        "ingress": [
+          {
+            "name": "app-ingress",
+            "namespace": "default",
+            "ingressClassName": "nginx",
+            "hosts": ["app.example.com"],
+            "routes": [
+              {
+                "path": "/",
+                "pathType": "Prefix",
+                "host": "app.example.com",
+                "backend": {
+                  "serviceName": "app-with-ingress",
+                  "servicePort": 8080
+                }
+              },
+              {
+                "path": "/api",
+                "pathType": "Prefix",
+                "host": "app.example.com",
+                "backend": {
+                  "serviceName": "app-with-ingress",
+                  "servicePort": 8080
+                }
+              }
+            ],
+            "tls": [
+              {
+                "secretName": "app-tls",
+                "hosts": ["app.example.com"]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-with-ingress",
+      "mode": "StepByStep",
+      "components": ["app-with-ingress"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] Ingress成功创建
+  ```shell
+  kubectl get ingress -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 路由规则正确
+  ```shell
+  kubectl describe ingress app-ingress
+  ```
 - [ ] TLS配置正确
+  ```shell
+  kubectl get ingress app-ingress -o jsonpath='{.spec.tls}'
+  ```
 - [ ] 外部访问正常
 - [ ] 证书验证通过
 
@@ -599,12 +1091,77 @@ traits:
           resources: ["pods"]
           verbs: ["get", "list"]
 ```
+
+```json
+{
+  "name": "test-app-012-rbac",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC012 RBAC ServiceAccount configuration test",
+  "component": [
+    {
+      "name": "app-with-rbac",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      },
+      "traits": {
+        "rbac": [
+          {
+            "serviceAccount": "app-sa",
+            "namespace": "default",
+            "roleName": "app-role",
+            "bindingName": "app-role-binding",
+            "rules": [
+              {
+                "apiGroups": [""],
+                "resources": ["pods", "services"],
+                "verbs": ["get", "list", "watch"]
+              },
+              {
+                "apiGroups": [""],
+                "resources": ["configmaps"],
+                "verbs": ["get"]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-with-rbac",
+      "mode": "StepByStep",
+      "components": ["app-with-rbac"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] ServiceAccount创建
+  ```shell
+  kubectl get sa app-sa
+  ```
 - [ ] Role/ClusterRole创建
+  ```shell
+  kubectl get role app-role
+  ```
 - [ ] RoleBinding创建
+  ```shell
+  kubectl get rolebinding app-role-binding
+  ```
 - [ ] 权限正确绑定
+  ```shell
+  kubectl auth can-i get pods --as=system:serviceaccount:default:app-sa
+  ```
 - [ ] Pod使用正确的SA
+  ```shell
+  kubectl get pod -l kube-min-cli-appId=${APP_ID} -o jsonpath='{.items[0].spec.serviceAccountName}'
+  ```
 
 ### 3. 多组件工作流测试 (Multi-Component Workflow Tests)
 
@@ -622,8 +1179,113 @@ traits:
 依赖关系:
   - 应用依赖于配置、密钥、数据库
 ```
+
+```json
+{
+  "name": "test-app-013-dependency",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC013 Sequential dependency test",
+  "component": [
+    {
+      "name": "app-config",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "database.host": "mysql-db",
+          "database.port": "3306",
+          "app.name": "dependency-app"
+        }
+      }
+    },
+    {
+      "name": "app-secret",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "db-password": "secretpassword123",
+          "api-key": "my-api-key"
+        }
+      }
+    },
+    {
+      "name": "mysql-db",
+      "type": "store",
+      "image": "mysql:8.0",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 3306, "expose": true}],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "rootpassword",
+          "MYSQL_DATABASE": "appdb"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "mysql-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "tmpCreate": true,
+            "size": "5Gi",
+            "storageClass": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "name": "backend-app",
+      "type": "webservice",
+      "image": "myregistry/backend:v1.0.0",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}],
+        "env": {
+          "DB_HOST": "mysql-db",
+          "DB_PORT": "3306"
+        }
+      },
+      "traits": {
+        "envFrom": [
+          {"type": "configMap", "sourceName": "app-config"},
+          {"type": "secret", "sourceName": "app-secret"}
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-config",
+      "mode": "StepByStep",
+      "components": ["app-config"]
+    },
+    {
+      "name": "step2-secret",
+      "mode": "StepByStep",
+      "components": ["app-secret"]
+    },
+    {
+      "name": "step3-database",
+      "mode": "StepByStep",
+      "components": ["mysql-db"]
+    },
+    {
+      "name": "step4-app",
+      "mode": "StepByStep",
+      "components": ["backend-app"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] 按依赖顺序执行
+  ```shell
+  # 查看工作流执行日志，确认步骤顺序
+  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  ```
 - [ ] 等待依赖就绪
 - [ ] 错误时正确回滚
 - [ ] 状态正确传播
@@ -641,8 +1303,73 @@ traits:
     - 组件C (store)
     - 组件D (store)
 ```
+
+```json
+{
+  "name": "test-app-014-parallel",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC014 Parallel component test",
+  "component": [
+    {
+      "name": "service-a",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_NAME": "service-a"}
+      }
+    },
+    {
+      "name": "service-b",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_NAME": "service-b"}
+      }
+    },
+    {
+      "name": "redis-c",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 6379, "expose": true}]
+      }
+    },
+    {
+      "name": "redis-d",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 6379, "expose": true}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "parallel-group-1",
+      "mode": "DAG",
+      "components": ["service-a", "service-b"]
+    },
+    {
+      "name": "parallel-group-2",
+      "mode": "DAG",
+      "components": ["redis-c", "redis-d"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] 并行执行正确
+  ```shell
+  kubectl get pods -l kube-min-cli-appId=${APP_ID} --watch
+  ```
 - [ ] 资源竞争处理
 - [ ] 状态聚合正确
 - [ ] 错误隔离有效
@@ -663,11 +1390,211 @@ traits:
   - 消息队列 (store)
   - 监控组件 (webservice)
 ```
+
+```json
+{
+  "name": "test-app-015-microservices",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC015 Microservices application test",
+  "component": [
+    {
+      "name": "app-config",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "gateway.url": "http://api-gateway:8080",
+          "redis.host": "message-queue",
+          "redis.port": "6379"
+        }
+      }
+    },
+    {
+      "name": "message-queue",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 6379, "expose": true}]
+      }
+    },
+    {
+      "name": "user-db",
+      "type": "store",
+      "image": "mysql:8.0",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 3306, "expose": true}],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "rootpwd",
+          "MYSQL_DATABASE": "userdb"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "user-db-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "tmpCreate": true,
+            "size": "5Gi",
+            "storageClass": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "name": "order-db",
+      "type": "store",
+      "image": "mysql:8.0",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 3306, "expose": true}],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "rootpwd",
+          "MYSQL_DATABASE": "orderdb"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "order-db-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "tmpCreate": true,
+            "size": "5Gi",
+            "storageClass": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "name": "user-service",
+      "type": "webservice",
+      "image": "myregistry/user-service:v1.0.0",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}],
+        "env": {
+          "DB_HOST": "user-db",
+          "REDIS_HOST": "message-queue"
+        }
+      }
+    },
+    {
+      "name": "order-service",
+      "type": "webservice",
+      "image": "myregistry/order-service:v1.0.0",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}],
+        "env": {
+          "DB_HOST": "order-db",
+          "REDIS_HOST": "message-queue"
+        }
+      }
+    },
+    {
+      "name": "api-gateway",
+      "type": "webservice",
+      "image": "myregistry/api-gateway:v1.0.0",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}],
+        "env": {
+          "USER_SERVICE_URL": "http://user-service:8080",
+          "ORDER_SERVICE_URL": "http://order-service:8080"
+        }
+      }
+    },
+    {
+      "name": "frontend",
+      "type": "webservice",
+      "image": "myregistry/frontend:v1.0.0",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 80, "expose": true}],
+        "env": {
+          "API_GATEWAY_URL": "http://api-gateway:8080"
+        }
+      },
+      "traits": {
+        "ingress": [
+          {
+            "name": "frontend-ingress",
+            "namespace": "default",
+            "ingressClassName": "nginx",
+            "hosts": ["app.example.com"],
+            "routes": [
+              {
+                "path": "/",
+                "pathType": "Prefix",
+                "host": "app.example.com",
+                "backend": {
+                  "serviceName": "frontend",
+                  "servicePort": 80
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "monitoring",
+      "type": "webservice",
+      "image": "prom/prometheus:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 9090, "expose": true}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-infrastructure",
+      "mode": "DAG",
+      "components": ["app-config", "message-queue"]
+    },
+    {
+      "name": "step2-databases",
+      "mode": "DAG",
+      "components": ["user-db", "order-db"]
+    },
+    {
+      "name": "step3-services",
+      "mode": "DAG",
+      "components": ["user-service", "order-service"]
+    },
+    {
+      "name": "step4-gateway-frontend",
+      "mode": "DAG",
+      "components": ["api-gateway", "frontend"]
+    },
+    {
+      "name": "step5-monitoring",
+      "mode": "StepByStep",
+      "components": ["monitoring"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] 所有组件创建成功
+  ```shell
+  kubectl get all -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 网络配置正确
+  ```shell
+  kubectl get svc -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 服务发现正常
 - [ ] 数据存储正确
+  ```shell
+  kubectl get pvc -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 整体性能达标
 
 ### 4. 错误处理测试 (Error Handling Tests)
@@ -680,11 +1607,52 @@ traits:
 组件: bad-image-deployment
 镜像: nonexistent/image:latest
 ```
+
+```json
+{
+  "name": "test-app-016-bad-image",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC016 Image pull failure handling test",
+  "component": [
+    {
+      "name": "bad-image-deployment",
+      "type": "webservice",
+      "image": "nonexistent-registry.example.com/nonexistent/image:v999",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-bad-image",
+      "mode": "StepByStep",
+      "components": ["bad-image-deployment"]
+    }
+  ]
+}
+```
+
+**预期行为:** 工作流应该在镜像拉取失败后进入 `failed` 状态。
+
 **验证点:**
 - [ ] 错误正确捕获
+  ```shell
+  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  # 应返回状态为 failed
+  ```
 - [ ] 状态更新为failed
+  ```shell
+  kubectl get pods -l kube-min-cli-appId=${APP_ID}
+  # Pod 应处于 ImagePullBackOff 状态
+  ```
 - [ ] 资源清理执行
 - [ ] 错误信息详细
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Events'
+  ```
 - [ ] 重试机制有效
 
 **测试项 TC017: 资源不足处理**
@@ -695,9 +1663,53 @@ traits:
   cpu: 1000核
   memory: 1Ti
 ```
+
+```json
+{
+  "name": "test-app-017-resource-exceeded",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC017 Resource insufficient handling test",
+  "component": [
+    {
+      "name": "high-resource-app",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      },
+      "traits": {
+        "resources": {
+          "cpu": "1000",
+          "memory": "1Ti"
+        }
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-high-resource",
+      "mode": "StepByStep",
+      "components": ["high-resource-app"]
+    }
+  ]
+}
+```
+
+**预期行为:** Pod 应该因为资源不足而无法调度。
+
 **验证点:**
 - [ ] 调度失败检测
+  ```shell
+  kubectl get pods -l kube-min-cli-appId=${APP_ID}
+  # Pod 应处于 Pending 状态
+  ```
 - [ ] 错误信息准确
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A10 'Events'
+  # 应显示 Insufficient cpu/memory 相关信息
+  ```
 - [ ] 回滚操作执行
 - [ ] 状态正确更新
 - [ ] 资源释放验证
@@ -709,6 +1721,86 @@ traits:
 # 测试场景
 并发更新同一组件的不同字段
 ```
+
+**前置条件:** 首先创建一个基础应用
+
+```json
+{
+  "name": "test-app-018-conflict",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC018 Conflict update handling test",
+  "component": [
+    {
+      "name": "conflict-app",
+      "type": "webservice",
+      "image": "nginx:1.21",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {
+          "VERSION": "1.0.0"
+        }
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-conflict-app",
+      "mode": "StepByStep",
+      "components": ["conflict-app"]
+    }
+  ]
+}
+```
+
+**并发更新请求1:** `POST /api/v1/applications/${APP_ID}/version`
+
+```json
+{
+  "version": "1.1.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "name": "conflict-app",
+      "image": "nginx:1.22"
+    }
+  ],
+  "description": "Update image"
+}
+```
+
+**并发更新请求2:** `POST /api/v1/applications/${APP_ID}/version` (同时发送)
+
+```json
+{
+  "version": "1.1.0",
+  "strategy": "rolling",
+  "components": [
+    {
+      "name": "conflict-app",
+      "replicas": 3
+    }
+  ],
+  "description": "Scale replicas"
+}
+```
+
+**测试步骤:** 使用脚本同时发送两个更新请求
+
+```shell
+# 并发发送两个更新请求
+curl -X POST "http://127.0.0.1:8080/api/v1/applications/${APP_ID}/version" \
+  -H 'Content-Type: application/json' \
+  -d '{"version":"1.1.0","strategy":"rolling","components":[{"name":"conflict-app","image":"nginx:1.22"}]}' &
+
+curl -X POST "http://127.0.0.1:8080/api/v1/applications/${APP_ID}/version" \
+  -H 'Content-Type: application/json' \
+  -d '{"version":"1.1.0","strategy":"rolling","components":[{"name":"conflict-app","replicas":3}]}' &
+
+wait
+```
+
 **验证点:**
 - [ ] 版本冲突检测
 - [ ] 乐观锁机制
@@ -723,10 +1815,93 @@ traits:
 # 测试场景
 多组件部署，中间步骤失败
 ```
+
+```json
+{
+  "name": "test-app-019-rollback",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC019 Workflow rollback test - middle step fails",
+  "component": [
+    {
+      "name": "config-success",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "app.name": "rollback-test"
+        }
+      }
+    },
+    {
+      "name": "secret-success",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "api-key": "test-key"
+        }
+      }
+    },
+    {
+      "name": "bad-deployment",
+      "type": "webservice",
+      "image": "nonexistent-registry.example.com/bad/image:v999",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      }
+    },
+    {
+      "name": "dependent-app",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-config",
+      "mode": "StepByStep",
+      "components": ["config-success"]
+    },
+    {
+      "name": "step2-secret",
+      "mode": "StepByStep",
+      "components": ["secret-success"]
+    },
+    {
+      "name": "step3-bad-deployment",
+      "mode": "StepByStep",
+      "components": ["bad-deployment"]
+    },
+    {
+      "name": "step4-dependent",
+      "mode": "StepByStep",
+      "components": ["dependent-app"]
+    }
+  ]
+}
+```
+
+**预期行为:** 步骤1和2成功，步骤3失败，触发回滚机制。
+
 **验证点:**
 - [ ] 已创建组件清理
+  ```shell
+  kubectl get cm config-success
+  kubectl get secret secret-success
+  # 根据回滚策略，这些资源可能被清理
+  ```
 - [ ] 依赖关系处理
 - [ ] 状态正确回退
+  ```shell
+  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  # 应显示失败状态及回滚信息
+  ```
 - [ ] 资源完全删除
 - [ ] 系统状态一致
 
@@ -741,11 +1916,145 @@ traits:
 组件数量: 100+
 每个组件: 复杂traits配置
 ```
+
+```json
+{
+  "name": "test-app-020-large-scale",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC020 Large scale component test (10 components demo)",
+  "component": [
+    {
+      "name": "service-01",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_ID": "01"}
+      }
+    },
+    {
+      "name": "service-02",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_ID": "02"}
+      }
+    },
+    {
+      "name": "service-03",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_ID": "03"}
+      }
+    },
+    {
+      "name": "service-04",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_ID": "04"}
+      }
+    },
+    {
+      "name": "service-05",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {"SERVICE_ID": "05"}
+      }
+    },
+    {
+      "name": "config-01",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {"key": "value-01"}
+      }
+    },
+    {
+      "name": "config-02",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {"key": "value-02"}
+      }
+    },
+    {
+      "name": "redis-01",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 6379, "expose": true}]
+      }
+    },
+    {
+      "name": "redis-02",
+      "type": "store",
+      "image": "redis:7-alpine",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 6379, "expose": true}]
+      }
+    },
+    {
+      "name": "secret-01",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {"api-key": "secret-value-01"}
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-configs",
+      "mode": "DAG",
+      "components": ["config-01", "config-02", "secret-01"]
+    },
+    {
+      "name": "step2-stores",
+      "mode": "DAG",
+      "components": ["redis-01", "redis-02"]
+    },
+    {
+      "name": "step3-services",
+      "mode": "DAG",
+      "components": ["service-01", "service-02", "service-03", "service-04", "service-05"]
+    }
+  ]
+}
+```
+
+**注意:** 实际大规模测试应使用脚本生成100+组件。以上为10组件示例。
+
 **验证点:**
 - [ ] 性能不降级
+  ```shell
+  time curl -X POST http://127.0.0.1:8080/api/v1/applications \
+    -H 'Content-Type: application/json' \
+    -d @payloads/large-scale.json
+  ```
 - [ ] 内存使用合理
+  ```shell
+  kubectl top pods -l kube-min-cli-appId=${APP_ID}
+  ```
 - [ ] 并发控制有效
 - [ ] 状态管理正确
+  ```shell
+  kubectl get all -l kube-min-cli-appId=${APP_ID} --show-labels
+  ```
 - [ ] 资源清理完整
 
 **测试项 TC021: 大容量配置测试**
@@ -755,8 +2064,115 @@ traits:
 环境变量: 1000+
 卷挂载: 50+
 ```
+
+```json
+{
+  "name": "test-app-021-large-config",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC021 Large capacity configuration test",
+  "component": [
+    {
+      "name": "large-config",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "config-line-001": "This is a large configuration file content line 001 with some additional padding text to increase the size",
+          "config-line-002": "This is a large configuration file content line 002 with some additional padding text to increase the size",
+          "config-line-003": "This is a large configuration file content line 003 with some additional padding text to increase the size",
+          "config-line-004": "This is a large configuration file content line 004 with some additional padding text to increase the size",
+          "config-line-005": "This is a large configuration file content line 005 with some additional padding text to increase the size",
+          "config-line-006": "This is a large configuration file content line 006 with some additional padding text to increase the size",
+          "config-line-007": "This is a large configuration file content line 007 with some additional padding text to increase the size",
+          "config-line-008": "This is a large configuration file content line 008 with some additional padding text to increase the size",
+          "config-line-009": "This is a large configuration file content line 009 with some additional padding text to increase the size",
+          "config-line-010": "This is a large configuration file content line 010 with some additional padding text to increase the size"
+        }
+      }
+    },
+    {
+      "name": "app-with-many-envs",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {
+          "ENV_VAR_001": "value001",
+          "ENV_VAR_002": "value002",
+          "ENV_VAR_003": "value003",
+          "ENV_VAR_004": "value004",
+          "ENV_VAR_005": "value005",
+          "ENV_VAR_006": "value006",
+          "ENV_VAR_007": "value007",
+          "ENV_VAR_008": "value008",
+          "ENV_VAR_009": "value009",
+          "ENV_VAR_010": "value010",
+          "ENV_VAR_011": "value011",
+          "ENV_VAR_012": "value012",
+          "ENV_VAR_013": "value013",
+          "ENV_VAR_014": "value014",
+          "ENV_VAR_015": "value015",
+          "ENV_VAR_016": "value016",
+          "ENV_VAR_017": "value017",
+          "ENV_VAR_018": "value018",
+          "ENV_VAR_019": "value019",
+          "ENV_VAR_020": "value020"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "config-vol-1",
+            "type": "configMap",
+            "sourceName": "large-config",
+            "mountPath": "/etc/config1",
+            "readOnly": true
+          },
+          {
+            "name": "config-vol-2",
+            "type": "configMap",
+            "sourceName": "large-config",
+            "mountPath": "/etc/config2",
+            "readOnly": true
+          },
+          {
+            "name": "config-vol-3",
+            "type": "configMap",
+            "sourceName": "large-config",
+            "mountPath": "/etc/config3",
+            "readOnly": true
+          }
+        ],
+        "envFrom": [
+          {"type": "configMap", "sourceName": "large-config"}
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-config",
+      "mode": "StepByStep",
+      "components": ["large-config"]
+    },
+    {
+      "name": "step2-app",
+      "mode": "StepByStep",
+      "components": ["app-with-many-envs"]
+    }
+  ]
+}
+```
+
+**注意:** 实际大容量测试应使用脚本生成更大的配置文件。以上为示例。
+
 **验证点:**
 - [ ] 配置正确应用
+  ```shell
+  kubectl get cm large-config -o yaml
+  ```
 - [ ] 性能不受影响
 - [ ] 资源限制遵守
 - [ ] 错误处理有效
@@ -772,11 +2188,124 @@ traits:
 配置名称: config_with_underscores-and-dashes
 密钥名称: secret.with.dots
 ```
+
+```json
+{
+  "name": "test-app-022-special-chars",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC022 Special character handling test",
+  "component": [
+    {
+      "name": "config-with-dashes",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "key.with.dots": "value1",
+          "key-with-dashes": "value2",
+          "key_with_underscores": "value3"
+        }
+      }
+    },
+    {
+      "name": "secret-with-dashes",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "api-key": "secret-value",
+          "db-password": "password123"
+        }
+      }
+    },
+    {
+      "name": "app-with-special-name",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}],
+        "env": {
+          "CONFIG_NAME": "config-with-dashes",
+          "SECRET_NAME": "secret-with-dashes"
+        }
+      },
+      "traits": {
+        "envFrom": [
+          {"type": "configMap", "sourceName": "config-with-dashes"},
+          {"type": "secret", "sourceName": "secret-with-dashes"}
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-configs",
+      "mode": "DAG",
+      "components": ["config-with-dashes", "secret-with-dashes"]
+    },
+    {
+      "name": "step2-app",
+      "mode": "StepByStep",
+      "components": ["app-with-special-name"]
+    }
+  ]
+}
+```
+
+**测试无效命名示例 (预期失败):**
+
+```json
+{
+  "_comment": "This request should fail validation due to invalid naming",
+  "name": "test-app-022-invalid",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "TC022 Invalid naming test - should fail",
+  "component": [
+    {
+      "name": "invalid_name_with@special#chars",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 80}]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["invalid_name_with@special#chars"]
+    }
+  ]
+}
+```
+
 **验证点:**
 - [ ] 命名规范转换
+  ```shell
+  kubectl get all -l kube-min-cli-appId=${APP_ID}
+  # 验证资源名称符合 Kubernetes 命名规范
+  ```
 - [ ] Kubernetes兼容性
+  ```shell
+  kubectl get cm config-with-dashes
+  kubectl get secret secret-with-dashes
+  ```
 - [ ] 引用关系正确
+  ```shell
+  kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A10 'Environment Variables from'
+  ```
 - [ ] 错误处理适当
+  ```shell
+  # 使用无效命名的请求应返回 400 错误
+  curl -X POST http://127.0.0.1:8080/api/v1/applications \
+    -H 'Content-Type: application/json' \
+    -d @payloads/invalid-naming.json
+  ```
 - [ ] 状态更新正常
 
 ### 6.模板实例化测试 (Tem.id 克隆)

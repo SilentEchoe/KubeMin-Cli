@@ -1,0 +1,31 @@
+{
+  "_comment": "This request will fail validation due to invalid application name",
+  "name": "My_Invalid_App",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "name",
+      "code": "INVALID_NAME_FORMAT",
+      "message": "name must match DNS-1123 subdomain (lowercase alphanumeric, may contain hyphens, must start and end with alphanumeric)"
+    }
+  ]
+}
+
+

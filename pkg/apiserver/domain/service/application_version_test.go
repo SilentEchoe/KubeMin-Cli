@@ -470,4 +470,3 @@ func mustJSONStruct(v interface{}) *model.JSONStruct {
 	}
 	return js
 }
-

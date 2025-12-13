@@ -244,4 +244,3 @@ func AutoExtend(ctx context.Context, mutex Mutex, interval time.Duration) (cance
 
 	return cancelFunc
 }
-

@@ -102,4 +102,3 @@ var (
 	_ Locker = (*NoopLocker)(nil)
 	_ Mutex  = (*NoopMutex)(nil)
 )
-

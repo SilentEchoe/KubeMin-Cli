@@ -17,6 +17,7 @@ import (
 type applications struct {
 	ApplicationService service.ApplicationsService `inject:""`
 	WorkflowService    service.WorkflowService     `inject:""`
+	ValidationService  service.ValidationService   `inject:""`
 }
 
 // NewApplications new applications manage
@@ -37,6 +38,9 @@ func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.GET("/workflow/tasks/:taskID/status", app.getWorkflowTaskStatus)
 	// 版本更新接口
 	group.POST("/applications/:appID/version", app.updateVersion)
+	// 验证接口 (Try/DryRun)
+	group.POST("/applications/try", app.tryApplication)
+	group.POST("/applications/:appID/workflow/try", app.tryWorkflow)
 }
 
 func (app *applications) createApplications(c *gin.Context) {
@@ -312,5 +316,81 @@ func (app *applications) updateVersion(c *gin.Context) {
 
 	klog.Infof("update version succeeded appID=%s newVersion=%s taskID=%s",
 		appID, resp.Version, resp.TaskID)
+	c.JSON(http.StatusOK, resp)
+}
+
+// tryApplication validates an application creation request without actually creating it
+// @Summary Try/DryRun application creation
+// @Description Validates application configuration against naming rules, traits rules, and workflow component references without creating the application
+// @Tags applications
+// @Accept json
+// @Produce json
+// @Param request body apis.CreateApplicationsRequest true "Application configuration to validate"
+// @Success 200 {object} apis.TryApplicationResponse "Validation result with detailed errors if any"
+// @Router /applications/try [post]
+func (app *applications) tryApplication(c *gin.Context) {
+	var req apis.CreateApplicationsRequest
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
+		bcode.ReturnError(c, bcode.ErrApplicationConfig)
+		return
+	}
+
+	// Normalize component names
+	for i := range req.Component {
+		req.Component[i].Name = strings.ToLower(strings.TrimSpace(req.Component[i].Name))
+	}
+
+	// Normalize workflow steps
+	normalizeWorkflowSteps(req.WorkflowSteps)
+
+	ctx := c.Request.Context()
+	klog.V(2).Infof("try application validation request received name=%s components=%d workflows=%d",
+		req.Name, len(req.Component), len(req.WorkflowSteps))
+
+	resp := app.ValidationService.TryApplication(ctx, req)
+
+	klog.V(2).Infof("try application validation completed name=%s valid=%v errorCount=%d",
+		req.Name, resp.Valid, len(resp.Errors))
+
+	c.JSON(http.StatusOK, resp)
+}
+
+// tryWorkflow validates a workflow update request without actually updating it
+// @Summary Try/DryRun workflow update
+// @Description Validates workflow configuration against existing components without updating the workflow
+// @Tags applications
+// @Accept json
+// @Produce json
+// @Param appID path string true "Application ID"
+// @Param request body apis.TryWorkflowRequest true "Workflow configuration to validate"
+// @Success 200 {object} apis.TryWorkflowResponse "Validation result with detailed errors if any"
+// @Router /applications/{appID}/workflow/try [post]
+func (app *applications) tryWorkflow(c *gin.Context) {
+	appID := strings.TrimSpace(c.Param("appID"))
+	if appID == "" {
+		bcode.ReturnError(c, bcode.ErrApplicationNotExist)
+		return
+	}
+
+	var req apis.TryWorkflowRequest
+	if err := c.Bind(&req); err != nil {
+		klog.Error(err)
+		bcode.ReturnError(c, bcode.ErrWorkflowConfig)
+		return
+	}
+
+	// Normalize workflow steps
+	normalizeWorkflowSteps(req.Workflow)
+
+	ctx := c.Request.Context()
+	klog.V(2).Infof("try workflow validation request received appID=%s workflowId=%s name=%s steps=%d",
+		appID, req.WorkflowID, req.Name, len(req.Workflow))
+
+	resp := app.ValidationService.TryWorkflow(ctx, appID, req)
+
+	klog.V(2).Infof("try workflow validation completed appID=%s valid=%v errorCount=%d",
+		appID, resp.Valid, len(resp.Errors))
+
 	c.JSON(http.StatusOK, resp)
 }

@@ -126,4 +126,3 @@ type Config struct {
 	// Useful for namespacing locks in shared backends.
 	Prefix string
 }
-

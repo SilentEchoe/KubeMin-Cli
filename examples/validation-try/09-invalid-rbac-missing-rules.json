@@ -1,0 +1,39 @@
+{
+  "_comment": "This request will fail validation due to missing RBAC rules",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1,
+      "traits": {
+        "rbac": [
+          {
+            "serviceAccount": "backend-sa",
+            "rules": []
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "component[0].traits.rbac[0].rules",
+      "code": "MISSING_RBAC_RULES",
+      "message": "rbac rules are required"
+    }
+  ]
+}
+
+

@@ -6,30 +6,30 @@ import (
 
 // Template 应用模板定义
 type Template struct {
-	ID          string    `gorm:"primaryKey;type:varchar(24)" json:"id"`
-	Name        string    `gorm:"type:varchar(255);uniqueIndex;not null" json:"name"`
-	DisplayName string    `gorm:"type:varchar(64)" json:"display_name"`
-	Description string    `gorm:"type:text" json:"description"`
-	Category    string    `gorm:"type:varchar(64);index" json:"category"`
-	Version     string    `gorm:"type:varchar(64);default:'1.0.0'" json:"version"`
-	Icon        string    `gorm:"type:varchar(255)" json:"icon"`
-	Author      string    `gorm:"type:varchar(128)" json:"author"`
-	Source      string    `gorm:"type:varchar(255)" json:"source"`
-	Tags        string    `gorm:"type:varchar(512)" json:"tags"`
+	ID          string `gorm:"primaryKey;type:varchar(24)" json:"id"`
+	Name        string `gorm:"type:varchar(255);uniqueIndex;not null" json:"name"`
+	DisplayName string `gorm:"type:varchar(64)" json:"display_name"`
+	Description string `gorm:"type:text" json:"description"`
+	Category    string `gorm:"type:varchar(64);index" json:"category"`
+	Version     string `gorm:"type:varchar(64);default:'1.0.0'" json:"version"`
+	Icon        string `gorm:"type:varchar(255)" json:"icon"`
+	Author      string `gorm:"type:varchar(128)" json:"author"`
+	Source      string `gorm:"type:varchar(255)" json:"source"`
+	Tags        string `gorm:"type:varchar(512)" json:"tags"`
 
 	// 模板内容
-	Parameters  TemplateParameters `gorm:"type:json" json:"parameters"`
-	Components  TemplateComponents `gorm:"type:json" json:"components"`
-	Workflow    TemplateWorkflow   `gorm:"type:json" json:"workflow"`
+	Parameters TemplateParameters `gorm:"type:json" json:"parameters"`
+	Components TemplateComponents `gorm:"type:json" json:"components"`
+	Workflow   TemplateWorkflow   `gorm:"type:json" json:"workflow"`
 
 	// 元数据
-	IsPublic    bool      `gorm:"default:false;index" json:"is_public"`
-	IsSystem    bool      `gorm:"default:false;index" json:"is_system"`
-	Status      string    `gorm:"type:varchar(32);default:'active';index" json:"status"`
+	IsPublic bool   `gorm:"default:false;index" json:"is_public"`
+	IsSystem bool   `gorm:"default:false;index" json:"is_system"`
+	Status   string `gorm:"type:varchar(32);default:'active';index" json:"status"`
 
 	// 时间戳
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // TemplateParameters 模板参数定义
@@ -46,18 +46,18 @@ type TemplateParameters struct {
 
 // ParameterDefinition 单个参数定义
 type ParameterDefinition struct {
-	Name        string              `json:"name"`                    // 参数名称 (变量名)
-	DisplayName string              `json:"display_name"`           // 显示名称
-	Description string              `json:"description,omitempty"`  // 参数描述
-	Type        string              `json:"type"`                    // 参数类型: string, int, bool, array, object
-	Default     interface{}         `json:"default,omitempty"`      // 默认值
-	Required    bool                `json:"required"`               // 是否必需
-	Validation  *ParameterRule      `json:"validation,omitempty"`   // 验证规则
-	Options     []ParameterOption   `json:"options,omitempty"`      // 可选值（用于下拉选择）
-	DependsOn   []string            `json:"depends_on,omitempty"`   // 依赖的其他参数
-	Group       string              `json:"group,omitempty"`        // 所属分组
-	Order       int                 `json:"order,omitempty"`        // 显示顺序
-	Advanced    bool                `json:"advanced,omitempty"`     // 是否为高级参数
+	Name        string            `json:"name"`                  // 参数名称 (变量名)
+	DisplayName string            `json:"display_name"`          // 显示名称
+	Description string            `json:"description,omitempty"` // 参数描述
+	Type        string            `json:"type"`                  // 参数类型: string, int, bool, array, object
+	Default     interface{}       `json:"default,omitempty"`     // 默认值
+	Required    bool              `json:"required"`              // 是否必需
+	Validation  *ParameterRule    `json:"validation,omitempty"`  // 验证规则
+	Options     []ParameterOption `json:"options,omitempty"`     // 可选值（用于下拉选择）
+	DependsOn   []string          `json:"depends_on,omitempty"`  // 依赖的其他参数
+	Group       string            `json:"group,omitempty"`       // 所属分组
+	Order       int               `json:"order,omitempty"`       // 显示顺序
+	Advanced    bool              `json:"advanced,omitempty"`    // 是否为高级参数
 }
 
 // ParameterGroup 参数分组
@@ -70,13 +70,13 @@ type ParameterGroup struct {
 
 // ParameterRule 参数验证规则
 type ParameterRule struct {
-	MinLength    *int    `json:"min_length,omitempty"`    // 最小长度
-	MaxLength    *int    `json:"max_length,omitempty"`    // 最大长度
-	MinValue     *int    `json:"min_value,omitempty"`     // 最小值
-	MaxValue     *int    `json:"max_value,omitempty"`     // 最大值
-	Pattern      string  `json:"pattern,omitempty"`       // 正则表达式
-	Enum         []string `json:"enum,omitempty"`         // 枚举值
-	CustomMessage string `json:"custom_message,omitempty"` // 自定义错误消息
+	MinLength     *int     `json:"min_length,omitempty"`     // 最小长度
+	MaxLength     *int     `json:"max_length,omitempty"`     // 最大长度
+	MinValue      *int     `json:"min_value,omitempty"`      // 最小值
+	MaxValue      *int     `json:"max_value,omitempty"`      // 最大值
+	Pattern       string   `json:"pattern,omitempty"`        // 正则表达式
+	Enum          []string `json:"enum,omitempty"`           // 枚举值
+	CustomMessage string   `json:"custom_message,omitempty"` // 自定义错误消息
 }
 
 // ParameterOption 参数选项
@@ -87,15 +87,15 @@ type ParameterOption struct {
 
 // ParameterValidation 参数全局验证
 type ParameterValidation struct {
-	RequiredParams []string          `json:"required_params,omitempty"`
-	CustomRules    []CustomRule      `json:"custom_rules,omitempty"`
+	RequiredParams []string     `json:"required_params,omitempty"`
+	CustomRules    []CustomRule `json:"custom_rules,omitempty"`
 }
 
 // CustomRule 自定义验证规则
 type CustomRule struct {
-	Name        string `json:"name"`
-	Expression  string `json:"expression"` // JavaScript表达式
-	Message     string `json:"message"`
+	Name       string `json:"name"`
+	Expression string `json:"expression"` // JavaScript表达式
+	Message    string `json:"message"`
 }
 
 // TemplateComponents 模板组件定义
@@ -112,14 +112,14 @@ type TemplateComponents struct {
 
 // ComponentTemplate 组件模板
 type ComponentTemplate struct {
-	Name           string                 `json:"name"`                     // 模板名称 (可包含变量)
-	Type           string                 `json:"type"`                     // 组件类型
-	Description    string                 `json:"description,omitempty"`    // 组件描述
-	Properties     map[string]interface{} `json:"properties"`               // 属性模板 (可包含变量)
-	Traits         map[string]interface{} `json:"traits,omitempty"`         // Trait模板 (可包含变量)
-	Conditions     []string               `json:"conditions,omitempty"`     // 显示条件
-	Validation     *ComponentValidation   `json:"validation,omitempty"`     // 组件验证
-	Documentation  *ComponentDocs         `json:"documentation,omitempty"`  // 组件文档
+	Name          string                 `json:"name"`                    // 模板名称 (可包含变量)
+	Type          string                 `json:"type"`                    // 组件类型
+	Description   string                 `json:"description,omitempty"`   // 组件描述
+	Properties    map[string]interface{} `json:"properties"`              // 属性模板 (可包含变量)
+	Traits        map[string]interface{} `json:"traits,omitempty"`        // Trait模板 (可包含变量)
+	Conditions    []string               `json:"conditions,omitempty"`    // 显示条件
+	Validation    *ComponentValidation   `json:"validation,omitempty"`    // 组件验证
+	Documentation *ComponentDocs         `json:"documentation,omitempty"` // 组件文档
 }
 
 // ComponentRelation 组件关系
@@ -132,27 +132,27 @@ type ComponentRelation struct {
 
 // NamingRules 命名规则
 type NamingRules struct {
-	Prefix      string `json:"prefix,omitempty"`
-	Suffix      string `json:"suffix,omitempty"`
-	Separator   string `json:"separator,omitempty"` // 默认: "-"
-	MaxLength   int    `json:"max_length,omitempty"`
-	Transform   string `json:"transform,omitempty"` // lowercase, uppercase, camelCase
+	Prefix    string `json:"prefix,omitempty"`
+	Suffix    string `json:"suffix,omitempty"`
+	Separator string `json:"separator,omitempty"` // 默认: "-"
+	MaxLength int    `json:"max_length,omitempty"`
+	Transform string `json:"transform,omitempty"` // lowercase, uppercase, camelCase
 }
 
 // ComponentValidation 组件验证
 type ComponentValidation struct {
-	RequiredTraits []string          `json:"required_traits,omitempty"`
-	ForbiddenTraits []string         `json:"forbidden_traits,omitempty"`
-	MinReplicas    *int              `json:"min_replicas,omitempty"`
-	MaxReplicas    *int              `json:"max_replicas,omitempty"`
+	RequiredTraits  []string `json:"required_traits,omitempty"`
+	ForbiddenTraits []string `json:"forbidden_traits,omitempty"`
+	MinReplicas     *int     `json:"min_replicas,omitempty"`
+	MaxReplicas     *int     `json:"max_replicas,omitempty"`
 }
 
 // ComponentDocs 组件文档
 type ComponentDocs struct {
-	Brief        string `json:"brief,omitempty"`
-	Description  string `json:"description,omitempty"`
-	Usage        string `json:"usage,omitempty"`
-	Examples     []string `json:"examples,omitempty"`
+	Brief       string   `json:"brief,omitempty"`
+	Description string   `json:"description,omitempty"`
+	Usage       string   `json:"usage,omitempty"`
+	Examples    []string `json:"examples,omitempty"`
 }
 
 // TemplateWorkflow 模板工作流定义
@@ -169,13 +169,13 @@ type TemplateWorkflow struct {
 
 // WorkflowStepTemplate 工作流步骤模板
 type WorkflowStepTemplate struct {
-	Name        string                 `json:"name"`
-	Type        string                 `json:"type"` // deploy, configure, validate, wait
-	Components  []string               `json:"components,omitempty"`
-	Properties  map[string]interface{} `json:"properties,omitempty"`
-	Conditions  []string               `json:"conditions,omitempty"`
-	Timeout     *int                   `json:"timeout,omitempty"`
-	Retry       *RetryPolicy           `json:"retry,omitempty"`
+	Name       string                 `json:"name"`
+	Type       string                 `json:"type"` // deploy, configure, validate, wait
+	Components []string               `json:"components,omitempty"`
+	Properties map[string]interface{} `json:"properties,omitempty"`
+	Conditions []string               `json:"conditions,omitempty"`
+	Timeout    *int                   `json:"timeout,omitempty"`
+	Retry      *RetryPolicy           `json:"retry,omitempty"`
 }
 
 // WorkflowStrategy 工作流策略
@@ -197,29 +197,29 @@ type WorkflowParameterization struct {
 
 // ConditionalStep 条件步骤
 type ConditionalStep struct {
-	StepName   string   `json:"step_name"`
-	Condition  string   `json:"condition"` // JavaScript表达式
+	StepName   string                 `json:"step_name"`
+	Condition  string                 `json:"condition"` // JavaScript表达式
 	Parameters map[string]interface{} `json:"parameters"`
 }
 
 // RetryPolicy 重试策略
 type RetryPolicy struct {
-	Attempts      int    `json:"attempts"`
-	DelaySeconds  int    `json:"delay_seconds"`
+	Attempts      int     `json:"attempts"`
+	DelaySeconds  int     `json:"delay_seconds"`
 	BackoffFactor float64 `json:"backoff_factor,omitempty"`
-	MaxDelay      int    `json:"max_delay,omitempty"`
+	MaxDelay      int     `json:"max_delay,omitempty"`
 }
 
 // TemplateVersion 模板版本管理
 type TemplateVersion struct {
-	ID          string    `gorm:"primaryKey;type:varchar(24)" json:"id"`
-	TemplateID  string    `gorm:"type:varchar(24);index;not null" json:"template_id"`
-	Version     string    `gorm:"type:varchar(64);index;not null" json:"version"`
-	Description string    `gorm:"type:text" json:"description"`
+	ID          string          `gorm:"primaryKey;type:varchar(24)" json:"id"`
+	TemplateID  string          `gorm:"type:varchar(24);index;not null" json:"template_id"`
+	Version     string          `gorm:"type:varchar(64);index;not null" json:"version"`
+	Description string          `gorm:"type:text" json:"description"`
 	Content     TemplateContent `gorm:"type:json" json:"content"`
-	IsCurrent   bool      `gorm:"default:false;index" json:"is_current"`
-	CreatedAt   time.Time `json:"created_at"`
-	CreatedBy   string    `gorm:"type:varchar(128)" json:"created_by"`
+	IsCurrent   bool            `gorm:"default:false;index" json:"is_current"`
+	CreatedAt   time.Time       `json:"created_at"`
+	CreatedBy   string          `gorm:"type:varchar(128)" json:"created_by"`
 }
 
 // TemplateContent 模板内容快照
@@ -269,9 +269,9 @@ const (
 	TemplateStatusArchived = "archived"
 
 	// 组件关系类型
-	RelationTypeDependsOn = "depends_on"
+	RelationTypeDependsOn  = "depends_on"
 	RelationTypeConnectsTo = "connects_to"
-	RelationTypeExposesTo = "exposes_to"
+	RelationTypeExposesTo  = "exposes_to"
 
 	// 命名转换
 	NamingTransformLowercase = "lowercase"

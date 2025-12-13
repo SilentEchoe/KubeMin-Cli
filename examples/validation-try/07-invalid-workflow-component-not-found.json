@@ -1,0 +1,36 @@
+{
+  "_comment": "This request will fail validation because workflow references non-existent component",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:latest",
+      "nameSpace": "default",
+      "replicas": 1
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-all",
+      "mode": "StepByStep",
+      "components": ["backend", "frontend", "database"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "workflow[0].components[1]",
+      "code": "COMPONENT_NOT_FOUND",
+      "message": "component 'frontend' not found in application"
+    },
+    {
+      "field": "workflow[0].components[2]",
+      "code": "COMPONENT_NOT_FOUND",
+      "message": "component 'database' not found in application"
+    }
+  ]
+}
+
+

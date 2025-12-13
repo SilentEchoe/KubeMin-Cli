@@ -1,0 +1,89 @@
+{
+  "name": "app-with-init-sidecar",
+  "namespace": "default",
+  "version": "1.0.0",
+  "project": "demo-project",
+  "description": "Application with init container and sidecar",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "myregistry/backend:v1.0.0",
+      "nameSpace": "default",
+      "replicas": 2,
+      "properties": {
+        "ports": [
+          {
+            "port": 8080,
+            "expose": true
+          }
+        ]
+      },
+      "traits": {
+        "init": [
+          {
+            "name": "init-config",
+            "properties": {
+              "image": "busybox:latest",
+              "command": ["sh", "-c", "cp /config/* /app/config/"]
+            },
+            "traits": {
+              "storage": [
+                {
+                  "type": "config",
+                  "name": "app-config",
+                  "sourceName": "my-configmap",
+                  "mountPath": "/config",
+                  "readOnly": true
+                },
+                {
+                  "type": "ephemeral",
+                  "name": "shared-data",
+                  "mountPath": "/app/config"
+                }
+              ]
+            }
+          }
+        ],
+        "sidecar": [
+          {
+            "name": "logging-sidecar",
+            "image": "fluent/fluentd:v1.14",
+            "env": {
+              "FLUENTD_CONF": "fluent.conf"
+            },
+            "traits": {
+              "storage": [
+                {
+                  "type": "ephemeral",
+                  "name": "app-logs",
+                  "mountPath": "/var/log/app"
+                }
+              ],
+              "resources": {
+                "cpu": "100m",
+                "memory": "128Mi"
+              }
+            }
+          }
+        ],
+        "storage": [
+          {
+            "type": "ephemeral",
+            "name": "app-logs",
+            "mountPath": "/var/log/app"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ]
+}
+
+

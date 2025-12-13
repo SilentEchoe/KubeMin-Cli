@@ -142,5 +142,3 @@ func TestHealthGetName(t *testing.T) {
 	h := &health{}
 	require.Equal(t, "health", h.GetName())
 }
-
-

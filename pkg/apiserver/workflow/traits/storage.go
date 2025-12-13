@@ -11,7 +11,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
-	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
@@ -75,17 +74,19 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 			}
 
 			if vol.TmpCreate {
-				claimName := wfNaming.PVCName(vol.Name, ctx.Component.AppID)
+				// For StatefulSet volumeClaimTemplates:
+				// - The template name is used directly as the volume name by Kubernetes
+				// - volumeMounts.name must match the volumeClaimTemplate.metadata.name
+				// - No explicit volumes entry is needed (Kubernetes creates it automatically)
 				templatePVC := basePVC.DeepCopy()
-				templatePVC.Name = claimName
+				templatePVC.Name = volumeName // Use volumeName as the template name for simpler volumeMount reference
 				templatePVC.Annotations = map[string]string{config.LabelStorageRole: "template"}
 				pvcs = append(pvcs, *templatePVC)
-				volumes = append(volumes, corev1.Volume{
-					Name: volumeName,
-					VolumeSource: corev1.VolumeSource{
-						PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName},
-					},
-				})
+				// Note: We intentionally do NOT add a volumes entry here.
+				// For StatefulSets, volumeClaimTemplates automatically create volumes
+				// with the same name as the template metadata.name.
+				// The processor.go will handle this correctly and the volumeMounts
+				// will reference volumeName which matches the template name.
 			} else {
 				pvcs = append(pvcs, basePVC)
 				volumes = append(volumes, corev1.Volume{

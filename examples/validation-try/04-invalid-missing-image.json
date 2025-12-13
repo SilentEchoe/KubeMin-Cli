@@ -1,0 +1,31 @@
+{
+  "_comment": "This request will fail validation due to missing image for webservice component",
+  "name": "my-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "",
+      "nameSpace": "default",
+      "replicas": 1
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ],
+  "_expected_errors": [
+    {
+      "field": "component[0].image",
+      "code": "MISSING_IMAGE",
+      "message": "image is required for webservice and store component types"
+    }
+  ]
+}
+
+

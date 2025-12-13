@@ -1,0 +1,208 @@
+{
+  "name": "demo-app",
+  "namespace": "default",
+  "version": "1.0.0",
+  "project": "demo-project",
+  "description": "Complete demo application with all traits",
+  "component": [
+    {
+      "name": "app-config",
+      "type": "config",
+      "nameSpace": "default",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "database.host": "mysql.default.svc",
+          "database.port": "3306",
+          "log.level": "info"
+        }
+      },
+      "traits": {}
+    },
+    {
+      "name": "app-secret",
+      "type": "secret",
+      "nameSpace": "default",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "db.password": "secret123",
+          "api.key": "my-api-key"
+        }
+      },
+      "traits": {}
+    },
+    {
+      "name": "mysql",
+      "type": "store",
+      "image": "mysql:8.0",
+      "nameSpace": "default",
+      "replicas": 1,
+      "properties": {
+        "ports": [
+          {
+            "port": 3306,
+            "expose": true
+          }
+        ],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "root123"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "type": "persistent",
+            "name": "mysql-data",
+            "mountPath": "/var/lib/mysql",
+            "tmpCreate": true,
+            "size": "10Gi",
+            "storageClass": "standard"
+          }
+        ],
+        "probes": [
+          {
+            "type": "liveness",
+            "tcpSocket": {
+              "port": 3306
+            },
+            "initialDelaySeconds": 30,
+            "periodSeconds": 10
+          },
+          {
+            "type": "readiness",
+            "tcpSocket": {
+              "port": 3306
+            },
+            "initialDelaySeconds": 5,
+            "periodSeconds": 5
+          }
+        ]
+      }
+    },
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "myregistry/backend:v1.0.0",
+      "nameSpace": "default",
+      "replicas": 3,
+      "properties": {
+        "ports": [
+          {
+            "port": 8080,
+            "expose": true
+          }
+        ],
+        "env": {
+          "APP_ENV": "production"
+        }
+      },
+      "traits": {
+        "probes": [
+          {
+            "type": "liveness",
+            "httpGet": {
+              "path": "/healthz",
+              "port": 8080
+            },
+            "initialDelaySeconds": 30,
+            "periodSeconds": 10,
+            "timeoutSeconds": 5,
+            "failureThreshold": 3
+          },
+          {
+            "type": "readiness",
+            "httpGet": {
+              "path": "/ready",
+              "port": 8080
+            },
+            "initialDelaySeconds": 5,
+            "periodSeconds": 5
+          }
+        ],
+        "resources": {
+          "cpu": "500m",
+          "memory": "512Mi"
+        },
+        "envFrom": [
+          {
+            "type": "configMap",
+            "sourceName": "app-config"
+          },
+          {
+            "type": "secret",
+            "sourceName": "app-secret"
+          }
+        ],
+        "envs": [
+          {
+            "name": "POD_NAME",
+            "valueFrom": {
+              "field": "metadata.name"
+            }
+          },
+          {
+            "name": "POD_IP",
+            "valueFrom": {
+              "field": "status.podIP"
+            }
+          }
+        ],
+        "ingress": [
+          {
+            "name": "backend-ingress",
+            "namespace": "default",
+            "ingressClassName": "nginx",
+            "hosts": ["api.example.com"],
+            "routes": [
+              {
+                "path": "/api",
+                "pathType": "Prefix",
+                "backend": {
+                  "serviceName": "backend",
+                  "servicePort": 8080
+                }
+              }
+            ]
+          }
+        ],
+        "rbac": [
+          {
+            "serviceAccount": "backend-sa",
+            "rules": [
+              {
+                "apiGroups": [""],
+                "resources": ["pods", "services"],
+                "verbs": ["get", "list", "watch"]
+              },
+              {
+                "apiGroups": [""],
+                "resources": ["configmaps"],
+                "verbs": ["get"]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "config-step",
+      "mode": "StepByStep",
+      "components": ["app-config", "app-secret"]
+    },
+    {
+      "name": "database-step",
+      "mode": "DAG",
+      "components": ["mysql"]
+    },
+    {
+      "name": "services-step",
+      "mode": "DAG",
+      "components": ["backend"]
+    }
+  ]
+}
+
+

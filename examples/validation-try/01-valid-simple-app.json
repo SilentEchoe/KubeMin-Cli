@@ -1,0 +1,37 @@
+{
+  "name": "simple-backend",
+  "namespace": "default",
+  "version": "1.0.0",
+  "project": "demo-project",
+  "description": "Simple backend application",
+  "component": [
+    {
+      "name": "backend",
+      "type": "webservice",
+      "image": "nginx:1.24",
+      "nameSpace": "default",
+      "replicas": 2,
+      "properties": {
+        "ports": [
+          {
+            "port": 8080,
+            "expose": true
+          }
+        ],
+        "env": {
+          "APP_ENV": "production"
+        }
+      },
+      "traits": {}
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-backend",
+      "mode": "StepByStep",
+      "components": ["backend"]
+    }
+  ]
+}
+
+

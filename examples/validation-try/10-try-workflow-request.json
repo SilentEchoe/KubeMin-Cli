@@ -1,0 +1,25 @@
+{
+  "_comment": "Request for POST /applications/:appID/workflow/try",
+  "workflowId": "",
+  "name": "new-workflow",
+  "alias": "New Deployment Workflow",
+  "workflow": [
+    {
+      "name": "config-step",
+      "mode": "StepByStep",
+      "components": ["app-config", "app-secret"]
+    },
+    {
+      "name": "database-step",
+      "mode": "DAG",
+      "components": ["mysql", "redis"]
+    },
+    {
+      "name": "services-step",
+      "mode": "DAG",
+      "components": ["backend", "frontend"]
+    }
+  ]
+}
+
+

@@ -117,4 +117,3 @@ func New(cfg Config) (Locker, error) {
 		return nil, errors.New("unknown locker type: " + string(cfg.Type))
 	}
 }
-
