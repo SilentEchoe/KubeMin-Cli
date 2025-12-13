@@ -1,0 +1,39 @@
+{
+  "name": "test-deployment-ephemeral",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "Deployment 只使用 ephemeral volume (推荐方式)",
+  "component": [
+    {
+      "name": "web-app",
+      "type": "webservice",
+      "image": "nginx:alpine",
+      "replicas": 3,
+      "properties": {
+        "ports": [{"port": 80, "expose": true}]
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "cache",
+            "type": "ephemeral",
+            "mountPath": "/tmp/cache"
+          },
+          {
+            "name": "logs",
+            "type": "ephemeral",
+            "mountPath": "/var/log/nginx"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-web",
+      "mode": "StepByStep",
+      "components": ["web-app"]
+    }
+  ]
+}
+

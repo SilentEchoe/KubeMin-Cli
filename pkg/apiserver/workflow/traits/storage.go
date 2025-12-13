@@ -11,7 +11,6 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
-	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
@@ -72,25 +71,25 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				pvcSpec.StorageClassName = &vol.StorageClass
 			}
 
-			if vol.TmpCreate {
-				// For dynamically created PVCs (e.g., StatefulSet volumeClaimTemplates):
-				// - Use naming convention for PVC names: pvc-{traitName}-{appID}
-				// - Add "template" annotation to mark it as a template PVC
-				pvcName := wfNaming.PVCName(vol.Name, ctx.Component.AppID)
-				templatePVC := corev1.PersistentVolumeClaim{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        pvcName,
-						Namespace:   ctx.Component.Namespace,
-						Annotations: map[string]string{config.LabelStorageRole: "template"},
-					},
-					Spec: pvcSpec,
-				}
-				pvcs = append(pvcs, templatePVC)
-				// Add volumes entry with PVC claim reference
-				volumes = append(volumes, corev1.Volume{
-					Name:         volumeName,
-					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: pvcName}},
-				})
+		if vol.TmpCreate {
+			// For dynamically created PVCs (e.g., StatefulSet volumeClaimTemplates):
+			// - Use volumeName as the template name so VolumeMount references work correctly
+			// - StatefulSet will create PVCs named: {volumeName}-{podName} (e.g., mysql-data-mysql-0)
+			// - Add "template" annotation to mark it as a template PVC
+			templatePVC := corev1.PersistentVolumeClaim{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        volumeName,
+					Namespace:   ctx.Component.Namespace,
+					Annotations: map[string]string{config.LabelStorageRole: "template"},
+				},
+				Spec: pvcSpec,
+			}
+			pvcs = append(pvcs, templatePVC)
+			// Add volumes entry with PVC claim reference (using volumeName for consistency)
+			volumes = append(volumes, corev1.Volume{
+				Name:         volumeName,
+				VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: volumeName}},
+			})
 			} else {
 				// Reference existing PVC: use ClaimName if specified, otherwise use vol.Name
 				claimName := vol.ClaimName

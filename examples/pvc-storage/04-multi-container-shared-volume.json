@@ -1,0 +1,76 @@
+{
+  "name": "test-multi-container-volume",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "多容器共享 Volume 测试 - 主容器 + Sidecar + Init",
+  "component": [
+    {
+      "name": "mysql-cluster",
+      "type": "store",
+      "image": "mysql:8.0",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 3306, "expose": true}],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "rootpassword",
+          "MYSQL_DATABASE": "appdb"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "mysql-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "subPath": "mysql",
+            "tmpCreate": true,
+            "size": "10Gi",
+            "storageClass": "standard"
+          }
+        ],
+        "sidecar": [
+          {
+            "name": "xtrabackup",
+            "image": "percona/percona-xtrabackup:8.0",
+            "command": ["sleep", "infinity"],
+            "traits": {
+              "storage": [
+                {
+                  "name": "mysql-data",
+                  "type": "persistent",
+                  "mountPath": "/var/lib/mysql",
+                  "subPath": "mysql"
+                }
+              ]
+            }
+          }
+        ],
+        "init": [
+          {
+            "name": "init-mysql",
+            "image": "busybox:latest",
+            "command": ["sh", "-c", "echo 'Initializing MySQL data directory...' && mkdir -p /var/lib/mysql/mysql"],
+            "traits": {
+              "storage": [
+                {
+                  "name": "mysql-data",
+                  "type": "persistent",
+                  "mountPath": "/var/lib/mysql",
+                  "subPath": "mysql"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-mysql-cluster",
+      "mode": "StepByStep",
+      "components": ["mysql-cluster"]
+    }
+  ]
+}
+

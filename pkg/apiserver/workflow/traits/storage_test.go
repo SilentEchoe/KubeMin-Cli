@@ -9,7 +9,6 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 const userInputJSON = `
@@ -96,7 +95,8 @@ func TestStorageProcessor_DuplicateInput(t *testing.T) {
 	assert.Len(t, result.Volumes, 2, "Should have one PVC volume and one ephemeral volume")
 	assert.Equal(t, "data", result.Volumes[0].Name)
 	assert.NotNil(t, result.Volumes[0].VolumeSource.PersistentVolumeClaim)
-	assert.Equal(t, wfNaming.PVCName("data", ctx.Component.AppID), result.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName)
+	// For tmpCreate=true, the ClaimName matches the volumeName so VolumeMount references work correctly
+	assert.Equal(t, "data", result.Volumes[0].VolumeSource.PersistentVolumeClaim.ClaimName)
 	assert.Equal(t, "conf", result.Volumes[1].Name)
 	assert.NotNil(t, result.Volumes[1].VolumeSource.EmptyDir)
 
@@ -105,8 +105,8 @@ func TestStorageProcessor_DuplicateInput(t *testing.T) {
 
 	pvc, ok := result.AdditionalObjects[0].(*corev1.PersistentVolumeClaim)
 	assert.True(t, ok, "The additional object should be a PersistentVolumeClaim")
-	expectedPVCName := wfNaming.PVCName("data", ctx.Component.AppID)
-	assert.Equal(t, expectedPVCName, pvc.Name, "The PVC should be normalized with component/app ID")
+	// For tmpCreate=true, PVC template name matches volumeName for StatefulSet volumeClaimTemplates compatibility
+	assert.Equal(t, "data", pvc.Name, "The PVC template name should match volumeName for VolumeMount references")
 	assert.Equal(t, ctx.Component.Namespace, pvc.Namespace, "PVC should inherit component namespace")
 
 	annotations := pvc.GetAnnotations()

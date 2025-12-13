@@ -1,0 +1,98 @@
+{
+  "name": "test-dependency-chain",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "依赖链中的 StatefulSet PVC 测试 - Config -> Secret -> Database -> App",
+  "component": [
+    {
+      "name": "app-config",
+      "type": "config",
+      "replicas": 1,
+      "properties": {
+        "conf": {
+          "database.host": "mysql-db",
+          "database.port": "3306",
+          "app.name": "dependency-test-app"
+        }
+      }
+    },
+    {
+      "name": "app-secret",
+      "type": "secret",
+      "replicas": 1,
+      "properties": {
+        "secret": {
+          "db-password": "secretpassword123",
+          "api-key": "my-api-key-12345"
+        }
+      }
+    },
+    {
+      "name": "mysql-db",
+      "type": "store",
+      "image": "mysql:8.0",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 3306, "expose": true}],
+        "env": {
+          "MYSQL_ROOT_PASSWORD": "rootpassword",
+          "MYSQL_DATABASE": "appdb"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "mysql-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/mysql",
+            "tmpCreate": true,
+            "size": "5Gi",
+            "storageClass": "standard"
+          }
+        ]
+      }
+    },
+    {
+      "name": "backend-app",
+      "type": "webservice",
+      "image": "nginx:alpine",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 8080, "expose": true}],
+        "env": {
+          "DB_HOST": "mysql-db",
+          "DB_PORT": "3306"
+        }
+      },
+      "traits": {
+        "envFrom": [
+          {"type": "configMap", "sourceName": "app-config"},
+          {"type": "secret", "sourceName": "app-secret"}
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "step1-config",
+      "mode": "StepByStep",
+      "components": ["app-config"]
+    },
+    {
+      "name": "step2-secret",
+      "mode": "StepByStep",
+      "components": ["app-secret"]
+    },
+    {
+      "name": "step3-database",
+      "mode": "StepByStep",
+      "components": ["mysql-db"]
+    },
+    {
+      "name": "step4-app",
+      "mode": "StepByStep",
+      "components": ["backend-app"]
+    }
+  ]
+}
+

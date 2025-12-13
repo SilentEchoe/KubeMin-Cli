@@ -1,0 +1,43 @@
+{
+  "name": "test-mixed-pvc-mode",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "混合 PVC 模式测试 - tmpCreate + 引用已有 PVC",
+  "component": [
+    {
+      "name": "app-server",
+      "type": "store",
+      "image": "nginx:alpine",
+      "replicas": 2,
+      "properties": {
+        "ports": [{"port": 80, "expose": true}]
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "app-data",
+            "type": "persistent",
+            "mountPath": "/data",
+            "tmpCreate": true,
+            "size": "2Gi"
+          },
+          {
+            "name": "shared-config",
+            "type": "persistent",
+            "mountPath": "/config",
+            "tmpCreate": false,
+            "claimName": "existing-config-pvc"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-app",
+      "mode": "StepByStep",
+      "components": ["app-server"]
+    }
+  ]
+}
+

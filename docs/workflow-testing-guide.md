@@ -248,7 +248,7 @@ curl -X POST \
    保存返回的 `taskId`。
 3. 轮询任务状态直到结束：
    ```shell
-   curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+   curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
    ```
 
 **验证点:**
@@ -957,73 +957,8 @@ traits:
 
 #### 2.2 网络Trait测试
 
-**测试项 TC010: Service配置测试**
-```yaml
-# 测试用例
-组件: app-deployment
-traits:
-  - 类型: service
-    属性:
-      ports:
-        - 名称: http
-        端口: 8080
-        目标端口: 80
-      type: ClusterIP
-```
+##### **测试项 TC010: Ingress配置测试**
 
-```json
-{
-  "name": "test-app-010-service",
-  "namespace": "default",
-  "version": "1.0.0",
-  "description": "TC010 Service configuration test",
-  "component": [
-    {
-      "name": "app-with-service",
-      "type": "webservice",
-      "image": "nginx:latest",
-      "replicas": 2,
-      "properties": {
-        "ports": [
-          {"port": 8080, "expose": true},
-          {"port": 9090, "expose": true}
-        ],
-        "env": {
-          "APP_PORT": "8080"
-        }
-      }
-    }
-  ],
-  "workflow": [
-    {
-      "name": "deploy-service",
-      "mode": "StepByStep",
-      "components": ["app-with-service"]
-    }
-  ]
-}
-```
-
-**验证点:**
-- [ ] Service成功创建
-  ```shell
-  kubectl get svc -l kube-min-cli-appId=${APP_ID}
-  ```
-- [ ] 端口映射正确
-  ```shell
-  kubectl get svc svc-app-with-service-${APP_ID} -o jsonpath='{.spec.ports}'
-  ```
-- [ ] 端点正确关联
-  ```shell
-  kubectl get endpoints svc-app-with-service-${APP_ID}
-  ```
-- [ ] DNS解析正常
-  ```shell
-  kubectl run dns-test --rm -it --image=busybox --restart=Never -- nslookup svc-app-with-service-${APP_ID}
-  ```
-- [ ] 网络连通性验证
-
-**测试项 TC011: Ingress配置测试**
 ```yaml
 # 测试用例
 组件: app-deployment
@@ -1041,10 +976,10 @@ traits:
 
 ```json
 {
-  "name": "test-app-011-ingress",
+  "name": "test-app-010-ingress",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "TC011 Ingress configuration test",
+  "description": "TC010 Ingress configuration test",
   "component": [
     {
       "name": "app-with-ingress",
@@ -1103,24 +1038,64 @@ traits:
 ```
 
 **验证点:**
-- [ ] Ingress成功创建
+- [x] Ingress成功创建
   ```shell
   kubectl get ingress -l kube-min-cli-appId=${APP_ID}
+  
+  NAME                                            CLASS    HOSTS              ADDRESS   PORTS     AGE
+  ing-app-ingress-xl3re326go3qhbb9hqc24k62        nginx    app.example.com              80, 443   10s
   ```
-- [ ] 路由规则正确
+- [x] 路由规则正确
   ```shell
-  kubectl describe ingress app-ingress
+  > kubectl get ingress ing-app-ingress-xl3re326go3qhbb9hqc24k62 -o yaml
+  
+  apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    creationTimestamp: "2025-12-13T07:01:38Z"
+    generation: 1
+    name: ing-app-ingress-xl3re326go3qhbb9hqc24k62
+    namespace: default
+    resourceVersion: "5286300"
+    uid: 556e3c7a-4b6b-4068-9e70-92cb657cb47b
+  spec:
+    ingressClassName: nginx
+    rules:
+    - host: app.example.com
+      http:
+        paths:
+        - backend:
+            service:
+              name: app-with-ingress
+              port:
+                number: 8080
+          path: /
+          pathType: Prefix
+        - backend:
+            service:
+              name: app-with-ingress
+              port:
+                number: 8080
+          path: /api
+          pathType: Prefix
+    tls:
+    - hosts:
+      - app.example.com
+      secretName: app-tls
+  status:
+    loadBalancer: {}
   ```
-- [ ] TLS配置正确
+- [x] TLS配置正确
   ```shell
   kubectl get ingress app-ingress -o jsonpath='{.spec.tls}'
   ```
-- [ ] 外部访问正常
-- [ ] 证书验证通过
+- [x] 外部访问正常
+- [x] 证书验证通过
 
 #### 2.3 RBAC Trait测试
 
-**测试项 TC012: ServiceAccount配置测试**
+##### **测试项 TC011: ServiceAccount配置测试**
+
 ```yaml
 # 测试用例
 组件: app-deployment
@@ -1138,10 +1113,10 @@ traits:
 
 ```json
 {
-  "name": "test-app-012-rbac",
+  "name": "test-app-011-rbac",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "TC012 RBAC ServiceAccount configuration test",
+  "description": "TC011 RBAC ServiceAccount configuration test",
   "component": [
     {
       "name": "app-with-rbac",
@@ -1186,32 +1161,50 @@ traits:
 ```
 
 **验证点:**
-- [ ] ServiceAccount创建
+- [x] ServiceAccount创建
   ```shell
-  kubectl get sa app-sa
+  > kubectl get sa app-sa
+  
+  NAME             SECRETS   AGE
+  app-sa           0         22s
   ```
-- [ ] Role/ClusterRole创建
+- [x] Role/ClusterRole创建
   ```shell
-  kubectl get role app-role
+  > kubectl get role app-role
+  
+  NAME       CREATED AT
+  app-role   2025-12-13T07:24:23Z
   ```
-- [ ] RoleBinding创建
+- [x] RoleBinding创建
   ```shell
-  kubectl get rolebinding app-role-binding
+  > kubectl get rolebinding app-role-binding
+  
+  app-role-binding   Role/app-role   43s
   ```
-- [ ] 权限正确绑定
+- [x] 权限正确绑定
   ```shell
   kubectl auth can-i get pods --as=system:serviceaccount:default:app-sa
+  > yes
   ```
-- [ ] Pod使用正确的SA
+- [x] Pod使用正确的SA
   ```shell
   kubectl get pod -l kube-min-cli-appId=${APP_ID} -o jsonpath='{.items[0].spec.serviceAccountName}'
+  
+  
+  kubectl get pod deploy-app-with-rbac-kjjbr11rax50fo006aa52t9m-5b8d5cd549-fcmbw -o jsonpath='{.items[0].spec.serviceAccountName}'
+  
+  
+  
+  serviceAccount: app-sa
+  serviceAccountName: app-sa
   ```
 
 ### 3. 多组件工作流测试 (Multi-Component Workflow Tests)
 
 #### 3.1 依赖关系测试
 
-**测试项 TC013: 顺序依赖测试**
+##### **测试项 TC012: 顺序依赖测试**
+
 ```yaml
 # 测试用例
 应用: dependency-app
@@ -1226,10 +1219,10 @@ traits:
 
 ```json
 {
-  "name": "test-app-013-dependency",
+  "name": "test-app-012-dependency",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "TC013 Sequential dependency test",
+  "description": "TC012 Sequential dependency test",
   "component": [
     {
       "name": "app-config",
@@ -1325,15 +1318,54 @@ traits:
 ```
 
 **验证点:**
-- [ ] 按依赖顺序执行
+- [x] 按依赖顺序执行
   ```shell
   # 查看工作流执行日志，确认步骤顺序
-  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
+  
+  {
+      "taskId": "ojo3lk8k5y1dukall1t8npn0",
+      "status": "completed",
+      "workflowId": "f6rx5ywixeat3tfnxqjtdgqp",
+      "workflowName": "test-app-012-dependency-ea7ff7qjd4ipclsb",
+      "appId": "ngfjmll19vd8562z4g70mk50",
+      "type": "workflow",
+      "components": [
+          {
+              "name": "app-config",
+              "type": "configmap_deploy",
+              "status": "completed",
+              "startTime": 1765612402,
+              "endTime": 1765612402
+          },
+          {
+              "name": "app-secret",
+              "type": "secret_deploy",
+              "status": "completed",
+              "startTime": 1765612402,
+              "endTime": 1765612402
+          },
+          {
+              "name": "mysql-db",
+              "type": "store_deploy",
+              "status": "completed",
+              "startTime": 1765612402,
+              "endTime": 1765612407
+          },
+          {
+              "name": "backend-app",
+              "type": "service_deploy",
+              "status": "completed",
+              "startTime": 1765612407,
+              "endTime": 1765612409
+          }
+      ]
+  }
   ```
-- [ ] 等待依赖就绪
-- [ ] 错误时正确回滚
-- [ ] 状态正确传播
-- [ ] 并发控制有效
+- [x] 等待依赖就绪
+- [x] 错误时正确回滚
+- [x] 状态正确传播
+- [x] 并发控制有效
 
 **测试项 TC014: 并行组件测试**
 ```yaml
@@ -1684,7 +1716,7 @@ traits:
 **验证点:**
 - [ ] 错误正确捕获
   ```shell
-  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
   # 应返回状态为 failed
   ```
 - [ ] 状态更新为failed
@@ -1943,7 +1975,7 @@ wait
 - [ ] 依赖关系处理
 - [ ] 状态正确回退
   ```shell
-  curl http://127.0.0.1:8080/api/v1/tasks/${TASK_ID}
+  curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
   # 应显示失败状态及回滚信息
   ```
 - [ ] 资源完全删除

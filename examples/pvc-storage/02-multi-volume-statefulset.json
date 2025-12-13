@@ -1,0 +1,54 @@
+{
+  "name": "test-multi-volume-sts",
+  "namespace": "default",
+  "version": "1.0.0",
+  "description": "多 Volume StatefulSet 测试 - 验证多个 tmpCreate volume",
+  "component": [
+    {
+      "name": "postgres-db",
+      "type": "store",
+      "image": "postgres:15",
+      "replicas": 1,
+      "properties": {
+        "ports": [{"port": 5432, "expose": true}],
+        "env": {
+          "POSTGRES_PASSWORD": "secretpassword",
+          "PGDATA": "/var/lib/postgresql/data/pgdata"
+        }
+      },
+      "traits": {
+        "storage": [
+          {
+            "name": "pg-data",
+            "type": "persistent",
+            "mountPath": "/var/lib/postgresql/data",
+            "tmpCreate": true,
+            "size": "10Gi",
+            "storageClass": "standard"
+          },
+          {
+            "name": "pg-wal",
+            "type": "persistent",
+            "mountPath": "/var/lib/postgresql/wal",
+            "tmpCreate": true,
+            "size": "5Gi",
+            "storageClass": "standard"
+          },
+          {
+            "name": "pg-backup",
+            "type": "ephemeral",
+            "mountPath": "/backup"
+          }
+        ]
+      }
+    }
+  ],
+  "workflow": [
+    {
+      "name": "deploy-postgres",
+      "mode": "StepByStep",
+      "components": ["postgres-db"]
+    }
+  ]
+}
+
