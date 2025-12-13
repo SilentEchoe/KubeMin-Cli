@@ -111,18 +111,16 @@ func TestWorkerBackoffDelay(t *testing.T) {
 	}
 }
 
-func TestReportWorkerErrorSendsToErrChan(t *testing.T) {
+func TestReportWorkerErrorLogsError(t *testing.T) {
+	// reportWorkerError now only logs errors instead of sending to errChan.
+	// This is intentional: workflow task failures are business errors and
+	// should not cause service termination.
 	wf := &Workflow{
 		errChan: make(chan error, 1),
 	}
 	wf.reportWorkerError(errors.New("worker failed"))
-	select {
-	case err := <-wf.errChan:
-		require.Error(t, err)
-		require.Contains(t, err.Error(), "worker failed")
-	default:
-		t.Fatalf("expected error to be sent to errChan")
-	}
+	// errChan should remain empty since errors are now only logged
+	require.Len(t, wf.errChan, 0)
 }
 
 func TestReportWorkerErrorIgnoresNil(t *testing.T) {

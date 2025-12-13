@@ -140,19 +140,16 @@ func (w *Workflow) runWorkflowTask(ctx context.Context, task *model.WorkflowQueu
 	}()
 }
 
+// reportTaskError logs workflow task errors.
+// Note: Workflow task failures are expected business errors (e.g., deployment failures,
+// validation errors) and should NOT cause the server to exit. Only infrastructure errors
+// (e.g., Redis connection failures, database errors) should trigger service termination.
+// Therefore, we only log the error instead of sending it to errChan.
 func (w *Workflow) reportTaskError(err error) {
 	if err == nil {
 		return
 	}
-	if w.errChan != nil {
-		select {
-		case w.errChan <- err:
-		default:
-			klog.Errorf("workflow task error: %v", err)
-		}
-	} else {
-		klog.Errorf("workflow task error: %v", err)
-	}
+	klog.Errorf("workflow task error: %v", err)
 }
 
 func (w *Workflow) maxWorkflowConcurrency() int64 {

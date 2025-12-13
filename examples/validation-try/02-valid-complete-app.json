@@ -39,12 +39,7 @@
       "nameSpace": "default",
       "replicas": 1,
       "properties": {
-        "ports": [
-          {
-            "port": 3306,
-            "expose": true
-          }
-        ],
+        "ports": [{"port": 3306}],
         "env": {
           "MYSQL_ROOT_PASSWORD": "root123"
         }
@@ -87,12 +82,7 @@
       "nameSpace": "default",
       "replicas": 3,
       "properties": {
-        "ports": [
-          {
-            "port": 8080,
-            "expose": true
-          }
-        ],
+        "ports": [{"port": 8080}],
         "env": {
           "APP_ENV": "production"
         }

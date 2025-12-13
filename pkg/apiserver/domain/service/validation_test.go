@@ -509,7 +509,7 @@ func TestValidationService_TryApplication_CompleteValidConfig(t *testing.T) {
 				NameSpace:     "default",
 				Replicas:      2,
 				Properties: apisv1.Properties{
-					Ports: []spec.Ports{{Port: 8080, Expose: true}},
+					Ports: []spec.Ports{{Port: 8080}},
 					Env: map[string]string{
 						"APP_ENV": "production",
 					},

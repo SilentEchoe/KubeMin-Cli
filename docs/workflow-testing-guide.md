@@ -789,7 +789,7 @@ traits:
         "storage": [
           {
             "name": "config-volume",
-            "type": "configMap",
+            "type": "config",
             "sourceName": "app-config",
             "mountPath": "/etc/config",
             "readOnly": true
@@ -814,22 +814,44 @@ traits:
 ```
 
 **验证点:**
-- [ ] ConfigMap正确挂载
+- [x] ConfigMap正确挂载
   ```shell
   kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Mounts'
+  
+  > kubectl describe pod deploy-app-with-configmap-trydp6meg7s5pvfrqvlonq3o-55cd9fdfg5mb | grep -A5 'Mounts'
+   Mounts:
+        /etc/config from config-volume (ro)
+        /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-spls8 (ro)
+  Conditions:
+    Type                        Status
+    PodReadyToStartContainers   True
   ```
-- [ ] 文件路径正确
+- [x] 文件路径正确
   ```shell
   kubectl exec -it ${POD_NAME} -- ls -la /etc/config
+  
+  > kubectl exec -it deploy-app-with-configmap-trydp6meg7s5pvfrqvlonq3o-55cd9fdfg5mb -- ls -la /etc/config
+  total 16
+  drwxrwxrwx 3 root root 4096 Dec 13 06:41 .
+  drwxr-xr-x 1 root root 4096 Dec 13 06:41 ..
+  drwxr-xr-x 2 root root 4096 Dec 13 06:41 ..2025_12_13_06_41_00.359621063
+  lrwxrwxrwx 1 root root   31 Dec 13 06:41 ..data -> ..2025_12_13_06_41_00.359621063
+  lrwxrwxrwx 1 root root   15 Dec 13 06:41 app.conf -> ..data/app.conf
   ```
-- [ ] 文件权限正确
-- [ ] 内容只读属性
+- [x] 文件权限正确
+- [x] 内容只读属性
   ```shell
   kubectl exec -it ${POD_NAME} -- cat /etc/config/app.conf
+  
+  > kubectl exec -it deploy-app-with-configmap-trydp6meg7s5pvfrqvlonq3o-55cd9fdfg5mb -- cat /etc/config/app.conf
+  server.host=localhost
+  server.port=8080
+  log.level=info%
   ```
-- [ ] 热更新支持
+- [x] 热更新支持
 
-**测试项 TC009: Secret挂载测试**
+#### **测试项 TC009: Secret挂载测试**
+
 ```yaml
 # 测试用例
 组件: app-deployment
@@ -896,20 +918,42 @@ traits:
 ```
 
 **验证点:**
-- [ ] Secret正确挂载
+- [x] Secret正确挂载
   ```shell
   kubectl describe pod -l kube-min-cli-appId=${APP_ID} | grep -A5 'Mounts'
+  
+  
+  > kubectl describe pod deploy-app-with-secret-dev0y3vsmxwu7h966sdrblr8-547cf74bb44rnnb | grep -A5 'Mounts'
+  
+      Mounts:
+        /etc/secrets from secret-volume (ro)
+        /var/run/secrets/kubernetes.io/serviceaccount from kube-api-access-zx5s6 (ro)
+  Conditions:
+    Type                        Status
+    PodReadyToStartContainers   True
   ```
-- [ ] 文件路径正确
+- [x] 文件路径正确
   ```shell
   kubectl exec -it ${POD_NAME} -- ls -la /etc/secrets
+  
+  > kubectl exec -it deploy-app-with-secret-dev0y3vsmxwu7h966sdrblr8-547cf74bb44rnnb -- ls -la /etc/secrets
+  total 8
+  drwxrwxrwt 3 root root  120 Dec 13 06:47 .
+  drwxr-xr-x 1 root root 4096 Dec 13 06:47 ..
+  drwxr-xr-x 2 root root   80 Dec 13 06:47 ..2025_12_13_06_47_12.3610060343
+  lrwxrwxrwx 1 root root   32 Dec 13 06:47 ..data -> ..2025_12_13_06_47_12.3610060343
+  lrwxrwxrwx 1 root root   14 Dec 13 06:47 api-key -> ..data/api-key
+  lrwxrwxrwx 1 root root   18 Dec 13 06:47 db-password -> ..data/db-password
   ```
-- [ ] 文件权限正确(600)
-- [ ] 内容自动解码
+- [x] 文件权限正确(600)
+- [x] 内容自动解码
   ```shell
   kubectl exec -it ${POD_NAME} -- cat /etc/secrets/db-password
+  
+  > kubectl exec -it deploy-app-with-secret-dev0y3vsmxwu7h966sdrblr8-547cf74bb44rnnb -- cat /etc/secrets/db-password
+  supersecretpassword%
   ```
-- [ ] 安全性验证
+- [x] 安全性验证
 
 #### 2.2 网络Trait测试
 
@@ -2125,21 +2169,21 @@ wait
         "storage": [
           {
             "name": "config-vol-1",
-            "type": "configMap",
+            "type": "config",
             "sourceName": "large-config",
             "mountPath": "/etc/config1",
             "readOnly": true
           },
           {
             "name": "config-vol-2",
-            "type": "configMap",
+            "type": "config",
             "sourceName": "large-config",
             "mountPath": "/etc/config2",
             "readOnly": true
           },
           {
             "name": "config-vol-3",
-            "type": "configMap",
+            "type": "config",
             "sourceName": "large-config",
             "mountPath": "/etc/config3",
             "readOnly": true

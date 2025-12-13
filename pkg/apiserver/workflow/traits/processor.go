@@ -15,6 +15,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // TraitContext provides the inputs a Processor needs to render its changes.
@@ -128,7 +129,9 @@ func ApplyTraits(component *model.ApplicationComponent, workload runtime.Object)
 	}
 
 	// Apply the aggregated result to the final workload.
-	if err := applyTraitResultToWorkload(finalResult, workload, component.Name); err != nil {
+	// Use normalized container name to match the actual container name in the workload.
+	mainContainerName := utils.NormalizeLowerStrip(component.Name)
+	if err := applyTraitResultToWorkload(finalResult, workload, mainContainerName); err != nil {
 		return nil, err
 	}
 

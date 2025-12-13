@@ -12,12 +12,7 @@
       "nameSpace": "default",
       "replicas": 2,
       "properties": {
-        "ports": [
-          {
-            "port": 8080,
-            "expose": true
-          }
-        ]
+        "ports": [{"port": 8080}]
       },
       "traits": {
         "init": [

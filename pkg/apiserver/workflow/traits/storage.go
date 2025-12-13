@@ -11,6 +11,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/utils"
+	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports
@@ -51,6 +52,9 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 		processedVolumes[volumeName] = true
 		volType := config.StorageTypeMapping[vol.Type]
+		if volType == "" {
+			return nil, fmt.Errorf("unknown storage type %q for volume %q; supported types: persistent, ephemeral, host-mounted, config, secret", vol.Type, vol.Name)
+		}
 
 		mountPath := defaultOr(vol.MountPath, fmt.Sprintf("/mnt/%s", volumeName))
 
@@ -68,30 +72,39 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				pvcSpec.StorageClassName = &vol.StorageClass
 			}
 
-			basePVC := corev1.PersistentVolumeClaim{
-				ObjectMeta: metav1.ObjectMeta{Name: vol.Name, Namespace: ctx.Component.Namespace},
-				Spec:       pvcSpec,
-			}
-
 			if vol.TmpCreate {
-				// For StatefulSet volumeClaimTemplates:
-				// - The template name is used directly as the volume name by Kubernetes
-				// - volumeMounts.name must match the volumeClaimTemplate.metadata.name
-				// - No explicit volumes entry is needed (Kubernetes creates it automatically)
-				templatePVC := basePVC.DeepCopy()
-				templatePVC.Name = volumeName // Use volumeName as the template name for simpler volumeMount reference
-				templatePVC.Annotations = map[string]string{config.LabelStorageRole: "template"}
-				pvcs = append(pvcs, *templatePVC)
-				// Note: We intentionally do NOT add a volumes entry here.
-				// For StatefulSets, volumeClaimTemplates automatically create volumes
-				// with the same name as the template metadata.name.
-				// The processor.go will handle this correctly and the volumeMounts
-				// will reference volumeName which matches the template name.
+				// For dynamically created PVCs (e.g., StatefulSet volumeClaimTemplates):
+				// - Use naming convention for PVC names: pvc-{traitName}-{appID}
+				// - Add "template" annotation to mark it as a template PVC
+				pvcName := wfNaming.PVCName(vol.Name, ctx.Component.AppID)
+				templatePVC := corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:        pvcName,
+						Namespace:   ctx.Component.Namespace,
+						Annotations: map[string]string{config.LabelStorageRole: "template"},
+					},
+					Spec: pvcSpec,
+				}
+				pvcs = append(pvcs, templatePVC)
+				// Add volumes entry with PVC claim reference
+				volumes = append(volumes, corev1.Volume{
+					Name:         volumeName,
+					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: pvcName}},
+				})
 			} else {
+				// Reference existing PVC: use ClaimName if specified, otherwise use vol.Name
+				claimName := vol.ClaimName
+				if claimName == "" {
+					claimName = vol.Name
+				}
+				basePVC := corev1.PersistentVolumeClaim{
+					ObjectMeta: metav1.ObjectMeta{Name: claimName, Namespace: ctx.Component.Namespace},
+					Spec:       pvcSpec,
+				}
 				pvcs = append(pvcs, basePVC)
 				volumes = append(volumes, corev1.Volume{
 					Name:         volumeName,
-					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: vol.Name}},
+					VolumeSource: corev1.VolumeSource{PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{ClaimName: claimName}},
 				})
 			}
 		case config.VolumeTypeEmptyDir:
@@ -138,10 +151,11 @@ func (s *StorageProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	}
 
 	// The container name is not known here. The aggregator will place the mounts.
-	// We use the component name as a temporary key for mounts intended for the main container.
+	// We use the normalized component name as the key to match the actual container name.
 	volumeMountMap := make(map[string][]corev1.VolumeMount)
 	if len(volumeMounts) > 0 {
-		volumeMountMap[ctx.Component.Name] = volumeMounts
+		normalizedName := utils.NormalizeLowerStrip(ctx.Component.Name)
+		volumeMountMap[normalizedName] = volumeMounts
 	}
 
 	return &TraitResult{

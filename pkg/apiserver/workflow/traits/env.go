@@ -7,6 +7,7 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 // EnvsProcessor implements the user-friendly `envs` trait. It translates a
@@ -34,9 +35,11 @@ func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		nativeEnvs = append(nativeEnvs, *nativeEnv)
 	}
 
+	// Use normalized component name to match the actual container name
+	normalizedName := utils.NormalizeLowerStrip(ctx.Component.Name)
 	return &TraitResult{
 		EnvVars: map[string][]corev1.EnvVar{
-			ctx.Component.Name: nativeEnvs,
+			normalizedName: nativeEnvs,
 		},
 	}, nil
 }
@@ -80,9 +83,11 @@ func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 	}
 
+	// Use normalized component name to match the actual container name
+	normalizedName := utils.NormalizeLowerStrip(ctx.Component.Name)
 	return &TraitResult{
 		EnvFromSources: map[string][]corev1.EnvFromSource{
-			ctx.Component.Name: envFromSources,
+			normalizedName: envFromSources,
 		},
 	}, nil
 }

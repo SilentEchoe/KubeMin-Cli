@@ -94,8 +94,7 @@ type Properties struct {
 }
 
 type Ports struct {
-	Port   int32 `json:"port"`
-	Expose bool  `json:"expose"`
+	Port int32 `json:"port"`
 }
 
 // ProbeTraitsSpec defines a health check probe for a container.

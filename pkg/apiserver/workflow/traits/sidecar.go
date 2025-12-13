@@ -59,10 +59,11 @@ func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		}
 
 		// The sidecar container gets the volume mounts from its nested traits.
-		// The component name is used as the key for the main container's resources.
+		// Use normalized component name to match the key used in storage trait.
+		normalizedName := utils.NormalizeLowerStrip(ctx.Component.Name)
 		var volumeMounts []corev1.VolumeMount
 		if nestedResult != nil {
-			if mounts, ok := nestedResult.VolumeMounts[ctx.Component.Name]; ok {
+			if mounts, ok := nestedResult.VolumeMounts[normalizedName]; ok {
 				volumeMounts = mounts
 			}
 		}
@@ -70,10 +71,10 @@ func (s *SidecarProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 		// The sidecar container also gets the EnvFrom and EnvVars from its nested traits.
 		var envFromSources []corev1.EnvFromSource
 		if nestedResult != nil {
-			if envFrom, ok := nestedResult.EnvFromSources[ctx.Component.Name]; ok {
+			if envFrom, ok := nestedResult.EnvFromSources[normalizedName]; ok {
 				envFromSources = envFrom
 			}
-			if nestedEnvVars, ok := nestedResult.EnvVars[ctx.Component.Name]; ok {
+			if nestedEnvVars, ok := nestedResult.EnvVars[normalizedName]; ok {
 				envVars = append(envVars, nestedEnvVars...)
 			}
 		}

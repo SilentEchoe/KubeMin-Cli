@@ -21,7 +21,7 @@ const userInputJSON = `
       "mountPath": "/var/lib/mysql",
       "subPath": "mysql",
       "size": "5Gi",
-      "create": true
+      "tmpCreate": true
     },
     {
       "type": "ephemeral",
