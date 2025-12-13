@@ -119,4 +119,8 @@ func (c *cleanupStore) IsExistByCondition(context.Context, string, map[string]in
 	return false, nil
 }
 
+func (c *cleanupStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return false, nil
+}
+
 var _ datastore.DataStore = (*cleanupStore)(nil)

@@ -49,6 +49,7 @@ type ApplicationsService interface {
 
 type applicationsServiceImpl struct {
 	KubeClient        kubernetes.Interface               `inject:"kubeClient"`
+	Store             datastore.DataStore                `inject:"datastore"`
 	AppRepo           repository.ApplicationRepository   `inject:""`
 	WorkflowRepo      repository.WorkflowRepository      `inject:""`
 	ComponentRepo     repository.ComponentRepository     `inject:""`
@@ -119,78 +120,174 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		return nil, err
 	}
 
-	if err = c.AppRepo.Create(ctx, application); err != nil {
-		if errors.Is(err, datastore.ErrRecordExist) {
-			return nil, bcode.ErrApplicationExist
-		}
-		return nil, err
-	}
-
 	components, err := prepareComponents(application.ID, application.Namespace, resolvedComponents)
 	if err != nil {
 		return nil, err
 	}
 
-	// 预清理：删除该应用ID下的所有现有组件，确保幂等性
-	if err = c.ComponentRepo.DeleteByAppID(ctx, application.ID); err != nil {
-		klog.Errorf("Pre-cleanup components for application %s failed: %v", application.ID, err)
-		return nil, bcode.ErrComponentBuild
+	if c.Store == nil {
+		return nil, fmt.Errorf("datastore is not initialized")
 	}
 
-	// 批量创建组件
-	if len(components) > 0 {
-		// 使用批量创建，失败时回滚
-		if err = c.ComponentRepo.BatchAdd(ctx, components); err != nil {
-			klog.Errorf("Batch create components for application %s failed: %v", application.ID, err)
-			// 批量创建失败，清理已创建的部分组件
-			if cleanupErr := c.ComponentRepo.DeleteByAppID(ctx, application.ID); cleanupErr != nil {
-				klog.Errorf("Cleanup components on failure for application %s failed: %v", application.ID, cleanupErr)
-			}
-			return nil, bcode.ErrCreateComponents
+	var workflow *model.Workflow
+	run := func(store datastore.DataStore) error {
+		if err := repository.CreateApplications(ctx, store, application); err != nil {
+			return err
+		}
+		if err := repository.DelComponentsByAppID(ctx, store, application.ID); err != nil {
+			klog.Errorf("pre-cleanup components for application %s failed: %v", application.ID, err)
+			return bcode.ErrComponentBuild
+		}
+		if err := batchAddComponents(ctx, store, components); err != nil {
+			klog.Errorf("batch create components for application %s failed: %v", application.ID, err)
+			return bcode.ErrCreateComponents
+		}
+		wf, err := c.upsertDefaultWorkflow(ctx, store, application, req, resolvedComponents)
+		if err != nil {
+			return err
+		}
+		workflow = wf
+		return nil
+	}
+
+	if tx, ok := c.Store.(datastore.Transactional); ok {
+		if err := tx.WithTransaction(ctx, run); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := run(c.Store); err != nil {
+			return nil, err
 		}
 	}
 
+	base := assembler.ConvertAppModelToBase(application, workflow.ID)
+	return base, nil
+}
+
+func batchAddComponents(ctx context.Context, store datastore.DataStore, components []*model.ApplicationComponent) error {
+	if len(components) == 0 {
+		return nil
+	}
+	entities := make([]datastore.Entity, len(components))
+	for i, comp := range components {
+		entities[i] = comp
+	}
+	return store.BatchAdd(ctx, entities)
+}
+
+func (c *applicationsServiceImpl) upsertDefaultWorkflow(ctx context.Context, store datastore.DataStore, app *model.Applications, req apisv1.CreateApplicationsRequest, resolvedComponents []apisv1.CreateComponentRequest) (*model.Workflow, error) {
 	workflowAliasBase := req.Alias
 	if workflowAliasBase == "" {
 		workflowAliasBase = req.Name
 	}
 
-	workflowAlias := fmt.Sprintf("%s-%s", workflowAliasBase, "workflow")
-	workflowName := fmt.Sprintf("%s-%s", req.Name, "workflow")
+	desiredAlias := fmt.Sprintf("%s-workflow", workflowAliasBase)
+	desiredName := fmt.Sprintf("%s-workflow", req.Name)
+
 	var workflowBody interface{}
 	if len(req.WorkflowSteps) == 0 {
 		workflowBody = convertWorkflowStepByComponent(resolvedComponents)
 	} else {
-		workflowName = fmt.Sprintf("%s-%s", req.Name, utils.RandStringByNumLowercase(16))
 		workflowBody = convertWorkflowStepsFromRequest(req.WorkflowSteps)
 	}
 
-	workflowStep, stepErr := model.NewJSONStructByStruct(workflowBody)
-	if stepErr != nil {
+	workflowStep, err := model.NewJSONStructByStruct(workflowBody)
+	if err != nil {
 		return nil, bcode.ErrCreateWorkflow
 	}
 
-	workflow := &model.Workflow{
-		ID:           utils.RandStringByNumLowercase(24),
-		Name:         workflowName,
-		Namespace:    application.Namespace,
-		AppID:        application.ID,
-		Alias:        workflowAlias,
-		Disabled:     false,
-		ProjectID:    application.Project,
-		Description:  application.Description,
-		WorkflowType: config.WorkflowTaskTypeWorkflow,
-		Status:       config.StatusCreated,
-		Steps:        workflowStep,
+	workflows, err := repository.FindWorkflowsByAppID(ctx, store, app.ID)
+	if err != nil {
+		return nil, err
 	}
 
-	if err = c.WorkflowRepo.Create(ctx, workflow); err != nil {
-		klog.Errorf("TmpCreate workflow err: %v", err)
-		return nil, bcode.ErrCreateWorkflow
+	target := pickDefaultWorkflow(workflows, desiredName, desiredAlias)
+	if target == nil {
+		workflow := &model.Workflow{
+			ID:           utils.RandStringByNumLowercase(24),
+			Name:         ensureUniqueWorkflowName(desiredName, workflows),
+			Namespace:    app.Namespace,
+			AppID:        app.ID,
+			Alias:        desiredAlias,
+			Disabled:     false,
+			ProjectID:    app.Project,
+			Description:  app.Description,
+			WorkflowType: config.WorkflowTaskTypeWorkflow,
+			Status:       config.StatusCreated,
+			Steps:        workflowStep,
+		}
+		if err := repository.CreateWorkflow(ctx, store, workflow); err != nil {
+			klog.Errorf("create workflow failed: %v", err)
+			return nil, bcode.ErrCreateWorkflow
+		}
+		return workflow, nil
 	}
 
-	base := assembler.ConvertAppModelToBase(application, workflow.ID)
-	return base, nil
+	if desiredName != "" && !strings.EqualFold(target.Name, desiredName) {
+		target.Name = ensureUniqueWorkflowNameExcluding(desiredName, workflows, target.ID)
+	}
+	if desiredAlias != "" {
+		target.Alias = desiredAlias
+	}
+	target.Namespace = app.Namespace
+	target.ProjectID = app.Project
+	target.Description = app.Description
+	target.Steps = workflowStep
+
+	if err := store.Put(ctx, target); err != nil {
+		return nil, err
+	}
+	return target, nil
+}
+
+func pickDefaultWorkflow(workflows []*model.Workflow, desiredName, desiredAlias string) *model.Workflow {
+	best, bestRank := (*model.Workflow)(nil), -1
+	for _, wf := range workflows {
+		if wf == nil {
+			continue
+		}
+		if wf.WorkflowType != "" && wf.WorkflowType != config.WorkflowTaskTypeWorkflow {
+			continue
+		}
+		rank := 0
+		if desiredName != "" && strings.EqualFold(wf.Name, desiredName) {
+			rank = 2
+		} else if desiredAlias != "" && strings.EqualFold(wf.Alias, desiredAlias) {
+			rank = 1
+		}
+		if best == nil || rank > bestRank ||
+			(rank == bestRank && wf.UpdateTime.After(best.UpdateTime)) ||
+			(rank == bestRank && wf.UpdateTime.Equal(best.UpdateTime) && wf.CreateTime.After(best.CreateTime)) {
+			best = wf
+			bestRank = rank
+		}
+	}
+	return best
+}
+
+func ensureUniqueWorkflowNameExcluding(base string, workflows []*model.Workflow, excludeID string) string {
+	if base == "" {
+		return base
+	}
+	candidate := base
+	suffix := 1
+	for {
+		inUse := false
+		for _, wf := range workflows {
+			if wf == nil || wf.ID == excludeID {
+				continue
+			}
+			if strings.EqualFold(wf.Name, candidate) {
+				inUse = true
+				break
+			}
+		}
+		if !inUse {
+			return candidate
+		}
+		candidate = fmt.Sprintf("%s-%d", base, suffix)
+		suffix++
+	}
 }
 
 func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespace, appName string, reqComponents []apisv1.CreateComponentRequest) ([]apisv1.CreateComponentRequest, error) {
@@ -236,7 +333,6 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 	return components, nil
 }
 
-// cloneComponentsFromTemplate 克隆组件模版
 func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Context, namespace, templateID string, tr *templateRequest) ([]apisv1.CreateComponentRequest, error) {
 	if tr == nil {
 		return nil, nil
@@ -541,13 +637,6 @@ func (c *applicationsServiceImpl) refreshExistingApplication(ctx context.Context
 	}
 	if req.TmpEnable != nil {
 		application.TmpEnable = *req.TmpEnable
-	}
-
-	if err = c.ComponentRepo.DeleteByAppID(ctx, req.ID); err != nil {
-		return nil, bcode.ErrComponentBuild
-	}
-	if err = c.WorkflowRepo.DeleteByAppID(ctx, req.ID); err != nil {
-		return nil, bcode.ErrWorkflowBuild
 	}
 	return application, nil
 }

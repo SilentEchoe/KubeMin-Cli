@@ -325,11 +325,11 @@ func (app *applications) updateVersion(c *gin.Context) {
 // @Tags applications
 // @Accept json
 // @Produce json
-// @Param request body apis.CreateApplicationsRequest true "Application configuration to validate"
+// @Param request body apis.TryApplicationRequest true "Application configuration to validate (optional appId to validate workflow against an existing application)"
 // @Success 200 {object} apis.TryApplicationResponse "Validation result with detailed errors if any"
 // @Router /applications/try [post]
 func (app *applications) tryApplication(c *gin.Context) {
-	var req apis.CreateApplicationsRequest
+	var req apis.TryApplicationRequest
 	if err := c.Bind(&req); err != nil {
 		klog.Error(err)
 		bcode.ReturnError(c, bcode.ErrApplicationConfig)
@@ -345,10 +345,18 @@ func (app *applications) tryApplication(c *gin.Context) {
 	normalizeWorkflowSteps(req.WorkflowSteps)
 
 	ctx := c.Request.Context()
-	klog.V(2).Infof("try application validation request received name=%s components=%d workflows=%d",
-		req.Name, len(req.Component), len(req.WorkflowSteps))
+	if strings.TrimSpace(req.AppID) != "" {
+		appID := strings.TrimSpace(req.AppID)
+		klog.V(2).Infof("try validation request received appID=%s steps=%d", appID, len(req.WorkflowSteps))
 
-	resp := app.ValidationService.TryApplication(ctx, req)
+		wfResp := app.ValidationService.TryWorkflow(ctx, appID, apis.TryWorkflowRequest{Workflow: req.WorkflowSteps})
+		c.JSON(http.StatusOK, apis.TryApplicationResponse{Valid: wfResp.Valid, Errors: wfResp.Errors})
+		return
+	}
+
+	klog.V(2).Infof("try application validation request received name=%s components=%d workflows=%d", req.Name, len(req.Component), len(req.WorkflowSteps))
+
+	resp := app.ValidationService.TryApplication(ctx, req.CreateApplicationsRequest)
 
 	klog.V(2).Infof("try application validation completed name=%s valid=%v errorCount=%d",
 		req.Name, resp.Valid, len(resp.Errors))

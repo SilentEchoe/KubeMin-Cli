@@ -187,3 +187,10 @@ type DataStore interface {
 	// Returns (true, nil) if update succeeded, (false, nil) if condition not met, or (false, error) on failure.
 	CompareAndSwap(ctx context.Context, entity Entity, conditionField string, conditionValue interface{}, updates map[string]interface{}) (bool, error)
 }
+
+// Transactional is an optional extension interface for datastores that support transactions.
+// Implementations should ensure all operations performed on the provided tx store are committed
+// atomically, and rolled back if fn returns an error.
+type Transactional interface {
+	WithTransaction(ctx context.Context, fn func(tx DataStore) error) error
+}

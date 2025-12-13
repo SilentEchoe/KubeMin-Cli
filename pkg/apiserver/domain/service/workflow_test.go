@@ -36,6 +36,10 @@ func (f *failingDataStore) IsExistByCondition(context.Context, string, map[strin
 	return false, f.err
 }
 
+func (f *failingDataStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return false, f.err
+}
+
 func TestCreateWorkflowTaskPropagatesStoreError(t *testing.T) {
 	storeErr := errors.New("datastore unavailable")
 	svc := &workflowServiceImpl{Store: &failingDataStore{err: storeErr}}

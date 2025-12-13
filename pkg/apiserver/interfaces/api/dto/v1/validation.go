@@ -11,7 +11,13 @@ type ValidationError struct {
 }
 
 // TryApplicationRequest is the same as CreateApplicationsRequest
-// We use the existing CreateApplicationsRequest type directly
+// It accepts an optional appId to validate only workflow steps against an existing application.
+// When appId is provided, the request is treated as a workflow validation request using the
+// workflow steps from CreateApplicationsRequest.WorkflowSteps.
+type TryApplicationRequest struct {
+	AppID string `json:"appId,omitempty"`
+	CreateApplicationsRequest
+}
 
 // TryApplicationResponse is the response for the try application validation API
 type TryApplicationResponse struct {
@@ -78,4 +84,3 @@ const (
 	ErrCodeDuplicateWorkflowStep   = "DUPLICATE_WORKFLOW_STEP"
 	ErrCodeWorkflowStepNoComponent = "WORKFLOW_STEP_NO_COMPONENT"
 )
-

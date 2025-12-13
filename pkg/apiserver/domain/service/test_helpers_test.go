@@ -226,6 +226,7 @@ var _ repository.ComponentRepository = (*mockCleanupComponentRepo)(nil)
 // newMockServiceWithStore creates an applicationsServiceImpl with mock repos from the store
 func newMockServiceWithStore(store *inMemoryAppStore) *applicationsServiceImpl {
 	return &applicationsServiceImpl{
+		Store:             store,
 		AppRepo:           &mockAppRepo{store: store},
 		WorkflowRepo:      &mockWorkflowRepo{store: store},
 		ComponentRepo:     &mockComponentRepo{store: store},

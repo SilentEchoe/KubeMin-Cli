@@ -143,4 +143,8 @@ func (s *statusDataStore) IsExistByCondition(context.Context, string, map[string
 	return false, nil
 }
 
+func (s *statusDataStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return false, nil
+}
+
 var _ datastore.DataStore = (*statusDataStore)(nil)

@@ -74,6 +74,7 @@ func (f *fakeDataStore) IsExist(context.Context, datastore.Entity) (bool, error)
 func (f *fakeDataStore) IsExistByCondition(context.Context, string, map[string]interface{}, interface{}) (bool, error) {
 	return false, fmt.Errorf("not implemented")
 }
+
 func (f *fakeDataStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
 	return true, nil
 }

@@ -457,4 +457,8 @@ func (s *inMemoryAppStore) IsExistByCondition(context.Context, string, map[strin
 	return false, nil
 }
 
+func (s *inMemoryAppStore) CompareAndSwap(context.Context, datastore.Entity, string, interface{}, map[string]interface{}) (bool, error) {
+	return false, nil
+}
+
 var _ datastore.DataStore = (*inMemoryAppStore)(nil)
