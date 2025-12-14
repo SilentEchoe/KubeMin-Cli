@@ -13,6 +13,7 @@ func ConvertAppModelToBase(app *model.Applications, workflowID string) *apisv1.A
 	appBase := &apisv1.ApplicationBase{
 		ID:          app.ID,
 		Name:        app.Name,
+		Namespace:   app.Namespace,
 		Version:     app.Version,
 		Project:     app.Project,
 		Alias:       app.Alias,

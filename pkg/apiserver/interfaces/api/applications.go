@@ -36,9 +36,7 @@ func (app *applications) RegisterRoutes(group *gin.RouterGroup) {
 	group.POST("/applications/:appID/workflow/exec", app.execApplicationWorkflow)
 	group.POST("/applications/:appID/workflow/cancel", app.cancelApplicationWorkflow)
 	group.GET("/workflow/tasks/:taskID/status", app.getWorkflowTaskStatus)
-	// 版本更新接口
 	group.POST("/applications/:appID/version", app.updateVersion)
-	// 验证接口 (Try/DryRun)
 	group.POST("/applications/try", app.tryApplication)
 	group.POST("/applications/:appID/workflow/try", app.tryWorkflow)
 }
