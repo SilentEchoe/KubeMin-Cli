@@ -44,7 +44,6 @@ type CreateApplicationsRequest struct {
 	ID            string                      `json:"ID"`
 	Name          string                      `json:"name" validate:"checkname"`
 	NameSpace     string                      `json:"namespace"`
-	Image         string                      `json:"image"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
 	Project       string                      `json:"project"`
