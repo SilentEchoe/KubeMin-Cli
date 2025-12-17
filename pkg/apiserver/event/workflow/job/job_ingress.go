@@ -87,6 +87,18 @@ func (c *DeployIngressJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployIngressJob run error: %v", err)
@@ -119,6 +131,8 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	ingress, ok := c.job.JobInfo.(*networkingv1.Ingress)
 	if !ok {
 		return fmt.Errorf("deploy job Job.Info conversion type failure (actual: %T)", c.job.JobInfo)
@@ -129,10 +143,21 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 	if ingress.Namespace == "" {
 		ingress.Namespace = c.namespace
 	}
+	if bundle != nil {
+		EnsureBundleLabels(ingress, bundle.Name, c.job.Name)
+	}
 
 	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("ingress %s/%s already exists but is not owned by bundle=%q", ingress.Namespace, ingress.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceIngress, ingress.Namespace, ingress.Name)
+			klog.Infof("Bundle Ingress %s/%s already exists; skipping update", ingress.Namespace, ingress.Name)
+			return nil
+		}
 		ingress.ResourceVersion = existing.ResourceVersion
 		if ingress.Labels == nil && len(existing.Labels) > 0 {
 			ingress.Labels = existing.Labels

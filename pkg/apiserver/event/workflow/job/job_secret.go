@@ -92,6 +92,18 @@ func (c *DeploySecretJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeploySecretJob run error")
 		c.job.Status = config.StatusFailed
@@ -108,6 +120,8 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 	if c.client == nil {
 		return fmt.Errorf("client is nil")
 	}
+
+	bundle := bundleFromJob(c.job)
 
 	var secret *corev1.Secret
 	switch v := c.job.JobInfo.(type) {
@@ -149,6 +163,9 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 	if secret.Namespace == "" {
 		secret.Namespace = c.job.Namespace
 	}
+	if bundle != nil {
+		EnsureBundleLabels(secret, bundle.Name, c.job.Name)
+	}
 
 	// Default to Opaque if not set
 	if string(secret.Type) == "" {
@@ -158,6 +175,14 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 	cli := c.client.CoreV1().Secrets(secret.Namespace)
 
 	if existing, err := cli.Get(ctx, secret.Name, metav1.GetOptions{}); err == nil {
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("secret %s/%s already exists but is not owned by bundle=%q", secret.Namespace, secret.Name, bundle.Name)
+			}
+			logger.Info("Bundle Secret already exists; skipping update", "secretName", secret.Name, "namespace", secret.Namespace, "bundle", bundle.Name)
+			markResourceObserved(ctx, config.ResourceSecret, secret.Namespace, secret.Name)
+			return nil
+		}
 		// If existing is immutable, updates will be rejected by API server.
 		if existing.Immutable != nil && *existing.Immutable {
 			// Compare quickly to avoid noisy operations; if data differs, return an error.
@@ -230,12 +255,13 @@ func GenerateSecret(component *model.ApplicationComponent, properties *model.Pro
 			if fn, ok := properties.Conf["config.fileName"]; ok && fn != "" {
 				fileName = fn
 			}
+			labels := BuildLabels(component, properties)
 			return &model.SecretInput{
 				Name:      name,
 				Namespace: namespace,
 				URL:       url,
 				FileName:  fileName,
-				Labels:    properties.Labels,
+				Labels:    labels,
 			}
 		}
 	}

@@ -19,6 +19,8 @@ const (
 	LabelComponentID   = "kube-min-cli-componentId"
 	LabelComponentName = "kube-min-cli-componentName"
 	LabelStorageRole   = "storage.kubemin.cli/pvc-role"
+	LabelBundle        = "kubemin.io/bundle"
+	LabelBundleMember  = "kubemin.io/bundle-member"
 )
 
 type JobRunPolicy string

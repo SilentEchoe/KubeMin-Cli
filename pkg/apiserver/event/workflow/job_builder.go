@@ -4,10 +4,12 @@ import (
 	"context"
 	"encoding/json"
 	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -178,9 +180,13 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 	if len(additionalObjects) == 0 {
 		return jobs, nil
 	}
+	bundle := job.ParseTraits(component.Traits).Bundle
 
 	for _, obj := range additionalObjects {
 		if pvc, ok := obj.(*corev1.PersistentVolumeClaim); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(pvc, bundle.Name, component.Name)
+			}
 			ns := pvc.Namespace
 			if ns == "" {
 				ns = component.Namespace
@@ -197,6 +203,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			pvcJob.JobType = string(config.JobDeployPVC)
 			pvcJob.JobInfo = pvc
+			pvcJob.Bundle = bundle
 			setDeployTimeout(pvcJob)
 
 			jobs = append(jobs, pvcJob)
@@ -205,9 +212,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 		if ingress, ok := obj.(*networkingv1.Ingress); ok {
 			baseName := nameOrFallback(ingress.Name, component.Name)
 			normalizedName := job.BuildIngressName(baseName, component.AppID)
+			if bundle != nil {
+				normalizedName = job.BuildSharedIngressName(baseName)
+			}
 			ingress.Name = normalizedName
 			if ingress.Namespace == "" {
 				ingress.Namespace = component.Namespace
+			}
+			if bundle != nil {
+				job.EnsureBundleLabels(ingress, bundle.Name, component.Name)
 			}
 			ingressJob := NewJobTask(
 				ingress.Name,
@@ -220,11 +233,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			ingressJob.JobType = string(config.JobDeployIngress)
 			ingressJob.JobInfo = ingress
+			ingressJob.Bundle = bundle
 			setDeployTimeout(ingressJob)
 			jobs = append(jobs, ingressJob)
 			klog.Infof("Created Ingress job for component %s: %s", component.Name, ingress.Name)
 		}
 		if sa, ok := obj.(*corev1.ServiceAccount); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(sa, bundle.Name, component.Name)
+			}
 			ns := sa.Namespace
 			if ns == "" {
 				ns = component.Namespace
@@ -241,11 +258,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			jobTask.JobType = string(config.JobDeployServiceAccount)
 			jobTask.JobInfo = sa.DeepCopy()
+			jobTask.Bundle = bundle
 			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ServiceAccount job for component %s: %s/%s", component.Name, ns, sa.Name)
 		}
 		if role, ok := obj.(*rbacv1.Role); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(role, bundle.Name, component.Name)
+			}
 			ns := role.Namespace
 			if ns == "" {
 				ns = component.Namespace
@@ -262,11 +283,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			jobTask.JobType = string(config.JobDeployRole)
 			jobTask.JobInfo = role.DeepCopy()
+			jobTask.Bundle = bundle
 			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created Role job for component %s: %s/%s", component.Name, ns, role.Name)
 		}
 		if binding, ok := obj.(*rbacv1.RoleBinding); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(binding, bundle.Name, component.Name)
+			}
 			ns := binding.Namespace
 			if ns == "" {
 				ns = component.Namespace
@@ -283,11 +308,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			jobTask.JobType = string(config.JobDeployRoleBinding)
 			jobTask.JobInfo = binding.DeepCopy()
+			jobTask.Bundle = bundle
 			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created RoleBinding job for component %s: %s/%s", component.Name, ns, binding.Name)
 		}
 		if clusterRole, ok := obj.(*rbacv1.ClusterRole); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(clusterRole, bundle.Name, component.Name)
+			}
 			jobTask := NewJobTask(
 				clusterRole.Name,
 				component.Namespace,
@@ -299,11 +328,15 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			jobTask.JobType = string(config.JobDeployClusterRole)
 			jobTask.JobInfo = clusterRole.DeepCopy()
+			jobTask.Bundle = bundle
 			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRole job for component %s: %s", component.Name, clusterRole.Name)
 		}
 		if clusterBinding, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+			if bundle != nil {
+				job.EnsureBundleLabels(clusterBinding, bundle.Name, component.Name)
+			}
 			jobTask := NewJobTask(
 				clusterBinding.Name,
 				component.Namespace,
@@ -315,6 +348,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			)
 			jobTask.JobType = string(config.JobDeployClusterRoleBinding)
 			jobTask.JobInfo = clusterBinding.DeepCopy()
+			jobTask.Bundle = bundle
 			setDeployTimeout(jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRoleBinding job for component %s: %s", component.Name, clusterBinding.Name)
@@ -350,6 +384,7 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	}
 
 	properties := ParseProperties(ctx, component.Properties)
+	bundle := job.ParseTraits(component.Traits).Bundle
 
 	switch component.ComponentType {
 	case config.ServerJob:
@@ -363,6 +398,7 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
+		jobTask.Bundle = bundle
 		setDeployTimeout(jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 
@@ -370,6 +406,7 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
+		jobTask.Bundle = bundle
 		setDeployTimeout(jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 	}
@@ -378,8 +415,27 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		svcJob.JobType = string(config.JobDeployService)
 		svcJob.JobInfo = job.GenerateService(component, &properties)
+		svcJob.Bundle = bundle
 		setDeployTimeout(svcJob)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
+	}
+
+	if bundle != nil {
+		kind, anchorName := job.BundleAnchor(bundle)
+		if strings.EqualFold(kind, "ConfigMap") && anchorName != "" {
+			anchor := &corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      anchorName,
+					Namespace: namespace,
+				},
+			}
+			job.EnsureBundleLabels(anchor, bundle.Name, "anchor")
+			anchorJob := NewJobTask(anchorName, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
+			anchorJob.JobType = string(config.JobDeployConfigMap)
+			anchorJob.JobInfo = anchor
+			anchorJob.Bundle = bundle
+			buckets[config.JobPriorityLow] = append(buckets[config.JobPriorityLow], anchorJob)
+		}
 	}
 
 	return buckets
@@ -405,6 +461,7 @@ func queueServiceJobs(
 		}
 		buckets[priority] = append(buckets[priority], jobTask)
 	}
+	bundle := job.ParseTraits(component.Traits).Bundle
 
 	// Traits may emit extra Kubernetes objects (PVC, Ingress, etc.). Schedule them
 	// ahead of the base workload so dependencies are ready before the deployment runs.
@@ -422,6 +479,7 @@ func queueServiceJobs(
 	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 	jobTask.JobType = string(jobType)
 	jobTask.JobInfo = result.Service
+	jobTask.Bundle = bundle
 	setDeployTimeout(jobTask)
 	appendJob(config.JobPriorityNormal, jobTask)
 }

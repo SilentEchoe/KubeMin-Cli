@@ -91,6 +91,18 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "deploy pvc job run error")
@@ -125,16 +137,32 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	var pvc *corev1.PersistentVolumeClaim
 	if p, ok := c.job.JobInfo.(*corev1.PersistentVolumeClaim); ok {
 		pvc = p
 	} else {
 		return fmt.Errorf("deploy pvc job info conversion type failure")
 	}
+	if pvc.Namespace == "" {
+		pvc.Namespace = c.job.Namespace
+	}
+	if bundle != nil {
+		EnsureBundleLabels(pvc, bundle.Name, c.job.Name)
+	}
 
 	// 检查PVC是否已存在
 	existingPVC, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
 	if err == nil {
+		if bundle != nil {
+			if !bundleOwns(existingPVC.Labels, bundle.Name) {
+				return fmt.Errorf("pvc %s/%s already exists but is not owned by bundle=%q", pvc.Namespace, pvc.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourcePVC, pvc.Namespace, pvc.Name)
+			logger.Info("Bundle PVC already exists; skipping update", "pvcName", pvc.Name)
+			return nil
+		}
 		// PVC已存在，检查是否需要更新
 		if c.shouldUpdatePVC(existingPVC, pvc) {
 			pvc.ResourceVersion = existingPVC.ResourceVersion

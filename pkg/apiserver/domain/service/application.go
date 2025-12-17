@@ -932,6 +932,11 @@ func (c *applicationsServiceImpl) CleanupApplicationResources(ctx context.Contex
 
 func (c *applicationsServiceImpl) deleteComponentResources(ctx context.Context, component *model.ApplicationComponent, reporter *cleanupReporter) error {
 	props := job.ParseProperties(component.Properties)
+	traits := job.ParseTraits(component.Traits)
+	if traits.Bundle != nil && strings.TrimSpace(traits.Bundle.Name) != "" {
+		klog.V(4).Infof("skip cleanup for shared bundle component %s/%s (bundle=%s)", component.Name, component.AppID, traits.Bundle.Name)
+		return nil
+	}
 	componentCopy := *component
 	if componentCopy.Namespace == "" {
 		componentCopy.Namespace = config.DefaultNamespace

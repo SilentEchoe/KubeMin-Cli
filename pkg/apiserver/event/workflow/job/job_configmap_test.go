@@ -56,6 +56,7 @@ func TestGenerateConfigMap(t *testing.T) {
 			Namespace: "kube-system",
 			URL:       "http://example.com/config.txt",
 			FileName:  "my-config-file.txt",
+			Labels:    map[string]string{config.LabelCli: "test-app-my-configmap-from-url", config.LabelAppID: "test-app", config.LabelComponentID: "2", config.LabelComponentName: "my-configmap-from-url"},
 		}
 		actual := GenerateConfigMap(component, properties)
 		if !reflect.DeepEqual(actual, expected) {

@@ -101,6 +101,18 @@ func (c *DeployJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		c.job.Error = err.Error()
@@ -137,8 +149,14 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 	)
 	if d, ok := c.job.JobInfo.(*appsv1.Deployment); ok {
 		deploy = d
-		deployName = buildWebServiceName(c.job.Name, c.job.AppID)
-		deploy.Name = deployName
+		deployName = deploy.Name
+		if deployName == "" {
+			deployName = buildWebServiceName(c.job.Name, c.job.AppID)
+			if bundleFromJob(c.job) != nil {
+				deployName = buildSharedWebServiceName(c.job.Name)
+			}
+			deploy.Name = deployName
+		}
 	} else {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
@@ -148,7 +166,16 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("failed to check deployment existence: %w", err)
 	}
 
+	bundle := bundleFromJob(c.job)
 	if isAlreadyExists {
+		if bundle != nil {
+			if !bundleOwns(deployLast.Labels, bundle.Name) {
+				return fmt.Errorf("deployment %s/%s already exists but is not owned by bundle=%q", deploy.Namespace, deployName, bundle.Name)
+			}
+			klog.Infof("Bundle Deployment %q already exists; skipping update.", deploy.Name)
+			markResourceObserved(ctx, config.ResourceDeployment, deploy.Namespace, deploy.Name)
+			return nil
+		}
 		//如果存在先进行对比，然后
 		if isDeploymentChanged(deployLast, deploy) {
 			deploy.ResourceVersion = deployLast.ResourceVersion // 必须设置才能更新
@@ -185,7 +212,14 @@ func (c *DeployJobCtl) updateServiceModuleImages(ctx context.Context) error {
 }
 
 func (c *DeployJobCtl) wait(ctx context.Context) error {
-	targetName := buildWebServiceName(c.job.Name, c.job.AppID)
+	targetName := c.job.Name
+	if deployObj, ok := c.job.JobInfo.(*appsv1.Deployment); ok && deployObj != nil && deployObj.Name != "" {
+		targetName = deployObj.Name
+	} else if bundleFromJob(c.job) != nil {
+		targetName = buildSharedWebServiceName(c.job.Name)
+	} else {
+		targetName = buildWebServiceName(c.job.Name, c.job.AppID)
+	}
 	timeout := time.Duration(c.timeout()) * time.Second
 
 	// 优先使用 Informer 事件驱动
@@ -214,7 +248,14 @@ func (c *DeployJobCtl) waitPolling(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	targetName := buildWebServiceName(c.job.Name, c.job.AppID)
+	targetName := c.job.Name
+	if deployObj, ok := c.job.JobInfo.(*appsv1.Deployment); ok && deployObj != nil && deployObj.Name != "" {
+		targetName = deployObj.Name
+	} else if bundleFromJob(c.job) != nil {
+		targetName = buildSharedWebServiceName(c.job.Name)
+	} else {
+		targetName = buildWebServiceName(c.job.Name, c.job.AppID)
+	}
 
 	for {
 		select {
@@ -286,6 +327,9 @@ func (c *DeployJobCtl) deploymentExists(ctx context.Context, name, namespaces st
 
 func GenerateWebService(component *model.ApplicationComponent, properties *model.Properties) *GenerateServiceResult {
 	deploymentName := buildWebServiceName(component.Name, component.AppID)
+	if bundleFromComponent(component) != nil {
+		deploymentName = buildSharedWebServiceName(component.Name)
+	}
 	containerName := utils.NormalizeLowerStrip(component.Name)
 	var ContainerPort []corev1.ContainerPort
 	for _, v := range properties.Ports {

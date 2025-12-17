@@ -96,6 +96,18 @@ func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack() // 通知工作流开始运行
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
 		c.job.Error = err.Error()
@@ -125,6 +137,8 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	//During execution, it is possible to determine which resources need to be created,
 	//but these resources are limited to those closely related to the components, such as PVC.
 	var statefulSet *appsv1.StatefulSet
@@ -134,10 +148,29 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
 	}
 
-	statefulSetName := buildStoreSeverName(c.job.Name, c.job.AppID)
-	statefulSet.Name = statefulSetName
+	statefulSetName := statefulSet.Name
+	if statefulSetName == "" {
+		statefulSetName = buildStoreSeverName(c.job.Name, c.job.AppID)
+		if bundle != nil {
+			statefulSetName = buildSharedStoreServerName(c.job.Name)
+		}
+		statefulSet.Name = statefulSetName
+	}
 	if statefulSet.Namespace == "" {
 		statefulSet.Namespace = c.namespace
+	}
+
+	if bundle != nil {
+		if existing, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Get(ctx, statefulSet.Name, metav1.GetOptions{}); err == nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("statefulset %s/%s already exists but is not owned by bundle=%q", statefulSet.Namespace, statefulSet.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceStatefulSet, statefulSet.Namespace, statefulSet.Name)
+			klog.Infof("Bundle StatefulSet %s/%s already exists; skipping create", statefulSet.Namespace, statefulSet.Name)
+			return nil
+		} else if err != nil && !errors.IsNotFound(err) {
+			return fmt.Errorf("get statefulset %s/%s failed: %w", statefulSet.Namespace, statefulSet.Name, err)
+		}
 	}
 
 	result, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Create(ctx, statefulSet, metav1.CreateOptions{})
@@ -151,7 +184,14 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 }
 
 func (c *DeployStatefulSetJobCtl) wait(ctx context.Context) error {
-	targetName := buildStoreSeverName(c.job.Name, c.job.AppID)
+	targetName := c.job.Name
+	if stsObj, ok := c.job.JobInfo.(*appsv1.StatefulSet); ok && stsObj != nil && stsObj.Name != "" {
+		targetName = stsObj.Name
+	} else if bundleFromJob(c.job) != nil {
+		targetName = buildSharedStoreServerName(c.job.Name)
+	} else {
+		targetName = buildStoreSeverName(c.job.Name, c.job.AppID)
+	}
 	timeout := time.Duration(c.timeout()) * time.Second
 
 	// 优先使用 Informer 事件驱动
@@ -180,7 +220,14 @@ func (c *DeployStatefulSetJobCtl) waitPolling(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	targetName := buildStoreSeverName(c.job.Name, c.job.AppID)
+	targetName := c.job.Name
+	if stsObj, ok := c.job.JobInfo.(*appsv1.StatefulSet); ok && stsObj != nil && stsObj.Name != "" {
+		targetName = stsObj.Name
+	} else if bundleFromJob(c.job) != nil {
+		targetName = buildSharedStoreServerName(c.job.Name)
+	} else {
+		targetName = buildStoreSeverName(c.job.Name, c.job.AppID)
+	}
 
 	for {
 		select {
@@ -218,6 +265,9 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 		component.Namespace = config.DefaultNamespace
 	}
 	statefulSetName := buildStoreSeverName(component.Name, component.AppID)
+	if bundleFromComponent(component) != nil {
+		statefulSetName = buildSharedStoreServerName(component.Name)
+	}
 	containerName := utils.NormalizeLowerStrip(component.Name)
 
 	properties := ParseProperties(component.Properties)

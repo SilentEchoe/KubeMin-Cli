@@ -91,6 +91,18 @@ func (c *DeployConfigMapJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployConfigMapJob run error")
 		c.job.Status = config.StatusFailed
@@ -144,9 +156,21 @@ func (c *DeployConfigMapJobCtl) deployExistingConfigMap(ctx context.Context, cm 
 
 func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.ConfigMap) error {
 	logger := klog.FromContext(ctx)
+	bundle := bundleFromJob(c.job)
+	if bundle != nil {
+		EnsureBundleLabels(cm, bundle.Name, c.job.Name)
+	}
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
 	// Update if exists, create if not.
 	if existing, err := cli.Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("configmap %s/%s already exists but is not owned by bundle=%q", cm.Namespace, cm.Name, bundle.Name)
+			}
+			logger.Info("Bundle ConfigMap already exists; skipping update", "namespace", cm.Namespace, "name", cm.Name, "bundle", bundle.Name)
+			markResourceObserved(ctx, config.ResourceConfigMap, cm.Namespace, cm.Name)
+			return nil
+		}
 		// When updating, the ResourceVersion needs to be carried.
 		cm.ResourceVersion = existing.ResourceVersion
 		if _, err := cli.Update(ctx, cm, metav1.UpdateOptions{}); err != nil {
@@ -186,12 +210,13 @@ func GenerateConfigMap(component *model.ApplicationComponent, properties *model.
 			if fn, ok := properties.Conf["config.fileName"]; ok && fn != "" {
 				fileName = fn
 			}
+			labels := BuildLabels(component, properties)
 			return &model.ConfigMapInput{
 				Name:      name,
 				Namespace: namespace,
 				URL:       url,
 				FileName:  fileName,
-				Labels:    properties.Labels,
+				Labels:    labels,
 			}
 		}
 	}

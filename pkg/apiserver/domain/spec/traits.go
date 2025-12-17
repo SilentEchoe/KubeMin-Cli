@@ -14,6 +14,25 @@ type Traits struct {
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
 	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
 	Resources *ResourceTraitsSpec `json:"resources,omitempty"`
+	Bundle    *BundleTraitSpec    `json:"bundle,omitempty"`
+}
+
+// BundleTraitSpec declares that the component belongs to a namespace-scoped shared bundle.
+// When used, the system should treat matching resources as "create-once": create if absent,
+// skip updates, and avoid coupling lifecycle to any single application.
+type BundleTraitSpec struct {
+	// Name is the logical bundle identifier. All resources in the bundle should be labeled with it.
+	Name string `json:"name"`
+	// Anchor identifies the resource used to determine whether the bundle is already installed.
+	// If the anchor exists (and matches the bundle label), bundle jobs are skipped.
+	Anchor BundleAnchorSpec `json:"anchor,omitempty"`
+}
+
+// BundleAnchorSpec identifies a Kubernetes resource used as a bundle anchor.
+// Supported kinds: "ConfigMap", "Deployment".
+type BundleAnchorSpec struct {
+	Kind string `json:"kind,omitempty"`
+	Name string `json:"name,omitempty"`
 }
 
 // InitTraitSpec describes an init container with its own nested traits.

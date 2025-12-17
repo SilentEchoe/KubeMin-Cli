@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"KubeMin-Cli/pkg/apiserver/config"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 )
 
 func init() {
@@ -43,7 +44,8 @@ type JobTask struct {
 	EndTime    int64
 	Error      string
 	Timeout    int64
-	RetryCount int //重试次数
+	RetryCount int                   //重试次数
+	Bundle     *spec.BundleTraitSpec `json:"bundle,omitempty"`
 }
 
 func (j *JobInfo) PrimaryKey() string {

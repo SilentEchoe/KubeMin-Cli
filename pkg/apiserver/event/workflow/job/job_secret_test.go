@@ -57,6 +57,7 @@ func TestGenerateSecret(t *testing.T) {
 			Namespace: "kube-system",
 			URL:       "http://example.com/config",
 			FileName:  "my-config-file",
+			Labels:    map[string]string{config.LabelCli: "test-app-my-secret-from-url", config.LabelAppID: "test-app", config.LabelComponentID: "2", config.LabelComponentName: "my-secret-from-url"},
 		}
 		actual := GenerateSecret(component, properties)
 		if !reflect.DeepEqual(actual, expected) {

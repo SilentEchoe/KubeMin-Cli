@@ -95,6 +95,18 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		klog.Errorf("DeployServiceJob run error: %v", err)
@@ -127,6 +139,8 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	service, ok := c.job.JobInfo.(*applyv1.ServiceApplyConfiguration)
 	if !ok {
 		return fmt.Errorf("job.JobInfo is not a *applyv1.ServiceApplyConfiguration (actual type: %T)", c.job.JobInfo)
@@ -139,13 +153,22 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	name := *service.Name
 	namespace := *service.Namespace
 
-	if _, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+	existing, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			MarkResourceCreated(ctx, config.ResourceService, namespace, name)
 		} else {
 			return fmt.Errorf("check service existence failed: %w", err)
 		}
 	} else {
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("service %s/%s already exists but is not owned by bundle=%q", namespace, name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceService, namespace, name)
+			klog.InfoS("Bundle Service already exists; skipping update", "namespace", namespace, "name", name, "bundle", bundle.Name)
+			return nil
+		}
 		markResourceObserved(ctx, config.ResourceService, namespace, name)
 	}
 
@@ -178,7 +201,10 @@ func (c *DeployServiceJobCtl) wait(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
-	serviceName := buildServiceName(c.job.Name, c.job.AppID)
+	serviceName := c.job.Name
+	if svc, ok := c.job.JobInfo.(*applyv1.ServiceApplyConfiguration); ok && svc != nil && svc.Name != nil && *svc.Name != "" {
+		serviceName = *svc.Name
+	}
 	for {
 		select {
 		case <-ctx.Done():
@@ -237,9 +263,12 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 
 	labels := BuildLabels(component, properties)
 
-	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
+	selectorLabel := map[string]string{config.LabelAppID: labels[config.LabelAppID]}
 
 	serviceName := buildServiceName(component.Name, component.AppID)
+	if bundleFromComponent(component) != nil {
+		serviceName = buildSharedServiceName(component.Name)
+	}
 	svc := applyv1.Service(serviceName, component.Namespace).
 		WithLabels(labels).
 		WithSpec(applyv1.ServiceSpec().

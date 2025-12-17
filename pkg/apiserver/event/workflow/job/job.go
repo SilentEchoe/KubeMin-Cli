@@ -365,12 +365,36 @@ func ParseProperties(properties *model.JSONStruct) model.Properties {
 	return propertied
 }
 
+func ParseTraits(traits *model.JSONStruct) model.Traits {
+	if traits == nil {
+		return model.Traits{}
+	}
+	b, err := json.Marshal(traits)
+	if err != nil {
+		klog.Errorf("Component.Traits deserialization failure: %s", err)
+		return model.Traits{}
+	}
+	var parsed model.Traits
+	if err := json.Unmarshal(b, &parsed); err != nil {
+		klog.Errorf("Component.Traits unmarshal failure: %s", err)
+		return model.Traits{}
+	}
+	return parsed
+}
+
 func BuildLabels(c *model.ApplicationComponent, p *model.Properties) map[string]string {
-	labels := map[string]string{
-		config.LabelCli:           fmt.Sprintf("%s-%s", c.AppID, c.Name),
-		config.LabelComponentID:   fmt.Sprintf("%d", c.ID),
-		config.LabelAppID:         c.AppID,
-		config.LabelComponentName: c.Name,
+	bundle := bundleFromComponent(c)
+
+	labels := map[string]string{}
+	if bundle != nil && bundle.Name != "" {
+		labels[config.LabelAppID] = bundleAppID(bundle.Name)
+		labels[config.LabelBundle] = bundle.Name
+		labels[config.LabelBundleMember] = c.Name
+	} else {
+		labels[config.LabelCli] = fmt.Sprintf("%s-%s", c.AppID, c.Name)
+		labels[config.LabelComponentID] = fmt.Sprintf("%d", c.ID)
+		labels[config.LabelAppID] = c.AppID
+		labels[config.LabelComponentName] = c.Name
 	}
 	if p != nil {
 		for k, v := range p.Labels {

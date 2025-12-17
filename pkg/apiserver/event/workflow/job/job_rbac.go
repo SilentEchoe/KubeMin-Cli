@@ -85,6 +85,18 @@ func (c *DeployServiceAccountJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployServiceAccountJob run error")
@@ -103,6 +115,8 @@ func (c *DeployServiceAccountJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	sa, ok := c.job.JobInfo.(*corev1.ServiceAccount)
 	if !ok {
 		return fmt.Errorf("job info is not *corev1.ServiceAccount")
@@ -111,12 +125,25 @@ func (c *DeployServiceAccountJobCtl) run(ctx context.Context) error {
 	if sa.Namespace == "" {
 		sa.Namespace = c.job.Namespace
 	}
-	ensureManagedLabel(sa, c.job.AppID)
+	managedID := c.job.AppID
+	if bundle != nil {
+		EnsureBundleLabels(sa, bundle.Name, c.job.Name)
+		managedID = bundleAppID(bundle.Name)
+	}
+	ensureManagedLabel(sa, managedID)
 
 	cli := c.client.CoreV1().ServiceAccounts(sa.Namespace)
 	existing, err := cli.Get(ctx, sa.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("serviceaccount %s/%s already exists but is not owned by bundle=%q", sa.Namespace, sa.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceServiceAccount, sa.Namespace, sa.Name)
+			logger.Info("Bundle ServiceAccount already exists; skipping update", "namespace", sa.Namespace, "name", sa.Name, "bundle", bundle.Name)
+			return nil
+		}
 		if !isManagedResource(existing, c.job.AppID) {
 			logger.Info("serviceAccount exists but is not managed; skipping update", "namespace", sa.Namespace, "name", sa.Name)
 			markResourceObserved(ctx, config.ResourceServiceAccount, sa.Namespace, sa.Name)
@@ -212,6 +239,18 @@ func (c *DeployRoleJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployRoleJob run error")
@@ -230,6 +269,8 @@ func (c *DeployRoleJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	role, ok := c.job.JobInfo.(*rbacv1.Role)
 	if !ok {
 		return fmt.Errorf("job info is not *rbacv1.Role")
@@ -237,12 +278,25 @@ func (c *DeployRoleJobCtl) run(ctx context.Context) error {
 	if role.Namespace == "" {
 		role.Namespace = c.job.Namespace
 	}
-	ensureManagedLabel(role, c.job.AppID)
+	managedID := c.job.AppID
+	if bundle != nil {
+		EnsureBundleLabels(role, bundle.Name, c.job.Name)
+		managedID = bundleAppID(bundle.Name)
+	}
+	ensureManagedLabel(role, managedID)
 
 	cli := c.client.RbacV1().Roles(role.Namespace)
 	existing, err := cli.Get(ctx, role.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("role %s/%s already exists but is not owned by bundle=%q", role.Namespace, role.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceRole, role.Namespace, role.Name)
+			logger.Info("Bundle Role already exists; skipping update", "namespace", role.Namespace, "name", role.Name, "bundle", bundle.Name)
+			return nil
+		}
 		if !isManagedResource(existing, c.job.AppID) {
 			logger.Info("role exists but is not managed; skipping update", "namespace", role.Namespace, "name", role.Name)
 			markResourceObserved(ctx, config.ResourceRole, role.Namespace, role.Name)
@@ -336,6 +390,18 @@ func (c *DeployRoleBindingJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployRoleBindingJob run error")
@@ -354,6 +420,8 @@ func (c *DeployRoleBindingJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	binding, ok := c.job.JobInfo.(*rbacv1.RoleBinding)
 	if !ok {
 		return fmt.Errorf("job info is not *rbacv1.RoleBinding")
@@ -361,12 +429,25 @@ func (c *DeployRoleBindingJobCtl) run(ctx context.Context) error {
 	if binding.Namespace == "" {
 		binding.Namespace = c.job.Namespace
 	}
-	ensureManagedLabel(binding, c.job.AppID)
+	managedID := c.job.AppID
+	if bundle != nil {
+		EnsureBundleLabels(binding, bundle.Name, c.job.Name)
+		managedID = bundleAppID(bundle.Name)
+	}
+	ensureManagedLabel(binding, managedID)
 
 	cli := c.client.RbacV1().RoleBindings(binding.Namespace)
 	existing, err := cli.Get(ctx, binding.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("rolebinding %s/%s already exists but is not owned by bundle=%q", binding.Namespace, binding.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceRoleBinding, binding.Namespace, binding.Name)
+			logger.Info("Bundle RoleBinding already exists; skipping update", "namespace", binding.Namespace, "name", binding.Name, "bundle", bundle.Name)
+			return nil
+		}
 		if !isManagedResource(existing, c.job.AppID) {
 			logger.Info("roleBinding exists but is not managed; skipping update", "namespace", binding.Namespace, "name", binding.Name)
 			markResourceObserved(ctx, config.ResourceRoleBinding, binding.Namespace, binding.Name)
@@ -456,6 +537,18 @@ func (c *DeployClusterRoleJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployClusterRoleJob run error")
@@ -474,16 +567,31 @@ func (c *DeployClusterRoleJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	role, ok := c.job.JobInfo.(*rbacv1.ClusterRole)
 	if !ok {
 		return fmt.Errorf("job info is not *rbacv1.ClusterRole")
 	}
-	ensureManagedLabel(role, c.job.AppID)
+	managedID := c.job.AppID
+	if bundle != nil {
+		EnsureBundleLabels(role, bundle.Name, c.job.Name)
+		managedID = bundleAppID(bundle.Name)
+	}
+	ensureManagedLabel(role, managedID)
 
 	cli := c.client.RbacV1().ClusterRoles()
 	existing, err := cli.Get(ctx, role.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("clusterrole %s already exists but is not owned by bundle=%q", role.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceClusterRole, "", role.Name)
+			logger.Info("Bundle ClusterRole already exists; skipping update", "name", role.Name, "bundle", bundle.Name)
+			return nil
+		}
 		if !isManagedResource(existing, c.job.AppID) {
 			logger.Info("clusterRole exists but is not managed; skipping update", "name", role.Name)
 			markResourceObserved(ctx, config.ResourceClusterRole, "", role.Name)
@@ -573,6 +681,18 @@ func (c *DeployClusterRoleBindingJobCtl) Run(ctx context.Context) error {
 	c.job.Status = config.StatusRunning
 	c.job.Error = ""
 	c.ack()
+	if bundle := bundleFromJob(c.job); bundle != nil {
+		skip, err := shouldSkipBundleJob(ctx, c.client, c.job.Namespace, bundle)
+		if err != nil {
+			return err
+		}
+		if skip {
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if err := c.run(ctx); err != nil {
 		logger.Error(err, "DeployClusterRoleBindingJob run error")
@@ -591,16 +711,31 @@ func (c *DeployClusterRoleBindingJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("client is nil")
 	}
 
+	bundle := bundleFromJob(c.job)
+
 	binding, ok := c.job.JobInfo.(*rbacv1.ClusterRoleBinding)
 	if !ok {
 		return fmt.Errorf("job info is not *rbacv1.ClusterRoleBinding")
 	}
-	ensureManagedLabel(binding, c.job.AppID)
+	managedID := c.job.AppID
+	if bundle != nil {
+		EnsureBundleLabels(binding, bundle.Name, c.job.Name)
+		managedID = bundleAppID(bundle.Name)
+	}
+	ensureManagedLabel(binding, managedID)
 
 	cli := c.client.RbacV1().ClusterRoleBindings()
 	existing, err := cli.Get(ctx, binding.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
+		if bundle != nil {
+			if !bundleOwns(existing.Labels, bundle.Name) {
+				return fmt.Errorf("clusterrolebinding %s already exists but is not owned by bundle=%q", binding.Name, bundle.Name)
+			}
+			markResourceObserved(ctx, config.ResourceClusterRoleBinding, "", binding.Name)
+			logger.Info("Bundle ClusterRoleBinding already exists; skipping update", "name", binding.Name, "bundle", bundle.Name)
+			return nil
+		}
 		if !isManagedResource(existing, c.job.AppID) {
 			logger.Info("clusterRoleBinding exists but is not managed; skipping update", "name", binding.Name)
 			markResourceObserved(ctx, config.ResourceClusterRoleBinding, "", binding.Name)
