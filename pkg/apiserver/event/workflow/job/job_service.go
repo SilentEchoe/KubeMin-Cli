@@ -263,7 +263,13 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 
 	labels := BuildLabels(component, properties)
 
-	selectorLabel := map[string]string{config.LabelAppID: labels[config.LabelAppID]}
+	selectorLabel := map[string]string{config.LabelAppID: component.AppID}
+	if bundleFromComponent(component) != nil {
+		selectorLabel = map[string]string{
+			config.LabelBundle:       labels[config.LabelBundle],
+			config.LabelBundleMember: labels[config.LabelBundleMember],
+		}
+	}
 
 	serviceName := buildServiceName(component.Name, component.AppID)
 	if bundleFromComponent(component) != nil {

@@ -249,7 +249,7 @@ func GenerateSecret(component *model.ApplicationComponent, properties *model.Pro
 		namespace = config.DefaultNamespace
 	}
 
-	if properties != nil && properties.Secret != nil {
+	if properties != nil && properties.Conf != nil {
 		if url, ok := properties.Conf["config.url"]; ok && url != "" {
 			fileName := "config"
 			if fn, ok := properties.Conf["config.fileName"]; ok && fn != "" {
