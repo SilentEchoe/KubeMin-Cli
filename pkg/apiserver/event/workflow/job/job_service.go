@@ -269,6 +269,8 @@ func GenerateService(component *model.ApplicationComponent, properties *model.Pr
 			config.LabelBundle:       labels[config.LabelBundle],
 			config.LabelBundleMember: labels[config.LabelBundleMember],
 		}
+	} else {
+		selectorLabel[config.LabelComponentName] = component.Name
 	}
 
 	serviceName := buildServiceName(component.Name, component.AppID)
