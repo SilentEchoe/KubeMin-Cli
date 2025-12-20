@@ -107,6 +107,11 @@ func (c *DeployServiceJobCtl) Run(ctx context.Context) error {
 		return err
 	}
 
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
+
 	if err := c.wait(ctx); err != nil {
 		c.job.Error = err.Error()
 		if statusErr, ok := ExtractStatusError(err); ok {
@@ -139,13 +144,41 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	name := *service.Name
 	namespace := *service.Namespace
 
-	if _, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
+	shareName, shareStrategy := shareInfoFromLabels(service.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		klog.Infof("Service %s/%s marked as shared ignore; skipping", namespace, name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := c.client.CoreV1().Services(namespace).List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared services failed: %w", err)
+		}
+		if exists {
+			klog.Infof("Service %s/%s already exists and is shared; skipping", namespace, name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
+
+	if existing, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {
 		if k8serrors.IsNotFound(err) {
 			MarkResourceCreated(ctx, config.ResourceService, namespace, name)
 		} else {
 			return fmt.Errorf("check service existence failed: %w", err)
 		}
-	} else {
+	} else if existing != nil {
 		markResourceObserved(ctx, config.ResourceService, namespace, name)
 	}
 

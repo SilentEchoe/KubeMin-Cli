@@ -19,6 +19,8 @@ const (
 	LabelComponentID   = "kube-min-cli-componentId"
 	LabelComponentName = "kube-min-cli-componentName"
 	LabelStorageRole   = "storage.kubemin.cli/pvc-role"
+	LabelShareName     = "kubemin-share-name"
+	LabelShareStrategy = "kubemin-share-strategy"
 )
 
 type JobRunPolicy string
@@ -27,6 +29,7 @@ type JobErrorPolicy string
 type WorkflowTaskType string
 type WorkflowMode string
 type Status string
+type ShareStrategy string
 
 func (s Status) ToLower() Status {
 	return Status(strings.ToLower(string(s)))
@@ -73,6 +76,10 @@ const (
 
 	WorkflowModeStepByStep WorkflowMode = "StepByStep"
 	WorkflowModeDAG        WorkflowMode = "DAG"
+
+	ShareStrategyDefault ShareStrategy = "default"
+	ShareStrategyIgnore  ShareStrategy = "ignore"
+	ShareStrategyForce   ShareStrategy = "force"
 
 	WaitingTasksQueryTimeout      = 5 * time.Second
 	TaskStateTransitionTimeout    = 5 * time.Second

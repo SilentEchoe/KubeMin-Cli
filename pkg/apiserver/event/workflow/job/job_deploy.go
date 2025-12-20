@@ -112,6 +112,11 @@ func (c *DeployJobCtl) Run(ctx context.Context) error {
 		return err
 	}
 
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
+
 	if err := c.wait(ctx); err != nil {
 		c.job.Error = err.Error()
 		if statusErr, ok := ExtractStatusError(err); ok {
@@ -141,6 +146,34 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 		deploy.Name = deployName
 	} else {
 		return fmt.Errorf("deploy Job Job.Info Conversion type failure")
+	}
+
+	shareName, shareStrategy := shareInfoFromLabels(deploy.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		klog.Infof("Deployment %q marked as shared ignore; skipping", deploy.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := c.client.AppsV1().Deployments(deploy.Namespace).List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared deployments failed: %w", err)
+		}
+		if exists {
+			klog.Infof("Deployment %q already exists and is shared; skipping", deploy.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
 	}
 
 	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deployName, deploy.Namespace)

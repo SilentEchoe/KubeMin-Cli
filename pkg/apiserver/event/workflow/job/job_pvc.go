@@ -103,6 +103,11 @@ func (c *DeployPVCJobCtl) Run(ctx context.Context) error {
 		return err
 	}
 
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
+
 	if err := c.wait(ctx); err != nil {
 		logger.Error(err, "deploy pvc wait error")
 		c.job.Error = err.Error()
@@ -133,6 +138,34 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 	}
 
 	// 检查PVC是否已存在
+	shareName, shareStrategy := shareInfoFromLabels(pvc.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("pvc marked as shared ignore; skipping", "pvcName", pvc.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared pvc failed: %w", err)
+		}
+		if exists {
+			logger.Info("pvc already exists and is shared; skipping", "pvcName", pvc.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
+
 	existingPVC, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})
 	if err == nil {
 		// PVC已存在，检查是否需要更新

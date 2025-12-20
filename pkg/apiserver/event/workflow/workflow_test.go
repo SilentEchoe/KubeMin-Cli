@@ -14,6 +14,7 @@ import (
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	"KubeMin-Cli/pkg/apiserver/utils"
 	wfNaming "KubeMin-Cli/pkg/apiserver/workflow/naming"
@@ -455,4 +456,64 @@ func TestSecretJobNameNormalization(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, expectedName, secretInput.Name)
 	require.Equal(t, config.DefaultNamespace, secretInput.Namespace)
+}
+
+func TestBuildJobsForComponent_ShareIgnoreSkipsJobs(t *testing.T) {
+	traitsJSON, err := model.NewJSONStructByStruct(spec.Traits{
+		Share: &spec.ShareTraitSpec{
+			Strategy: string(config.ShareStrategyIgnore),
+		},
+	})
+	require.NoError(t, err)
+
+	component := &model.ApplicationComponent{
+		Name:          "proxy",
+		AppID:         "app-share",
+		Namespace:     "default",
+		ComponentType: config.ServerJob,
+		Traits:        traitsJSON,
+	}
+	task := &model.WorkflowQueue{
+		WorkflowID: "wf-share",
+		ProjectID:  "proj-share",
+		AppID:      component.AppID,
+		TaskID:     "task-share",
+	}
+
+	buckets := buildJobsForComponent(context.Background(), component, task, int64(config.DefaultJobTaskTimeout))
+	require.Greater(t, countJobs(buckets), 0)
+	for _, jobs := range buckets {
+		for _, job := range jobs {
+			require.Equal(t, config.StatusSkipped, job.Status)
+		}
+	}
+}
+
+func TestCreateObjectJobsFromResult_ShareIgnoreSkipsAdditionalJobs(t *testing.T) {
+	traitsJSON, err := model.NewJSONStructByStruct(spec.Traits{
+		Share: &spec.ShareTraitSpec{
+			Strategy: string(config.ShareStrategyIgnore),
+		},
+	})
+	require.NoError(t, err)
+
+	component := &model.ApplicationComponent{
+		Name:          "cache",
+		AppID:         "app-share",
+		Namespace:     "demo",
+		ComponentType: config.StoreJob,
+		Traits:        traitsJSON,
+	}
+	task := &model.WorkflowQueue{
+		WorkflowID: "wf-share",
+		ProjectID:  "proj-share",
+		AppID:      component.AppID,
+		TaskID:     "task-share",
+	}
+
+	pvc := &corev1.PersistentVolumeClaim{ObjectMeta: metav1.ObjectMeta{Name: "data"}}
+	jobs, err := CreateObjectJobsFromResult([]client.Object{pvc}, component, task, nil, int64(config.DefaultJobTaskTimeout))
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	require.Equal(t, config.StatusSkipped, jobs[0].Status)
 }

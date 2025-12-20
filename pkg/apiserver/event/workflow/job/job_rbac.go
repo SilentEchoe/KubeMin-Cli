@@ -92,6 +92,10 @@ func (c *DeployServiceAccountJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -114,6 +118,33 @@ func (c *DeployServiceAccountJobCtl) run(ctx context.Context) error {
 	ensureManagedLabel(sa, c.job.AppID)
 
 	cli := c.client.CoreV1().ServiceAccounts(sa.Namespace)
+	shareName, shareStrategy := shareInfoFromLabels(sa.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("serviceAccount marked as shared ignore; skipping", "namespace", sa.Namespace, "name", sa.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared serviceAccounts failed: %w", err)
+		}
+		if exists {
+			logger.Info("serviceAccount already exists and is shared; skipping", "namespace", sa.Namespace, "name", sa.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	existing, err := cli.Get(ctx, sa.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -219,6 +250,10 @@ func (c *DeployRoleJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -240,6 +275,33 @@ func (c *DeployRoleJobCtl) run(ctx context.Context) error {
 	ensureManagedLabel(role, c.job.AppID)
 
 	cli := c.client.RbacV1().Roles(role.Namespace)
+	shareName, shareStrategy := shareInfoFromLabels(role.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("role marked as shared ignore; skipping", "namespace", role.Namespace, "name", role.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared roles failed: %w", err)
+		}
+		if exists {
+			logger.Info("role already exists and is shared; skipping", "namespace", role.Namespace, "name", role.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	existing, err := cli.Get(ctx, role.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -343,6 +405,10 @@ func (c *DeployRoleBindingJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -364,6 +430,33 @@ func (c *DeployRoleBindingJobCtl) run(ctx context.Context) error {
 	ensureManagedLabel(binding, c.job.AppID)
 
 	cli := c.client.RbacV1().RoleBindings(binding.Namespace)
+	shareName, shareStrategy := shareInfoFromLabels(binding.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("roleBinding marked as shared ignore; skipping", "namespace", binding.Namespace, "name", binding.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared roleBindings failed: %w", err)
+		}
+		if exists {
+			logger.Info("roleBinding already exists and is shared; skipping", "namespace", binding.Namespace, "name", binding.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	existing, err := cli.Get(ctx, binding.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -463,6 +556,10 @@ func (c *DeployClusterRoleJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -481,6 +578,33 @@ func (c *DeployClusterRoleJobCtl) run(ctx context.Context) error {
 	ensureManagedLabel(role, c.job.AppID)
 
 	cli := c.client.RbacV1().ClusterRoles()
+	shareName, shareStrategy := shareInfoFromLabels(role.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("clusterRole marked as shared ignore; skipping", "name", role.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared clusterRoles failed: %w", err)
+		}
+		if exists {
+			logger.Info("clusterRole already exists and is shared; skipping", "name", role.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	existing, err := cli.Get(ctx, role.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:
@@ -580,6 +704,10 @@ func (c *DeployClusterRoleBindingJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -598,6 +726,33 @@ func (c *DeployClusterRoleBindingJobCtl) run(ctx context.Context) error {
 	ensureManagedLabel(binding, c.job.AppID)
 
 	cli := c.client.RbacV1().ClusterRoleBindings()
+	shareName, shareStrategy := shareInfoFromLabels(binding.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("clusterRoleBinding marked as shared ignore; skipping", "name", binding.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared clusterRoleBindings failed: %w", err)
+		}
+		if exists {
+			logger.Info("clusterRoleBinding already exists and is shared; skipping", "name", binding.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 	existing, err := cli.Get(ctx, binding.Name, metav1.GetOptions{})
 	switch {
 	case err == nil:

@@ -19,13 +19,14 @@ type ConfigMapData struct {
 // SecretInput : 与 ConfigMapInput 类似，支持 Data 或 URL（URL 下载后作为单文件注入）。
 // 注意：Secret 的值需为字节；通过 StringData 便捷传入。
 type SecretInput struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Type      string            `json:"type,omitempty"`
-	Data      map[string]string `json:"data,omitempty"`
-	URL       string            `json:"url,omitempty"`
-	FileName  string            `json:"fileName,omitempty"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Type        string            `json:"type,omitempty"`
+	Data        map[string]string `json:"data,omitempty"`
+	URL         string            `json:"url,omitempty"`
+	FileName    string            `json:"fileName,omitempty"`
 }
 
 func ExtractFileNameFromURLForSecret(url string) string {
@@ -47,12 +48,13 @@ func ExtractFileNameFromURLForSecret(url string) string {
 
 // ConfigMapInput : 简化的声明，仅支持 Data 或 URL 二选一
 type ConfigMapInput struct {
-	Name      string            `json:"name"`
-	Namespace string            `json:"namespace"`
-	Labels    map[string]string `json:"labels,omitempty"`
-	Data      map[string]string `json:"data,omitempty"`
-	URL       string            `json:"url,omitempty"`
-	FileName  string            `json:"fileName,omitempty"`
+	Name        string            `json:"name"`
+	Namespace   string            `json:"namespace"`
+	Labels      map[string]string `json:"labels,omitempty"`
+	Annotations map[string]string `json:"annotations,omitempty"`
+	Data        map[string]string `json:"data,omitempty"`
+	URL         string            `json:"url,omitempty"`
+	FileName    string            `json:"fileName,omitempty"`
 }
 
 // GenerateConf 根据 Data 或 URL 生成标准 ConfigMapData
@@ -79,10 +81,11 @@ func (s *ConfigMapInput) GenerateConf() (*ConfigMapData, error) {
 			return nil, fmt.Errorf("total ConfigMap data size %d bytes exceeds maximum size %d bytes", totalSize, utils.ConfigMapMaxSize)
 		}
 		return &ConfigMapData{
-			Name:      s.Name,
-			Namespace: s.Namespace,
-			Labels:    s.Labels,
-			Data:      s.Data,
+			Name:        s.Name,
+			Namespace:   s.Namespace,
+			Labels:      s.Labels,
+			Annotations: s.Annotations,
+			Data:        s.Data,
 		}, nil
 	}
 
@@ -102,10 +105,11 @@ func (s *ConfigMapInput) GenerateConf() (*ConfigMapData, error) {
 		fileName = extractFileNameFromURLSimple(s.URL)
 	}
 	return &ConfigMapData{
-		Name:      s.Name,
-		Namespace: s.Namespace,
-		Labels:    s.Labels,
-		Data:      map[string]string{fileName: string(body)},
+		Name:        s.Name,
+		Namespace:   s.Namespace,
+		Labels:      s.Labels,
+		Annotations: s.Annotations,
+		Data:        map[string]string{fileName: string(body)},
 	}, nil
 }
 

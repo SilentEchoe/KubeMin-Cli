@@ -6,6 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/fake"
 
@@ -78,6 +79,48 @@ func TestDeployServiceAccountJobCtl_SkipUnmanaged(t *testing.T) {
 	}
 	if _, ok := after.Labels[config.LabelCli]; ok {
 		t.Fatalf("expected unmanaged service account to remain unchanged, got labels %v", after.Labels)
+	}
+}
+
+func TestDeployServiceAccountJobCtl_ShareDefaultSkipsWhenExists(t *testing.T) {
+	shareName := "proxy-webservice"
+	existing := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "shared-proxy",
+			Namespace: "ops",
+			Labels: map[string]string{
+				config.LabelShareName: shareName,
+			},
+		},
+	}
+	client := fake.NewSimpleClientset(existing)
+	jobTask := &model.JobTask{
+		Name:      "proxy-sa",
+		Namespace: "ops",
+		AppID:     "app-1",
+		JobType:   string(config.JobDeployServiceAccount),
+		JobInfo: &corev1.ServiceAccount{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "proxy-sa",
+				Namespace: "ops",
+				Labels: map[string]string{
+					config.LabelShareName:     shareName,
+					config.LabelShareStrategy: string(config.ShareStrategyDefault),
+				},
+			},
+		},
+	}
+	ctl := NewDeployServiceAccountJobCtl(jobTask, client, &noopStore{}, func() {})
+	ctx := WithCleanupTracker(context.Background())
+
+	if err := ctl.Run(ctx); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+	if jobTask.Status != config.StatusSkipped {
+		t.Fatalf("expected job status skipped, got %s", jobTask.Status)
+	}
+	if _, err := client.CoreV1().ServiceAccounts("ops").Get(context.Background(), "proxy-sa", metav1.GetOptions{}); err == nil || !k8serrors.IsNotFound(err) {
+		t.Fatalf("expected shared service account job to skip create, got err=%v", err)
 	}
 }
 

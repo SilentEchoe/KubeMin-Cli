@@ -128,7 +128,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 			job.RunJobs(ctx, tasksInPriority, stepConcurrency, w.Client, w.Store, w.ack, stopOnFailure)
 
 			for _, task := range tasksInPriority {
-				if task.Status != config.StatusCompleted {
+				if !isJobSuccessStatus(task.Status) {
 					err := fmt.Errorf("workflow %s failed at job %s (status=%s)", workflowName, task.Name, task.Status)
 					logger.Error(err, "Workflow failed at job, aborting.", "step", stepExec.Name, "priority", priority, "jobName", task.Name, "jobStatus", task.Status)
 					w.setStatus(config.StatusFailed)
@@ -144,6 +144,10 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
 	span.SetStatus(codes.Ok, "Workflow completed successfully")
 	w.updateWorkflowStatus(ctx)
 	return nil
+}
+
+func isJobSuccessStatus(status config.Status) bool {
+	return status == config.StatusCompleted || status == config.StatusSkipped || status == config.StatusPassed
 }
 
 func (w *WorkflowCtl) updateWorkflowStatus(ctx context.Context) {

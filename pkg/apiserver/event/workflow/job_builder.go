@@ -179,6 +179,8 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 		return jobs, nil
 	}
 
+	share := shareConfigForComponent(component)
+
 	for _, obj := range additionalObjects {
 		if pvc, ok := obj.(*corev1.PersistentVolumeClaim); ok {
 			ns := pvc.Namespace
@@ -186,6 +188,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				ns = component.Namespace
 				pvc.Namespace = ns
 			}
+			applyShareLabelsToObject(pvc, share)
 			pvcJob := NewJobTask(
 				pvc.Name,
 				ns,
@@ -198,6 +201,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			pvcJob.JobType = string(config.JobDeployPVC)
 			pvcJob.JobInfo = pvc
 			setDeployTimeout(pvcJob)
+			markJobSkippedIfIgnored(share, pvcJob)
 
 			jobs = append(jobs, pvcJob)
 			klog.Infof("Created PVC job for component %s: %s", component.Name, pvc.Name)
@@ -209,6 +213,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			if ingress.Namespace == "" {
 				ingress.Namespace = component.Namespace
 			}
+			applyShareLabelsToObject(ingress, share)
 			ingressJob := NewJobTask(
 				ingress.Name,
 				ingress.Namespace,
@@ -221,6 +226,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			ingressJob.JobType = string(config.JobDeployIngress)
 			ingressJob.JobInfo = ingress
 			setDeployTimeout(ingressJob)
+			markJobSkippedIfIgnored(share, ingressJob)
 			jobs = append(jobs, ingressJob)
 			klog.Infof("Created Ingress job for component %s: %s", component.Name, ingress.Name)
 		}
@@ -230,6 +236,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				ns = component.Namespace
 				sa.Namespace = ns
 			}
+			applyShareLabelsToObject(sa, share)
 			jobTask := NewJobTask(
 				sa.Name,
 				ns,
@@ -242,6 +249,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobTask.JobType = string(config.JobDeployServiceAccount)
 			jobTask.JobInfo = sa.DeepCopy()
 			setDeployTimeout(jobTask)
+			markJobSkippedIfIgnored(share, jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ServiceAccount job for component %s: %s/%s", component.Name, ns, sa.Name)
 		}
@@ -251,6 +259,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				ns = component.Namespace
 				role.Namespace = ns
 			}
+			applyShareLabelsToObject(role, share)
 			jobTask := NewJobTask(
 				role.Name,
 				ns,
@@ -263,6 +272,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobTask.JobType = string(config.JobDeployRole)
 			jobTask.JobInfo = role.DeepCopy()
 			setDeployTimeout(jobTask)
+			markJobSkippedIfIgnored(share, jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created Role job for component %s: %s/%s", component.Name, ns, role.Name)
 		}
@@ -272,6 +282,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				ns = component.Namespace
 				binding.Namespace = ns
 			}
+			applyShareLabelsToObject(binding, share)
 			jobTask := NewJobTask(
 				binding.Name,
 				ns,
@@ -284,10 +295,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobTask.JobType = string(config.JobDeployRoleBinding)
 			jobTask.JobInfo = binding.DeepCopy()
 			setDeployTimeout(jobTask)
+			markJobSkippedIfIgnored(share, jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created RoleBinding job for component %s: %s/%s", component.Name, ns, binding.Name)
 		}
 		if clusterRole, ok := obj.(*rbacv1.ClusterRole); ok {
+			applyShareLabelsToObject(clusterRole, share)
 			jobTask := NewJobTask(
 				clusterRole.Name,
 				component.Namespace,
@@ -300,10 +313,12 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobTask.JobType = string(config.JobDeployClusterRole)
 			jobTask.JobInfo = clusterRole.DeepCopy()
 			setDeployTimeout(jobTask)
+			markJobSkippedIfIgnored(share, jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRole job for component %s: %s", component.Name, clusterRole.Name)
 		}
 		if clusterBinding, ok := obj.(*rbacv1.ClusterRoleBinding); ok {
+			applyShareLabelsToObject(clusterBinding, share)
 			jobTask := NewJobTask(
 				clusterBinding.Name,
 				component.Namespace,
@@ -316,6 +331,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 			jobTask.JobType = string(config.JobDeployClusterRoleBinding)
 			jobTask.JobInfo = clusterBinding.DeepCopy()
 			setDeployTimeout(jobTask)
+			markJobSkippedIfIgnored(share, jobTask)
 			jobs = append(jobs, jobTask)
 			klog.Infof("Created ClusterRoleBinding job for component %s: %s", component.Name, clusterBinding.Name)
 		}
@@ -350,27 +366,32 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 	}
 
 	properties := ParseProperties(ctx, component.Properties)
+	share := shareConfigForComponent(component)
 
 	switch component.ComponentType {
 	case config.ServerJob:
 		serviceJobs := job.GenerateWebService(component, &properties)
-		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeploy, serviceJobs, defaultJobTimeoutSeconds)
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeploy, serviceJobs, defaultJobTimeoutSeconds, share)
 	case config.StoreJob:
 		storeJobs := job.GenerateStoreService(component)
-		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs, defaultJobTimeoutSeconds)
+		queueServiceJobs(logger, buckets, component, task, namespace, config.JobDeployStore, storeJobs, defaultJobTimeoutSeconds, share)
 
 	case config.ConfJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeployConfigMap)
 		jobTask.JobInfo = job.GenerateConfigMap(component, &properties)
+		applyShareLabelsToJobInfo(jobTask.JobInfo, share)
 		setDeployTimeout(jobTask)
+		markJobSkippedIfIgnored(share, jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 
 	case config.SecretJob:
 		jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		jobTask.JobType = string(config.JobDeploySecret)
 		jobTask.JobInfo = job.GenerateSecret(component, &properties)
+		applyShareLabelsToJobInfo(jobTask.JobInfo, share)
 		setDeployTimeout(jobTask)
+		markJobSkippedIfIgnored(share, jobTask)
 		buckets[config.JobPriorityMaxHigh] = append(buckets[config.JobPriorityMaxHigh], jobTask)
 	}
 
@@ -378,7 +399,9 @@ func buildJobsForComponent(ctx context.Context, component *model.ApplicationComp
 		svcJob := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 		svcJob.JobType = string(config.JobDeployService)
 		svcJob.JobInfo = job.GenerateService(component, &properties)
+		applyShareLabelsToJobInfo(svcJob.JobInfo, share)
 		setDeployTimeout(svcJob)
+		markJobSkippedIfIgnored(share, svcJob)
 		buckets[config.JobPriorityNormal] = append(buckets[config.JobPriorityNormal], svcJob)
 	}
 
@@ -394,6 +417,7 @@ func queueServiceJobs(
 	jobType config.JobType,
 	result *job.GenerateServiceResult,
 	defaultJobTimeoutSeconds int64,
+	share shareConfig,
 ) {
 	if result == nil {
 		return
@@ -422,8 +446,20 @@ func queueServiceJobs(
 	jobTask := NewJobTask(component.Name, namespace, task.WorkflowID, task.ProjectID, task.AppID, task.TaskID, defaultJobTimeoutSeconds)
 	jobTask.JobType = string(jobType)
 	jobTask.JobInfo = result.Service
+	applyShareLabelsToJobInfo(jobTask.JobInfo, share)
 	setDeployTimeout(jobTask)
+	markJobSkippedIfIgnored(share, jobTask)
 	appendJob(config.JobPriorityNormal, jobTask)
+}
+
+func markJobSkippedIfIgnored(share shareConfig, jobTask *model.JobTask) {
+	if jobTask == nil {
+		return
+	}
+	if share.ignore() {
+		jobTask.Status = config.StatusSkipped
+		jobTask.Error = ""
+	}
 }
 
 func newJobBuckets() map[int][]*model.JobTask {

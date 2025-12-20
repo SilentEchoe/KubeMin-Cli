@@ -14,6 +14,12 @@ type Traits struct {
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
 	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
 	Resources *ResourceTraitsSpec `json:"resources,omitempty"`
+	Share     *ShareTraitSpec     `json:"share,omitempty"`
+}
+
+// ShareTraitSpec controls how shared resources are handled in a namespace.
+type ShareTraitSpec struct {
+	Strategy string `json:"strategy,omitempty"`
 }
 
 // InitTraitSpec describes an init container with its own nested traits.

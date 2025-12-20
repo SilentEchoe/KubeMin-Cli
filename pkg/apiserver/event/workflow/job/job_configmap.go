@@ -97,6 +97,10 @@ func (c *DeployConfigMapJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -117,9 +121,10 @@ func (c *DeployConfigMapJobCtl) run(ctx context.Context) error {
 		}
 		cm = &corev1.ConfigMap{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      conf.Name,
-				Namespace: conf.Namespace,
-				Labels:    conf.Labels,
+				Name:        conf.Name,
+				Namespace:   conf.Namespace,
+				Labels:      conf.Labels,
+				Annotations: conf.Annotations,
 			},
 			Data: conf.Data,
 		}
@@ -146,6 +151,34 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 	logger := klog.FromContext(ctx)
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
 	// Update if exists, create if not.
+	shareName, shareStrategy := shareInfoFromLabels(cm.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("ConfigMap marked as shared ignore; skipping", "namespace", cm.Namespace, "name", cm.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared configmaps failed: %w", err)
+		}
+		if exists {
+			logger.Info("ConfigMap already exists and is shared; skipping", "namespace", cm.Namespace, "name", cm.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
+
 	if existing, err := cli.Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {
 		// When updating, the ResourceVersion needs to be carried.
 		cm.ResourceVersion = existing.ResourceVersion
@@ -164,8 +197,10 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 		return fmt.Errorf("get configmap %q failed: %w", cm.Name, err)
 	}
 
-	c.job.Status = config.StatusCompleted
-	c.ack()
+	if c.job.Status != config.StatusSkipped {
+		c.job.Status = config.StatusCompleted
+		c.ack()
+	}
 	return nil
 }
 

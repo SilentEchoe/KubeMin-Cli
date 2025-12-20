@@ -98,6 +98,10 @@ func (c *DeploySecretJobCtl) Run(ctx context.Context) error {
 		c.job.Error = err.Error()
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	c.job.Status = config.StatusCompleted
 	c.job.Error = ""
 	return nil
@@ -135,9 +139,10 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 		}
 		secret = &corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      v.Name,
-				Namespace: v.Namespace,
-				Labels:    v.Labels,
+				Name:        v.Name,
+				Namespace:   v.Namespace,
+				Labels:      v.Labels,
+				Annotations: v.Annotations,
 			},
 			Type:       st,
 			StringData: stringData,
@@ -156,6 +161,34 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 	}
 
 	cli := c.client.CoreV1().Secrets(secret.Namespace)
+
+	shareName, shareStrategy := shareInfoFromLabels(secret.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		logger.Info("Secret marked as shared ignore; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := cli.List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared secrets failed: %w", err)
+		}
+		if exists {
+			logger.Info("Secret already exists and is shared; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
 
 	if existing, err := cli.Get(ctx, secret.Name, metav1.GetOptions{}); err == nil {
 		// If existing is immutable, updates will be rejected by API server.
@@ -184,8 +217,10 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 		return fmt.Errorf("get secret %q failed: %w", secret.Name, err)
 	}
 
-	c.job.Status = config.StatusCompleted
-	c.ack()
+	if c.job.Status != config.StatusSkipped {
+		c.job.Status = config.StatusCompleted
+		c.ack()
+	}
 	return nil
 }
 

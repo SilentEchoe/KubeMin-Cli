@@ -106,6 +106,10 @@ func (c *DeployStatefulSetJobCtl) Run(ctx context.Context) error {
 		}
 		return err
 	}
+	if c.job.Status == config.StatusSkipped {
+		c.job.Error = ""
+		return nil
+	}
 	if err := c.wait(ctx); err != nil {
 		c.job.Error = err.Error()
 		if statusErr, ok := ExtractStatusError(err); ok {
@@ -138,6 +142,42 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 	statefulSet.Name = statefulSetName
 	if statefulSet.Namespace == "" {
 		statefulSet.Namespace = c.namespace
+	}
+
+	shareName, shareStrategy := shareInfoFromLabels(statefulSet.Labels)
+	if shareStrategy == config.ShareStrategyIgnore {
+		klog.Infof("StatefulSet %q marked as shared ignore; skipping", statefulSet.Name)
+		c.job.Status = config.StatusSkipped
+		c.job.Error = ""
+		c.ack()
+		return nil
+	}
+	if shareStrategy == config.ShareStrategyDefault {
+		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+			list, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).List(ctx, opts)
+			if err != nil {
+				return 0, err
+			}
+			return len(list.Items), nil
+		})
+		if err != nil {
+			return fmt.Errorf("list shared statefulsets failed: %w", err)
+		}
+		if exists {
+			klog.Infof("StatefulSet %q already exists and is shared; skipping", statefulSet.Name)
+			c.job.Status = config.StatusSkipped
+			c.job.Error = ""
+			c.ack()
+			return nil
+		}
+	}
+
+	_, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Get(ctx, statefulSet.Name, metav1.GetOptions{})
+	if err == nil {
+		return fmt.Errorf("statefulset %s/%s already exists", statefulSet.Namespace, statefulSet.Name)
+	}
+	if !errors.IsNotFound(err) {
+		return fmt.Errorf("failed to check statefulset %s/%s existence: %w", statefulSet.Namespace, statefulSet.Name, err)
 	}
 
 	result, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Create(ctx, statefulSet, metav1.CreateOptions{})

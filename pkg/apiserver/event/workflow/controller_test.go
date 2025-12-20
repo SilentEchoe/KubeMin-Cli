@@ -103,3 +103,22 @@ func TestIsWorkflowTerminal(t *testing.T) {
 		})
 	}
 }
+
+func TestIsJobSuccessStatus(t *testing.T) {
+	testCases := []struct {
+		status   config.Status
+		expected bool
+	}{
+		{config.StatusCompleted, true},
+		{config.StatusSkipped, true},
+		{config.StatusPassed, true},
+		{config.StatusFailed, false},
+		{config.StatusRunning, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(string(tc.status), func(t *testing.T) {
+			require.Equal(t, tc.expected, isJobSuccessStatus(tc.status))
+		})
+	}
+}
