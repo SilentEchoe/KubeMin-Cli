@@ -44,8 +44,8 @@ Share trait 用于在命名空间内复用组件资源。它只包含策略选�
 
 `default` 策略的「label list 判断」新增并发保护，避免并发工作流同时 list 为空导致重复创建：
 
-- 优先使用 Redis 分布式锁（`cache.AcquireLock`）。
-- 若 Redis 未初始化，则回退到进程内锁。
+- 使用 `pkg/apiserver/infrastructure/locker` 统一的锁抽象。
+- 若存在全局 Redis 客户端，则使用 Redis 分布式锁；否则回退到内存锁，最后退化为 no-op 锁。
 - 锁 key 格式：`kubemin-share:<resourceKind>:<shareName>`，涵盖 Deployment/Service/ConfigMap/PVC/RBAC 等资源。
 
 ### JobInfo 落库
