@@ -136,31 +136,29 @@ func (c *DeployIngressJobCtl) run(ctx context.Context) error {
 	}
 
 	shareName, shareStrategy := shareInfoFromLabels(ingress.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		klog.Infof("Ingress %s/%s marked as shared ignore; skipping", ingress.Namespace, ingress.Name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceIngress, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared ingress failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			klog.Infof("Ingress %s/%s marked as shared ignore; skipping", ingress.Namespace, ingress.Name)
+		} else {
+			klog.Infof("Ingress %s/%s already exists and is shared; skipping", ingress.Namespace, ingress.Name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared ingress failed: %w", err)
-		}
-		if exists {
-			klog.Infof("Ingress %s/%s already exists and is shared; skipping", ingress.Namespace, ingress.Name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	existing, err := c.client.NetworkingV1().Ingresses(ingress.Namespace).Get(ctx, ingress.Name, metav1.GetOptions{})

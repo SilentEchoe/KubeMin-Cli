@@ -152,31 +152,29 @@ func (c *DeployConfigMapJobCtl) deployConfigMap(ctx context.Context, cm *corev1.
 	cli := c.client.CoreV1().ConfigMaps(cm.Namespace)
 	// Update if exists, create if not.
 	shareName, shareStrategy := shareInfoFromLabels(cm.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		logger.Info("ConfigMap marked as shared ignore; skipping", "namespace", cm.Namespace, "name", cm.Name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceConfigMap, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := cli.List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared configmaps failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			logger.Info("ConfigMap marked as shared ignore; skipping", "namespace", cm.Namespace, "name", cm.Name)
+		} else {
+			logger.Info("ConfigMap already exists and is shared; skipping", "namespace", cm.Namespace, "name", cm.Name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := cli.List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared configmaps failed: %w", err)
-		}
-		if exists {
-			logger.Info("ConfigMap already exists and is shared; skipping", "namespace", cm.Namespace, "name", cm.Name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	if existing, err := cli.Get(ctx, cm.Name, metav1.GetOptions{}); err == nil {

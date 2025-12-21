@@ -3,6 +3,7 @@ package job
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,7 +12,7 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
+
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,7 +68,7 @@ func (c *DeployJobCtl) Clean(ctx context.Context) {
 			ns = c.job.Namespace
 		}
 		if err := c.client.AppsV1().Deployments(ns).Delete(cleanupCtx, ref.Name, metav1.DeleteOptions{}); err != nil {
-			if !errors.IsNotFound(err) {
+			if !k8serrors.IsNotFound(err) {
 				klog.Errorf("failed to delete deployment %s/%s during cleanup: %v", ns, ref.Name, err)
 			}
 		} else {
@@ -149,31 +150,29 @@ func (c *DeployJobCtl) run(ctx context.Context) error {
 	}
 
 	shareName, shareStrategy := shareInfoFromLabels(deploy.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		klog.Infof("Deployment %q marked as shared ignore; skipping", deploy.Name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceDeployment, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := c.client.AppsV1().Deployments(deploy.Namespace).List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared deployments failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			klog.Infof("Deployment %q marked as shared ignore; skipping", deploy.Name)
+		} else {
+			klog.Infof("Deployment %q already exists and is shared; skipping", deploy.Name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := c.client.AppsV1().Deployments(deploy.Namespace).List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared deployments failed: %w", err)
-		}
-		if exists {
-			klog.Infof("Deployment %q already exists and is shared; skipping", deploy.Name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	deployLast, isAlreadyExists, err := c.deploymentExists(ctx, deployName, deploy.Namespace)
@@ -228,7 +227,8 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 		err := waiter.WaitForDeploymentReady(ctx, c.job.Namespace, targetName, timeout)
 		if err != nil {
 			// 转换 WaitError 为 StatusError
-			if we, ok := err.(*informer.WaitError); ok {
+			var we *informer.WaitError
+			if errors.As(err, &we) {
 				return NewStatusError(we.Status, we.Err)
 			}
 			return err
@@ -241,7 +241,6 @@ func (c *DeployJobCtl) wait(ctx context.Context) error {
 	return c.waitPolling(ctx)
 }
 
-// waitPolling 使用轮询方式等待 Deployment 就绪（作为 fallback）
 func (c *DeployJobCtl) waitPolling(ctx context.Context) error {
 	timeout := time.After(time.Duration(c.timeout()) * time.Second)
 	ticker := time.NewTicker(2 * time.Second)
@@ -257,14 +256,14 @@ func (c *DeployJobCtl) waitPolling(ctx context.Context) error {
 			klog.Infof("timeout waiting for job %s", targetName)
 			return NewStatusError(config.StatusTimeout, fmt.Errorf("wait deployment %s timeout", targetName))
 		case <-ticker.C:
-			newResources, err := getDeploymentStatus(ctx, c.client, c.job.Namespace, targetName)
+			resources, err := getDeploymentStatus(ctx, c.client, c.job.Namespace, targetName)
 			if err != nil {
 				klog.Errorf("get resource owner info error: %v", err)
 				return fmt.Errorf("wait deployment %s error: %w", targetName, err)
 			}
-			if newResources != nil {
-				klog.Infof("newResources: %s, Replicas: %d, ReadyReplicas: %d", newResources.Name, newResources.Replicas, newResources.ReadyReplicas)
-				if newResources.Ready {
+			if resources != nil {
+				klog.Infof("resources: %s, Replicas: %d, ReadyReplicas: %d", resources.Name, resources.Replicas, resources.ReadyReplicas)
+				if resources.Ready {
 					return nil
 				}
 			}
@@ -276,7 +275,7 @@ func getDeploymentStatus(ctx context.Context, kubeClient kubernetes.Interface, n
 	klog.Infof("%s-%s", namespace, name)
 	deploy, err := kubeClient.AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		if errors.IsNotFound(err) {
+		if k8serrors.IsNotFound(err) {
 			// Deployment 不存在，处理这种情况
 			klog.Infof("deploy is nil")
 			return nil, nil

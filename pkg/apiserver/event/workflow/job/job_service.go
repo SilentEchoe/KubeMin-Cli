@@ -145,31 +145,29 @@ func (c *DeployServiceJobCtl) run(ctx context.Context) error {
 	namespace := *service.Namespace
 
 	shareName, shareStrategy := shareInfoFromLabels(service.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		klog.Infof("Service %s/%s marked as shared ignore; skipping", namespace, name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceService, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := c.client.CoreV1().Services(namespace).List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared services failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			klog.Infof("Service %s/%s marked as shared ignore; skipping", namespace, name)
+		} else {
+			klog.Infof("Service %s/%s already exists and is shared; skipping", namespace, name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := c.client.CoreV1().Services(namespace).List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared services failed: %w", err)
-		}
-		if exists {
-			klog.Infof("Service %s/%s already exists and is shared; skipping", namespace, name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	if existing, err := c.client.CoreV1().Services(namespace).Get(ctx, name, metav1.GetOptions{}); err != nil {

@@ -3,18 +3,24 @@ package workflow
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
+	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	applyv1 "k8s.io/client-go/applyconfigurations/core/v1"
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
+	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"KubeMin-Cli/pkg/apiserver/utils"
 )
 
 type StepExecution struct {
@@ -179,6 +185,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 		return jobs, nil
 	}
 
+	// 从traits 中解析 share 策略
 	share := shareConfigForComponent(component)
 
 	for _, obj := range additionalObjects {
@@ -188,6 +195,7 @@ func CreateObjectJobsFromResult(additionalObjects []client.Object, component *mo
 				ns = component.Namespace
 				pvc.Namespace = ns
 			}
+			// 根据策略是否要打Lab
 			applyShareLabelsToObject(pvc, share)
 			pvcJob := NewJobTask(
 				pvc.Name,
@@ -459,6 +467,122 @@ func markJobSkippedIfIgnored(share shareConfig, jobTask *model.JobTask) {
 	if share.ignore() {
 		jobTask.Status = config.StatusSkipped
 		jobTask.Error = ""
+	}
+}
+
+type shareConfig struct {
+	Strategy config.ShareStrategy
+	Name     string
+}
+
+func (s shareConfig) enabled() bool {
+	return s.Strategy != ""
+}
+
+func (s shareConfig) ignore() bool {
+	return s.Strategy == config.ShareStrategyIgnore
+}
+
+func shareConfigForComponent(component *model.ApplicationComponent) shareConfig {
+	if component == nil || component.Traits == nil {
+		return shareConfig{}
+	}
+
+	traitBytes, err := json.Marshal(component.Traits)
+	if err != nil {
+		klog.Errorf("failed to marshal traits for share lookup: %v", err)
+		return shareConfig{}
+	}
+
+	if string(traitBytes) == "{}" || string(traitBytes) == "null" {
+		return shareConfig{}
+	}
+
+	var traits spec.Traits
+	if err := json.Unmarshal(traitBytes, &traits); err != nil {
+		klog.Errorf("failed to unmarshal traits for share lookup: %v", err)
+		return shareConfig{}
+	}
+
+	if traits.Share == nil {
+		return shareConfig{}
+	}
+
+	strategy, ok := config.NormalizeShareStrategy(traits.Share.Strategy)
+	if !ok {
+		klog.Warningf("unknown share strategy %q, falling back to default", traits.Share.Strategy)
+	}
+	shareName := shareNameForComponent(component)
+	return shareConfig{
+		Strategy: strategy,
+		Name:     shareName,
+	}
+}
+
+func shareNameForComponent(component *model.ApplicationComponent) string {
+	if component == nil {
+		return ""
+	}
+	baseName := strings.TrimSpace(component.Namespace)
+	if baseName != "" {
+		baseName = utils.ToRFC1123Name(baseName)
+		if len(baseName) > 63 {
+			baseName = strings.Trim(baseName[:63], "-")
+		}
+		if baseName != "" {
+			return baseName
+		}
+	}
+	baseName = component.Name
+	if baseName == "" {
+		baseName = "shared"
+	}
+	kind := string(component.ComponentType)
+	if kind != "" {
+		baseName = fmt.Sprintf("%s-%s", baseName, kind)
+	}
+	baseName = utils.ToRFC1123Name(baseName)
+	if len(baseName) > 63 {
+		baseName = strings.Trim(baseName[:63], "-")
+	}
+	if baseName == "" {
+		baseName = "shared"
+	}
+	return baseName
+}
+
+func applyShareLabels(labels map[string]string, share shareConfig) map[string]string {
+	if !share.enabled() {
+		return labels
+	}
+	if labels == nil {
+		labels = make(map[string]string, 2)
+	}
+	labels[config.LabelShareName] = share.Name
+	labels[config.LabelShareStrategy] = string(share.Strategy)
+	return labels
+}
+
+func applyShareLabelsToObject(obj metav1.Object, share shareConfig) {
+	if obj == nil {
+		return
+	}
+	obj.SetLabels(applyShareLabels(obj.GetLabels(), share))
+}
+
+func applyShareLabelsToJobInfo(jobInfo interface{}, share shareConfig) {
+	if !share.enabled() {
+		return
+	}
+	switch info := jobInfo.(type) {
+	case metav1.Object:
+		applyShareLabelsToObject(info, share)
+	case *applyv1.ServiceApplyConfiguration:
+		info.Labels = applyShareLabels(info.Labels, share)
+	case *model.ConfigMapInput:
+		info.Labels = applyShareLabels(info.Labels, share)
+	case *model.SecretInput:
+		info.Labels = applyShareLabels(info.Labels, share)
 	}
 }
 

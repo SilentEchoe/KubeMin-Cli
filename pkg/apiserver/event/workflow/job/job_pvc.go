@@ -139,31 +139,29 @@ func (c *DeployPVCJobCtl) run(ctx context.Context) error {
 
 	// 检查PVC是否已存在
 	shareName, shareStrategy := shareInfoFromLabels(pvc.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		logger.Info("pvc marked as shared ignore; skipping", "pvcName", pvc.Name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourcePVC, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared pvc failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			logger.Info("pvc marked as shared ignore; skipping", "pvcName", pvc.Name)
+		} else {
+			logger.Info("pvc already exists and is shared; skipping", "pvcName", pvc.Name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared pvc failed: %w", err)
-		}
-		if exists {
-			logger.Info("pvc already exists and is shared; skipping", "pvcName", pvc.Name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	existingPVC, err := c.client.CoreV1().PersistentVolumeClaims(pvc.Namespace).Get(ctx, pvc.Name, metav1.GetOptions{})

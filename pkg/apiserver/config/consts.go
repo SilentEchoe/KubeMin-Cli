@@ -58,11 +58,11 @@ const (
 	JobDeployConfigMap          JobType = "configmap_deploy"
 	JobDeploySecret             JobType = "secret_deploy"
 	JobDeployIngress            JobType = "ingress_deploy"
-	JobDeployServiceAccount     JobType = "serviceaccount_deploy"
+	JobDeployServiceAccount     JobType = "service_account_deploy"
 	JobDeployRole               JobType = "role_deploy"
-	JobDeployRoleBinding        JobType = "rolebinding_deploy"
-	JobDeployClusterRole        JobType = "clusterrole_deploy"
-	JobDeployClusterRoleBinding JobType = "clusterrolebinding_deploy"
+	JobDeployRoleBinding        JobType = "role_binding_deploy"
+	JobDeployClusterRole        JobType = "cluster_role_deploy"
+	JobDeployClusterRoleBinding JobType = "cluster_role_binding_deploy"
 
 	DefaultRun    JobRunPolicy = ""
 	DefaultNotRun JobRunPolicy = "default_not_run"
@@ -197,13 +197,10 @@ type UpdateStrategy string
 const (
 	// UpdateStrategyRolling 滚动更新（默认）- 逐步替换Pod，保证服务可用性
 	UpdateStrategyRolling UpdateStrategy = "rolling"
-
 	// UpdateStrategyRecreate 重建更新 - 先删除所有旧Pod，再创建新Pod
 	UpdateStrategyRecreate UpdateStrategy = "recreate"
-
 	// UpdateStrategyCanary 金丝雀更新 - 先更新部分Pod，验证后再全量更新
 	UpdateStrategyCanary UpdateStrategy = "canary"
-
 	// UpdateStrategyBlueGreen 蓝绿部署 - 创建新版本，切换流量后销毁旧版本
 	UpdateStrategyBlueGreen UpdateStrategy = "blue-green"
 )

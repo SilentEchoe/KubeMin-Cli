@@ -234,6 +234,7 @@ func (w *ResourceReadyWaiter) syncStatusToDB(labels map[string]string, replicas,
 
 	// 计算状态
 	var status config.ComponentStatus
+
 	if ready {
 		status = config.ComponentStatusRunning
 	} else if readyReplicas > 0 {

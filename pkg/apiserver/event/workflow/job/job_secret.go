@@ -163,31 +163,29 @@ func (c *DeploySecretJobCtl) run(ctx context.Context) error {
 	cli := c.client.CoreV1().Secrets(secret.Namespace)
 
 	shareName, shareStrategy := shareInfoFromLabels(secret.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		logger.Info("Secret marked as shared ignore; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceSecret, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := cli.List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared secrets failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			logger.Info("Secret marked as shared ignore; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
+		} else {
+			logger.Info("Secret already exists and is shared; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
-	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := cli.List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared secrets failed: %w", err)
-		}
-		if exists {
-			logger.Info("Secret already exists and is shared; skipping", "secretName", secret.Name, "namespace", secret.Namespace)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
 	}
 
 	if existing, err := cli.Get(ctx, secret.Name, metav1.GetOptions{}); err == nil {

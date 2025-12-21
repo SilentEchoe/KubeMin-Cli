@@ -17,11 +17,6 @@ type Traits struct {
 	Share     *ShareTraitSpec     `json:"share,omitempty"`
 }
 
-// ShareTraitSpec controls how shared resources are handled in a namespace.
-type ShareTraitSpec struct {
-	Strategy string `json:"strategy,omitempty"`
-}
-
 // InitTraitSpec describes an init container with its own nested traits.
 type InitTraitSpec struct {
 	Name       string     `json:"name"`
@@ -206,4 +201,9 @@ type RBACRuleSpec struct {
 	ResourceNames   []string `json:"resourceNames,omitempty"`
 	NonResourceURLs []string `json:"nonResourceURLs,omitempty"`
 	Verbs           []string `json:"verbs"`
+}
+
+// ShareTraitSpec controls how shared resources are handled in a namespace.
+type ShareTraitSpec struct {
+	Strategy string `json:"strategy,omitempty"`
 }

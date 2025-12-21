@@ -53,7 +53,6 @@ func NewAPIServerCommand() *cobra.Command {
 	for _, set := range namedFlagSets.FlagSets {
 		fs.AddFlagSet(set)
 	}
-
 	return cmd
 }
 

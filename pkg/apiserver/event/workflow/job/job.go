@@ -192,8 +192,35 @@ func runJob(ctx context.Context, job *model.JobTask, client kubernetes.Interface
 		}
 	}()
 
-	if job.Status == config.StatusPassed || job.Status == config.StatusSkipped {
+	if job.Status == config.StatusPassed {
 		logger.Info("Job skipped", "status", job.Status)
+		return
+	}
+	if job.Status == config.StatusSkipped {
+		logger.Info("Job skipped", "status", job.Status)
+		job.Error = ""
+		now := time.Now().Unix()
+		if job.StartTime == 0 {
+			job.StartTime = now
+		}
+		if job.EndTime == 0 {
+			job.EndTime = now
+		}
+		if ack != nil {
+			ack()
+		}
+		if store == nil {
+			klog.Error("start job store is nil")
+			return
+		}
+		jobCtl := initJobCtl(job, client, store, ack)
+		if jobCtl == nil {
+			logger.Error(nil, "Failed to initialize job controller for skipped job")
+			return
+		}
+		if err := jobCtl.SaveInfo(ctx); err != nil {
+			logger.Error(err, "Failed to update job info in db")
+		}
 		return
 	}
 	job.Status = config.StatusPrepare
@@ -236,7 +263,7 @@ func runJob(ctx context.Context, job *model.JobTask, client kubernetes.Interface
 		}
 		job.EndTime = time.Now().Unix()
 		if job.Error != "" {
-			logger.Info("Finished job with error", "status", job.Status, "error", job.Error)
+			logger.Error(errors.New(job.Error), "Finished job with error", "status", job.Status, "detail", job.Error)
 		} else {
 			logger.Info("Finished job successfully", "status", job.Status)
 		}
@@ -392,9 +419,4 @@ func SetGlobalWaiter(w *informer.ResourceReadyWaiter) {
 // GetGlobalWaiter 获取全局等待器
 func GetGlobalWaiter() *informer.ResourceReadyWaiter {
 	return globalWaiter
-}
-
-// IsWaiterEnabled 检查 waiter 是否已启用
-func IsWaiterEnabled() bool {
-	return globalWaiter != nil
 }

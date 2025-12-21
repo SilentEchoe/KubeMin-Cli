@@ -145,34 +145,32 @@ func (c *DeployStatefulSetJobCtl) run(ctx context.Context) error {
 	}
 
 	shareName, shareStrategy := shareInfoFromLabels(statefulSet.Labels)
-	if shareStrategy == config.ShareStrategyIgnore {
-		klog.Infof("StatefulSet %q marked as shared ignore; skipping", statefulSet.Name)
+	unlock, skipped, err := resolveSharedResource(ctx, shareName, shareStrategy, config.ResourceStatefulSet, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
+		list, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).List(ctx, opts)
+		if err != nil {
+			return 0, err
+		}
+		return len(list.Items), nil
+	})
+	if err != nil {
+		return fmt.Errorf("resolve shared statefulsets failed: %w", err)
+	}
+	if unlock != nil {
+		defer unlock()
+	}
+	if skipped {
+		if shareStrategy == config.ShareStrategyIgnore {
+			klog.Infof("StatefulSet %q marked as shared ignore; skipping", statefulSet.Name)
+		} else {
+			klog.Infof("StatefulSet %q already exists and is shared; skipping", statefulSet.Name)
+		}
 		c.job.Status = config.StatusSkipped
 		c.job.Error = ""
 		c.ack()
 		return nil
 	}
-	if shareStrategy == config.ShareStrategyDefault {
-		exists, err := hasSharedResources(ctx, shareName, func(ctx context.Context, opts metav1.ListOptions) (int, error) {
-			list, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).List(ctx, opts)
-			if err != nil {
-				return 0, err
-			}
-			return len(list.Items), nil
-		})
-		if err != nil {
-			return fmt.Errorf("list shared statefulsets failed: %w", err)
-		}
-		if exists {
-			klog.Infof("StatefulSet %q already exists and is shared; skipping", statefulSet.Name)
-			c.job.Status = config.StatusSkipped
-			c.job.Error = ""
-			c.ack()
-			return nil
-		}
-	}
 
-	_, err := c.client.AppsV1().StatefulSets(statefulSet.Namespace).Get(ctx, statefulSet.Name, metav1.GetOptions{})
+	_, err = c.client.AppsV1().StatefulSets(statefulSet.Namespace).Get(ctx, statefulSet.Name, metav1.GetOptions{})
 	if err == nil {
 		return fmt.Errorf("statefulset %s/%s already exists", statefulSet.Namespace, statefulSet.Name)
 	}
