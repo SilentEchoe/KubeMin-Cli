@@ -1,50 +1,239 @@
-[English](./README.md) | [简体中文](./README_zh.md)
+[English](./nReadMe.md) | [简体中文](./nReadMe_zh.md)
 
 # KubeMin-Cli
 
-**一个为开发者设计的 Kubernetes 应用平台。**
+**面向开发者的 Kubernetes 应用平台**
 
-KubeMin-Cli 是一个云原生应用管理平台，旨在极大地简化在 Kubernetes 上的服务部署与编排。它提供了一个以开发者为中心的高级抽象层，弥合了简单应用需求与底层 Kubernetes 复杂性之间的鸿沟。
+KubeMin-Cli 是一个基于云原生的 PaaS 平台，以轻量化工作流的方式来描述应用，结构模型基于 **OAM（开放应用模型）**，原生设计的工作流作为核心驱动应用的完整生命周期：初始化资源、创建/更新工作负载、发布事件、监听状态等。
 
----
+## 核心能力
 
-## 愿景
+### 1. Traits：可组合的能力原子
 
-我们的目标是为在 Kubernetes 上定义、部署和管理应用提供单一、内聚的用户体验。我们坚信，开发者无需成为 Kubernetes 专家也能构建和运行他们的服务。KubeMin-Cli 抽象了繁琐的样板配置，让团队能够专注于真正重要的事情：他们的应用逻辑。
+Traits 结构将 Kubernetes 中的 Pod、Service、Volume 等底层概念抽象化，将存储、容器边车、环境变量、初始化、密钥等以 Trait 的方式定义，使组件不再依赖复杂的 YAML，而是用组合的方式来构建复杂应用。还提供了"引入模板"功能，能快速创建多个相同形态的新应用（如多套 MySQL），以此来保证生成的资源可用、无冲突、可追溯。
 
-## 核心概念
+### 2. Workflow：任务驱动的应用生命周期
 
-KubeMin-Cli 构建在一系列强大而直观的概念之上：
+每次"部署""更新""扩缩容"等操作都被抽象成一条工作流实例：支持并行任务、支持状态一致性、组件之间的依赖、持久化执行记录等。并在基础设施层使用 List-Watch 模式来维护应用状态的整个生命周期，实时同步应用组件之间的状态。
 
-*   **组件模型 (Component Model):** 受 [开放应用模型 (OAM)](https://oam.dev/) 启发，你的应用由一个或多个 **组件** 构成。一个组件是应用的可运行单元，例如一个 Web API、一个后台工作进程或一个数据库。
-*   **特征 (Traits):** 组件通过 **特征** 来增强，为其附加运维能力。需要持久化存储、边车容器（sidecar）或特定的环境变量？只需应用一个特征即可。这使得你的核心应用定义保持干净和专注。
-*   **工作流 (Workflow):** **工作流** 定义了组件之间的关系以及部署它们的过程。它描述了依赖关系（例如，“在部署 API 之前先部署数据库”）和编排逻辑。
+## 架构概览
 
-## 架构：轻量级工作流引擎
+### 工作流引擎
 
-KubeMin-Cli 的核心是其原生的轻量级工作流引擎。该引擎被实现为一个自定义的 Kubernetes 控制器，它直接解析 `KubeMinWorkflow` 定义，并将其转换为诸如 Deployment、Job 和 Service 等基础的 Kubernetes 资源。
+KubeMin-Cli 工作流引擎是整个应用交付系统的核心组件，负责将声明的应用配置转换为实际运行在 Kubernetes 集群上的资源。它充当了"编排者"的角色，协调多个组件的创建、更新和删除操作，确保应用的正确部署。
 
-这种方法为实现简洁性、高效率和低资源消耗而优化，使其成为最常见的应用部署场景和像边缘计算这样的资源受限环境的理想选择。
+#### 运行模式
 
-## 功能特性
+1. **本地模式**：使用 NoopQueue，直接扫描数据库执行任务，适用于单实例部署、开发测试。
+2. **分布式模式**：使用 Redis Streams、Kafka 等；支持任务分发和故障恢复，适用于多实例部署、生产环境。
 
-*   **统一的应用定义:** 在一个简单、声明式的模型中定义你的整个应用、其运维特性及其部署流程。
-*   **可扩展的特征体系:** 轻松地为任何组件添加存储、配置、网络等能力。
-*   **轻量与高效:** 以最小的开销运行，使其适用于从本地开发机到边缘的任何 Kubernetes 集群。
+#### 关键特性
 
-## 发展路线图 (Roadmap)
+- **资源依赖管理**：确保 ConfigMap、Secret、PVC 等依赖资源先于 Deployment、StatefulSet 创建
+- **执行顺序控制**：支持串行和并行两种执行模式，满足不同场景需求
+- **状态追踪**：完整记录每个任务和 Job 的执行状态，便于问题排查
+- **故障恢复**：支持任务重试、取消和资源清理，保证系统一致性
+- **分布式扩展**：支持多实例部署，通过 Redis Streams/Kafka 实现任务分发
 
-我们的愿景延伸至要求最严苛的云原生工作负载。未来版本计划引入：
+#### 工作流定义示例
 
-*   **混合式工作流引擎:** 为了给复杂的 AI/ML 管道提供一流的支持，我们计划引入一个可选的、可插拔的执行引擎，该引擎基于 **Argo Workflows** 等行业标准工具。这将启用复杂 DAG、产出物传递和事件驱动执行等高级功能。
-*   **高级 AI/ML 工作负载支持:** 通过与 KubeFlow 和 KServe 等框架集成，简化从训练到服务的 AI/ML 应用的整个生命周期。
+```json
+{
+  "workflow": [
+    {
+      "name": "config-step",
+      "mode": "StepByStep",
+      "components": ["config", "secret"]
+    },
+    {
+      "name": "database",
+      "mode": "DAG",
+      "components": ["mysql", "redis"]
+    },
+    {
+      "name": "services",
+      "mode": "StepByStep",
+      "components": ["backend", "frontend"]
+    }
+  ]
+}
+```
+
+### OAM Traits
+
+KubeMin-Cli 提供了全面的 Traits 集合来增强组件功能：
+
+#### 可用 Traits
+
+| Trait | 说明 | K8s 资源 |
+|-------|------|----------|
+| Storage | 存储挂载 | PVC、EmptyDir、ConfigMap、Secret Volume |
+| Init | 初始化容器 | InitContainer |
+| Sidecar | 边车容器 | Container |
+| Envs | 单个环境变量 | EnvVar |
+| EnvFrom | 批量环境变量导入 | EnvFromSource |
+| Probes | 健康检查探针 | LivenessProbe、ReadinessProbe、StartupProbe |
+| Resources | 计算资源限制 | ResourceRequirements |
+| Ingress | 入口流量路由 | Ingress |
+| RBAC | 权限访问控制 | ServiceAccount、Role、RoleBinding、ClusterRole、ClusterRoleBinding |
+
+#### Trait 处理顺序
+
+1. Storage（存储）
+2. EnvFrom（批量环境变量）
+3. Envs（环境变量）
+4. Resources（资源限制）
+5. Probes（健康探针）
+6. RBAC（权限控制）
+7. Init（初始化容器）
+8. Sidecar（边车容器）
+9. Ingress（入口流量）
 
 ## 快速开始
 
-*(即将推出...)*
+### 前置要求
+
+- Kubernetes 集群（v1.20+）
+- MySQL 数据库
+- Redis（分布式模式需要）
+
+### 安装
+
+```bash
+# 克隆仓库
+git clone https://github.com/your-org/KubeMin-Cli.git
+cd KubeMin-Cli
+
+# 构建二进制文件
+go build -o kubemin-cli cmd/main.go
+
+# 运行服务器
+./kubemin-cli
+```
+
+### 部署第一个应用
+
+```bash
+# 创建应用
+curl -X POST http://localhost:8080/applications \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "demo-app",
+    "namespace": "default",
+    "component": [
+      {
+        "name": "web",
+        "type": "webservice",
+        "image": "nginx:latest",
+        "replicas": 2,
+        "properties": {
+          "ports": [{"port": 80, "expose": true}]
+        }
+      }
+    ],
+    "workflow": [
+      {
+        "name": "deploy",
+        "mode": "StepByStep",
+        "components": ["web"]
+      }
+    ]
+  }'
+```
+
+## 配置
+
+### 环境变量
+
+- `MYSQL_DSN`：MySQL 连接字符串
+- `REDIS_ADDR`：Redis 服务器地址（分布式模式）
+- `KUBECONFIG`：kubeconfig 文件路径
+
+### 工作流引擎配置
+
+| 参数 | 默认值 | 说明 |
+|-----------|---------|-------------|
+| `--workflow-sequential-max-concurrency` | 1 | 串行步骤内部最大并发数 |
+| `--workflow-max-concurrent` | 10 | 最大并发工作流数 |
+| `--msg-type` | redis | 消息队列类型（noop/redis/kafka） |
+
+## 开发
+
+### 构建
+
+```bash
+# 为当前系统构建
+go build -o kubemin-cli cmd/main.go
+
+# 构建 Linux 版本
+make build-linux
+
+# 构建 macOS 版本
+make build-darwin
+
+# 构建 Windows 版本
+make build-windows
+```
+
+### 测试
+
+```bash
+# 运行所有测试（带竞态检测和覆盖率）
+go test ./... -race -cover
+
+# 运行特定包的测试
+go test ./pkg/apiserver/workflow/... -v
+```
+
+### 代码质量
+
+```bash
+# 格式化代码
+go fmt ./...
+
+# 运行静态分析
+go vet ./...
+
+# 整理依赖
+go mod tidy
+```
+
+## 架构详情
+
+### 整洁架构结构
+
+```
+pkg/apiserver/
+├── domain/           # 业务逻辑和领域模型
+│   ├── model/        # 领域实体
+│   ├── service/      # 业务逻辑服务
+│   └── repository/   # 数据访问接口
+├── infrastructure/   # 外部集成
+│   ├── persistence/  # 数据库层（GORM + MySQL）
+│   ├── messaging/    # 队列实现
+│   ├── kubernetes/   # K8s 客户端和工具
+│   └── tracing/      # OpenTelemetry 集成
+├── interfaces/api/   # REST API 层
+│   ├── handlers/     # HTTP 请求处理器
+│   └── middleware/   # Gin 中间件
+├── workflow/         # 工作流执行引擎
+│   ├── dispatcher/   # 任务分发逻辑
+│   ├── worker/       # 任务执行工作器
+│   └── traits/       # 组件特征处理器
+└── utils/            # 共享工具
+```
+
+### 关键模式
+
+1. **依赖注入**：自定义 IoC 容器管理服务生命周期
+2. **队列抽象**：统一接口支持 Redis Streams 和本地队列
+3. **特征系统**：通过特征处理器实现可扩展的组件增强
+4. **领导者选举**：基于 Kubernetes Lease 的分布式模式领导者选举
 
 ## 贡献
 
-我们欢迎各种形式的贡献！请参阅我们的贡献指南以获取更多详情。
+我们欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解指南。
 
-*(即将推出...)*
+## 许可证
+
+本项目采用 Apache License 2.0 许可证 - 详情请见 [LICENSE](LICENSE) 文件。
