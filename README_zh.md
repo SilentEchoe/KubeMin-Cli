@@ -1,4 +1,4 @@
-[English](./nReadMe.md) | [简体中文](./nReadMe_zh.md)
+[English](./README.md) | [简体中文](./README_zh.md)
 
 # KubeMin-Cli
 

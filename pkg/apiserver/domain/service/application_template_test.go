@@ -278,3 +278,56 @@ func TestCreateApplicationsFromTemplateRewritesPersistentStorageNames(t *testing
 	require.Equal(t, "tenant-a-mysql-app-data", clonedTraits.Sidecar[0].Traits.Storage[0].Name)
 	require.Empty(t, clonedTraits.Sidecar[0].Traits.Storage[0].ClaimName)
 }
+
+func TestCreateApplicationsFromTemplateShareKeepsTemplateNames(t *testing.T) {
+	store := newInMemoryAppStore()
+	templateApp := &model.Applications{ID: "tmpl-share-1", Name: "mysql", TmpEnable: true}
+	store.apps[templateApp.ID] = templateApp
+
+	traitsJSON, err := model.NewJSONStructByStruct(apisv1.Traits{})
+	require.NoError(t, err)
+
+	store.components["mysql"] = &model.ApplicationComponent{
+		Name:          "mysql",
+		AppID:         templateApp.ID,
+		Namespace:     config.DefaultNamespace,
+		Image:         "mysql:latest",
+		Replicas:      1,
+		ComponentType: config.StoreJob,
+		Traits:        traitsJSON,
+	}
+
+	svc := newMockServiceWithStore(store)
+	req := apisv1.CreateApplicationsRequest{
+		Name: "shared-mysql-app",
+		Component: []apisv1.CreateComponentRequest{
+			{
+				Name:          "ignored-name",
+				ComponentType: config.StoreJob,
+				Traits: apisv1.Traits{
+					Share: &spec.ShareTraitSpec{Strategy: "default"},
+				},
+				Template: &apisv1.TemplateRef{ID: templateApp.ID, Target: "mysql"},
+			},
+		},
+	}
+
+	resp, err := svc.CreateApplications(context.Background(), req)
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+
+	var createdStore *model.ApplicationComponent
+	for _, comp := range store.components {
+		if comp.AppID == resp.ID && comp.ComponentType == config.StoreJob {
+			createdStore = comp
+			break
+		}
+	}
+	require.NotNil(t, createdStore)
+	require.Equal(t, "mysql", createdStore.Name)
+
+	var clonedTraits apisv1.Traits
+	require.NoError(t, json.Unmarshal([]byte(createdStore.Traits.JSON()), &clonedTraits))
+	require.NotNil(t, clonedTraits.Share)
+	require.Equal(t, "default", clonedTraits.Share.Strategy)
+}

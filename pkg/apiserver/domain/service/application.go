@@ -22,6 +22,7 @@ import (
 	"KubeMin-Cli/pkg/apiserver/config"
 	"KubeMin-Cli/pkg/apiserver/domain/model"
 	"KubeMin-Cli/pkg/apiserver/domain/repository"
+	"KubeMin-Cli/pkg/apiserver/domain/spec"
 	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
 	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
 	assembler "KubeMin-Cli/pkg/apiserver/interfaces/api/assembler/v1"
@@ -66,6 +67,7 @@ type componentOverride struct {
 type templateRequest struct {
 	baseName  string
 	overrides []componentOverride
+	share     *spec.ShareTraitSpec
 }
 
 func lastSegment(name string) string {
@@ -312,9 +314,17 @@ func (c *applicationsServiceImpl) resolveComponents(ctx context.Context, namespa
 		if tr.baseName == "" {
 			tr.baseName = strings.TrimSpace(appName)
 		}
+		share := comp.Traits.Share
+		if share != nil && tr.share == nil {
+			tr.share = share
+		}
+		overrideName := strings.TrimSpace(comp.Name)
+		if share != nil {
+			overrideName = ""
+		}
 		// 记录需要覆盖的组件名、类型和目标模板组件
 		tr.overrides = append(tr.overrides, componentOverride{
-			name:       strings.TrimSpace(comp.Name),
+			name:       overrideName,
 			compType:   comp.ComponentType,
 			properties: comp.Properties,
 			target:     strings.TrimSpace(comp.Template.Target),
@@ -360,8 +370,11 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		return nil, bcode.ErrTemplateComponentMissing
 	}
 
+	shareEnabled := tr.share != nil
 	baseName := strings.TrimSpace(tr.baseName)
-	if baseName == "" {
+	if shareEnabled {
+		baseName = ""
+	} else if baseName == "" {
 		baseName = templateApp.Name
 	}
 
@@ -418,10 +431,12 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 		}
 
 		targetName := templateComp.Name
-		if override != nil && override.name != "" {
-			targetName = override.name
-		} else if baseName != "" {
-			targetName = fmt.Sprintf("%s-%s", baseName, lastSegment(templateComp.Name))
+		if !shareEnabled {
+			if override != nil && override.name != "" {
+				targetName = override.name
+			} else if baseName != "" {
+				targetName = fmt.Sprintf("%s-%s", baseName, lastSegment(templateComp.Name))
+			}
 		}
 
 		var overrideProps apisv1.Properties
@@ -438,7 +453,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 
 	clones := make([]apisv1.CreateComponentRequest, 0, len(plans))
 	for _, plan := range plans {
-		clone, err := convertComponentFromTemplate(plan.templateComp, plan.targetName, baseName, namespace, plan.override, nameMap, typeNameMap)
+		clone, err := convertComponentFromTemplate(plan.templateComp, plan.targetName, baseName, namespace, plan.override, nameMap, typeNameMap, tr.share)
 		if err != nil {
 			return nil, err
 		}
@@ -455,7 +470,7 @@ func (c *applicationsServiceImpl) cloneComponentsFromTemplate(ctx context.Contex
 	return clones, nil
 }
 
-func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, baseName, namespace string, overrideProps apisv1.Properties, nameMap map[string]string, typeNameMap map[config.JobType]string) (*apisv1.CreateComponentRequest, error) {
+func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newName, baseName, namespace string, overrideProps apisv1.Properties, nameMap map[string]string, typeNameMap map[config.JobType]string, share *spec.ShareTraitSpec) (*apisv1.CreateComponentRequest, error) {
 	var properties apisv1.Properties
 	if err := decodeJSONStruct(templateComp.Properties, &properties); err != nil {
 		return nil, fmt.Errorf("convert template component %s properties: %w", templateComp.Name, err)
@@ -465,6 +480,10 @@ func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newN
 		return nil, fmt.Errorf("convert template component %s traits: %w", templateComp.Name, err)
 	}
 
+	if share != nil {
+		shareCopy := *share
+		traits.Share = &shareCopy
+	}
 	applyPropertyOverrides(&properties, overrideProps, templateComp.ComponentType)
 	rewriteTraitsForTemplate(&traits, templateComp.Name, newName, baseName, namespace, nameMap, typeNameMap)
 
