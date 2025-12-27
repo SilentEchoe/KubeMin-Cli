@@ -1,7 +1,7 @@
 package service
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 // InitServiceBean init all service instance

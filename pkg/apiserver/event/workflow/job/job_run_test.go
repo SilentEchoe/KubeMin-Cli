@@ -7,9 +7,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 type jobInfoStore struct {

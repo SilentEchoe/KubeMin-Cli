@@ -3,8 +3,8 @@ package v1
 import (
 	"time"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 // ApplicationBase application base model
@@ -16,8 +16,8 @@ type ApplicationBase struct {
 	Project     string    `json:"project"`
 	Version     string    `json:"version"`
 	Description string    `json:"description"`
-	CreateTime  time.Time `json:"createTime"`
-	UpdateTime  time.Time `json:"updateTime"`
+	CreateTime  time.Time `json:"create_time"`
+	UpdateTime  time.Time `json:"update_time"`
 	Icon        string    `json:"icon"`
 	WorkflowID  string    `json:"workflow_id"`
 	TmpEnable   bool      `json:"tmp_enable"`
@@ -28,8 +28,8 @@ type ProjectBase struct {
 	Name        string    `json:"name"`
 	Alias       string    `json:"alias"`
 	Description string    `json:"description"`
-	CreateTime  time.Time `json:"createTime"`
-	UpdateTime  time.Time `json:"updateTime"`
+	CreateTime  time.Time `json:"create_time"`
+	UpdateTime  time.Time `json:"update_time"`
 	Owner       NameAlias `json:"owner,omitempty"`
 	Namespace   string    `json:"namespace"`
 }
@@ -41,9 +41,9 @@ type NameAlias struct {
 }
 
 type CreateApplicationsRequest struct {
-	ID            string                      `json:"ID"`
+	ID            string                      `json:"id"`
 	Name          string                      `json:"name" validate:"checkname"`
-	NameSpace     string                      `json:"namespace"`
+	Namespace     string                      `json:"namespace"`
 	Alias         string                      `json:"alias"`
 	Version       string                      `json:"version"`
 	Project       string                      `json:"project"`
@@ -60,11 +60,11 @@ type CreateComponentRequest struct {
 	Name          string         `json:"name"`
 	ComponentType config.JobType `json:"type"`
 	Image         string         `json:"image,omitempty"`
-	NameSpace     string         `json:"nameSpace"`
+	Namespace     string         `json:"namespace"`
 	Replicas      int32          `json:"replicas"`
 	Properties    Properties     `json:"properties"`
 	Traits        Traits         `json:"traits"`
-	Template      *TemplateRef   `json:"Tem,omitempty"`
+	Template      *TemplateRef   `json:"template,omitempty"`
 }
 
 type TemplateRef struct {
@@ -74,11 +74,11 @@ type TemplateRef struct {
 
 type CreateWorkflowStepRequest struct {
 	Name         string                         `json:"name"`
-	WorkflowType config.JobType                 `json:"jobType,omitempty"`
+	WorkflowType config.JobType                 `json:"job_type,omitempty"`
 	Properties   WorkflowProperties             `json:"properties,omitempty"`
 	Components   []string                       `json:"components,omitempty"`
 	Mode         string                         `json:"mode,omitempty"`
-	SubSteps     []CreateWorkflowSubStepRequest `json:"subSteps,omitempty"`
+	SubSteps     []CreateWorkflowSubStepRequest `json:"sub_steps,omitempty"`
 }
 
 // ListApplicationResponse list applications by query params
@@ -87,14 +87,14 @@ type ListApplicationResponse struct {
 }
 
 type ApplicationsDeployRequest struct {
-	WorkflowName string `json:"workflowName"`
-	Name         string `json:"appName"`
+	WorkflowName string `json:"workflow_name"`
+	Name         string `json:"app_name"`
 }
 
 type CleanupApplicationResourcesResponse struct {
-	AppID            string   `json:"appId"`
-	DeletedResources []string `json:"deletedResources"`
-	FailedResources  []string `json:"failedResources,omitempty"`
+	AppID            string   `json:"app_id"`
+	DeletedResources []string `json:"deleted_resources"`
+	FailedResources  []string `json:"failed_resources,omitempty"`
 }
 
 type CreateWorkflowRequest struct {
@@ -105,7 +105,7 @@ type CreateWorkflowRequest struct {
 	Labels      map[string]string            `json:"labels,omitempty"`
 	Component   []CreateComponentRequest     `json:"component"`
 	Workflows   []CreateWorkflowStepsRequest `json:"workflow"`
-	TryRun      bool                         `json:"tryRun"`
+	TryRun      bool                         `json:"try_run"`
 }
 
 type Properties = spec.Properties
@@ -123,16 +123,16 @@ type WorkflowTraits struct {
 
 type CreateWorkflowStepsRequest struct {
 	Name               string                         `json:"name"`
-	ComponentType      config.JobType                 `json:"jobType,omitempty"`
+	ComponentType      config.JobType                 `json:"job_type,omitempty"`
 	WorkflowProperties WorkflowPolicies               `json:"properties,omitempty"`
 	Components         []string                       `json:"components,omitempty"`
 	Mode               string                         `json:"mode,omitempty"`
-	SubSteps           []CreateWorkflowSubStepRequest `json:"subSteps,omitempty"`
+	SubSteps           []CreateWorkflowSubStepRequest `json:"sub_steps,omitempty"`
 }
 
 type CreateWorkflowSubStepRequest struct {
 	Name         string             `json:"name"`
-	WorkflowType config.JobType     `json:"jobType,omitempty"`
+	WorkflowType config.JobType     `json:"job_type,omitempty"`
 	Properties   WorkflowProperties `json:"properties,omitempty"`
 	Components   []string           `json:"components,omitempty"`
 }
@@ -151,7 +151,7 @@ type CreateConfigMapFromURLRequest struct {
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 	URL         string            `json:"url" validate:"required,url"`
-	FileName    string            `json:"fileName,omitempty"`
+	FileName    string            `json:"file_name,omitempty"`
 }
 
 type ConfigMapResponse struct {
@@ -160,8 +160,8 @@ type ConfigMapResponse struct {
 	Labels      map[string]string `json:"labels,omitempty"`
 	Annotations map[string]string `json:"annotations,omitempty"`
 	Data        map[string]string `json:"data"`
-	CreateTime  time.Time         `json:"createTime"`
-	UpdateTime  time.Time         `json:"updateTime"`
+	CreateTime  time.Time         `json:"create_time"`
+	UpdateTime  time.Time         `json:"update_time"`
 }
 
 type WorkflowPolicies struct {
@@ -169,45 +169,45 @@ type WorkflowPolicies struct {
 }
 
 type CreateWorkflowResponse struct {
-	WorkflowID string `json:"workflowId"`
+	WorkflowID string `json:"workflow_id"`
 }
 
 type UpdateApplicationWorkflowRequest struct {
-	WorkflowID string                      `json:"workflowId,omitempty"`
+	WorkflowID string                      `json:"workflow_id,omitempty"`
 	Name       string                      `json:"name,omitempty"`
 	Alias      string                      `json:"alias,omitempty"`
 	Workflow   []CreateWorkflowStepRequest `json:"workflow" validate:"required,min=1,dive"`
 }
 
 type UpdateWorkflowResponse struct {
-	WorkflowID string `json:"workflowId"`
+	WorkflowID string `json:"workflow_id"`
 }
 
 type ExecWorkflowRequest struct {
-	WorkflowID string `json:"workflowId" validate:"checkname"`
+	WorkflowID string `json:"workflow_id" validate:"checkname"`
 }
 
 type ExecWorkflowResponse struct {
-	TaskID string `json:"taskId"`
+	TaskID string `json:"task_id"`
 }
 
 type CancelWorkflowRequest struct {
-	TaskID string `json:"taskId" validate:"required"`
+	TaskID string `json:"task_id" validate:"required"`
 	User   string `json:"user,omitempty"`
 	Reason string `json:"reason,omitempty"`
 }
 
 type CancelWorkflowResponse struct {
-	TaskID string `json:"taskId"`
+	TaskID string `json:"task_id"`
 	Status string `json:"status"`
 }
 
 type TaskStatusResponse struct {
-	TaskID       string                  `json:"taskId"`
+	TaskID       string                  `json:"task_id"`
 	Status       string                  `json:"status"`
-	WorkflowID   string                  `json:"workflowId,omitempty"`
-	WorkflowName string                  `json:"workflowName,omitempty"`
-	AppID        string                  `json:"appId,omitempty"`
+	WorkflowID   string                  `json:"workflow_id,omitempty"`
+	WorkflowName string                  `json:"workflow_name,omitempty"`
+	AppID        string                  `json:"app_id,omitempty"`
 	Type         config.WorkflowTaskType `json:"type,omitempty"`
 	Components   []ComponentTaskStatus   `json:"components,omitempty"`
 }
@@ -217,8 +217,8 @@ type ComponentTaskStatus struct {
 	Type      string `json:"type,omitempty"`
 	Status    string `json:"status"`
 	Error     string `json:"error,omitempty"`
-	StartTime int64  `json:"startTime,omitempty"`
-	EndTime   int64  `json:"endTime,omitempty"`
+	StartTime int64  `json:"start_time,omitempty"`
+	EndTime   int64  `json:"end_time,omitempty"`
 }
 
 type ListApplicationWorkflowsResponse struct {
@@ -234,33 +234,33 @@ type ApplicationWorkflow struct {
 	Name         string                  `json:"name"`
 	Alias        string                  `json:"alias"`
 	Namespace    string                  `json:"namespace,omitempty"`
-	ProjectID    string                  `json:"projectId,omitempty"`
+	ProjectID    string                  `json:"project_id,omitempty"`
 	Description  string                  `json:"description,omitempty"`
 	Status       string                  `json:"status"`
 	Disabled     bool                    `json:"disabled"`
 	Steps        []WorkflowStepDetail    `json:"steps,omitempty"`
-	CreateTime   time.Time               `json:"createTime"`
-	UpdateTime   time.Time               `json:"updateTime"`
-	WorkflowType config.WorkflowTaskType `json:"workflowType"`
+	CreateTime   time.Time               `json:"create_time"`
+	UpdateTime   time.Time               `json:"update_time"`
+	WorkflowType config.WorkflowTaskType `json:"workflow_type"`
 }
 
 type WorkflowStepDetail struct {
 	Name         string                  `json:"name"`
-	WorkflowType config.JobType          `json:"workflowType,omitempty"`
+	WorkflowType config.JobType          `json:"workflow_type,omitempty"`
 	Mode         config.WorkflowMode     `json:"mode,omitempty"`
 	Components   []string                `json:"components,omitempty"`
-	SubSteps     []WorkflowSubStepDetail `json:"subSteps,omitempty"`
+	SubSteps     []WorkflowSubStepDetail `json:"sub_steps,omitempty"`
 }
 
 type WorkflowSubStepDetail struct {
 	Name         string         `json:"name"`
-	WorkflowType config.JobType `json:"workflowType,omitempty"`
+	WorkflowType config.JobType `json:"workflow_type,omitempty"`
 	Components   []string       `json:"components,omitempty"`
 }
 
 type ApplicationComponent struct {
 	ID            int            `json:"id"`
-	AppID         string         `json:"appId"`
+	AppID         string         `json:"app_id"`
 	Name          string         `json:"name"`
 	Namespace     string         `json:"namespace"`
 	Image         string         `json:"image,omitempty"`
@@ -268,8 +268,8 @@ type ApplicationComponent struct {
 	ComponentType config.JobType `json:"type"`
 	Properties    Properties     `json:"properties"`
 	Traits        Traits         `json:"traits"`
-	CreateTime    time.Time      `json:"createTime"`
-	UpdateTime    time.Time      `json:"updateTime"`
+	CreateTime    time.Time      `json:"create_time"`
+	UpdateTime    time.Time      `json:"update_time"`
 }
 
 // UpdateVersionRequest 版本更新请求
@@ -284,7 +284,7 @@ type UpdateVersionRequest struct {
 	Components []ComponentUpdateSpec `json:"components,omitempty"`
 
 	// AutoExec 是否自动执行工作流，默认 true
-	AutoExec *bool `json:"autoExec,omitempty"`
+	AutoExec *bool `json:"auto_exec,omitempty"`
 
 	// Description 更新说明
 	Description string `json:"description,omitempty"`
@@ -324,26 +324,26 @@ type ComponentUpdateSpec struct {
 // UpdateVersionResponse 版本更新响应
 type UpdateVersionResponse struct {
 	// AppID 应用ID
-	AppID string `json:"appId"`
+	AppID string `json:"app_id"`
 
 	// Version 新版本号
 	Version string `json:"version"`
 
 	// PreviousVersion 更新前版本号
-	PreviousVersion string `json:"previousVersion"`
+	PreviousVersion string `json:"previous_version"`
 
 	// Strategy 使用的更新策略
 	Strategy string `json:"strategy"`
 
 	// TaskID 工作流任务ID（如果触发了工作流执行）
-	TaskID string `json:"taskId,omitempty"`
+	TaskID string `json:"task_id,omitempty"`
 
 	// UpdatedComponents 已更新的组件名称列表
-	UpdatedComponents []string `json:"updatedComponents,omitempty"`
+	UpdatedComponents []string `json:"updated_components,omitempty"`
 
 	// AddedComponents 新增的组件名称列表
-	AddedComponents []string `json:"addedComponents,omitempty"`
+	AddedComponents []string `json:"added_components,omitempty"`
 
 	// RemovedComponents 已删除的组件名称列表
-	RemovedComponents []string `json:"removedComponents,omitempty"`
+	RemovedComponents []string `json:"removed_components,omitempty"`
 }

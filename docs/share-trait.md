@@ -72,7 +72,7 @@ JSON 请求示例：
 ```json
 {
   "name": "proxy",
-  "componentType": "webservice",
+  "component_type": "webservice",
   "namespace": "default",
   "image": "example/proxy:1.0.0",
   "replicas": 1,

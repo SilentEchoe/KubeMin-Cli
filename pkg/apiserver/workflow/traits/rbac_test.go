@@ -7,8 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 func TestRBACProcessor_NamespaceRole(t *testing.T) {

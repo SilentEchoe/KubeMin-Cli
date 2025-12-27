@@ -14,13 +14,13 @@ import (
 	"github.com/spf13/cobra"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/cmd/server/app/options"
-	server "KubeMin-Cli/pkg/apiserver"
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/observability"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/profiling"
-	"KubeMin-Cli/version"
+	"kubemin-cli/cmd/server/app/options"
+	server "kubemin-cli/pkg/apiserver"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/infrastructure/observability"
+	"kubemin-cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/utils/profiling"
+	"kubemin-cli/version"
 )
 
 // NewAPIServerCommand creates a *cobra.Command object with default parameters

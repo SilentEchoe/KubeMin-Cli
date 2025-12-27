@@ -38,7 +38,7 @@ POST /api/v1/applications/:appID/version
 | `version` | string | **是** | 新版本号 |
 | `strategy` | string | 否 | 更新策略，默认 `rolling` |
 | `components` | array | 否 | 组件更新规格列表 |
-| `autoExec` | bool | 否 | 是否自动执行工作流，默认 `true` |
+| `auto_exec` | bool | 否 | 是否自动执行工作流，默认 `true` |
 | `description` | string | 否 | 更新说明 |
 
 ### ComponentUpdateSpec
@@ -60,14 +60,14 @@ POST /api/v1/applications/:appID/version
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
-| `appId` | string | 应用 ID |
+| `app_id` | string | 应用 ID |
 | `version` | string | 新版本号 |
-| `previousVersion` | string | 更新前版本号 |
+| `previous_version` | string | 更新前版本号 |
 | `strategy` | string | 使用的更新策略 |
-| `taskId` | string | 工作流任务 ID（如果触发了工作流执行） |
-| `updatedComponents` | array | 已更新的组件名称列表 |
-| `addedComponents` | array | 新增的组件名称列表 |
-| `removedComponents` | array | 已删除的组件名称列表 |
+| `task_id` | string | 工作流任务 ID（如果触发了工作流执行） |
+| `updated_components` | array | 已更新的组件名称列表 |
+| `added_components` | array | 新增的组件名称列表 |
+| `removed_components` | array | 已删除的组件名称列表 |
 
 ## 错误码
 
@@ -106,14 +106,14 @@ POST /api/v1/applications/:appID/version
 
 ```json
 {
-  "appId": "abc123xyz",
+  "app_id": "abc123xyz",
   "version": "1.1.0",
-  "previousVersion": "1.0.0",
+  "previous_version": "1.0.0",
   "strategy": "rolling",
-  "taskId": "task-def456",
-  "updatedComponents": ["backend"],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "task-def456",
+  "updated_components": ["backend"],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 
@@ -220,7 +220,7 @@ POST /api/v1/applications/:appID/version
       "name": "deprecated-worker"
     }
   ],
-  "autoExec": true,
+  "auto_exec": true,
   "description": "Architecture refactoring"
 }
 ```
@@ -229,14 +229,14 @@ POST /api/v1/applications/:appID/version
 
 ```json
 {
-  "appId": "abc123xyz",
+  "app_id": "abc123xyz",
   "version": "3.0.0",
-  "previousVersion": "2.0.0",
+  "previous_version": "2.0.0",
   "strategy": "rolling",
-  "taskId": "task-789xyz",
-  "updatedComponents": ["backend"],
-  "addedComponents": ["message-queue"],
-  "removedComponents": ["deprecated-worker"]
+  "task_id": "task-789xyz",
+  "updated_components": ["backend"],
+  "added_components": ["message-queue"],
+  "removed_components": ["deprecated-worker"]
 }
 ```
 
@@ -255,7 +255,7 @@ POST /api/v1/applications/:appID/version
       "replicas": 1
     }
   ],
-  "autoExec": true
+  "auto_exec": true
 }
 ```
 
@@ -266,7 +266,7 @@ POST /api/v1/applications/:appID/version
 ```json
 {
   "version": "2.0.0",
-  "autoExec": false,
+  "auto_exec": false,
   "description": "Major version bump - documentation only"
 }
 ```
@@ -330,7 +330,7 @@ curl -X POST "http://localhost:8080/api/v1/applications/app-123/version" \
 
 ### 查看工作流执行状态
 
-更新后可以使用返回的 `taskId` 查询执行状态：
+更新后可以使用返回的 `task_id` 查询执行状态：
 
 ```bash
 curl "http://localhost:8080/api/v1/workflow/tasks/task-456/status"
@@ -350,6 +350,6 @@ curl "http://localhost:8080/api/v1/workflow/tasks/task-456/status"
 
 - 组件名称会自动转换为小写
 - 删除组件不会删除 Kubernetes 中已部署的资源，需要单独清理
-- `autoExec: false` 时仅更新数据库记录，不触发实际部署
+- `auto_exec: false` 时仅更新数据库记录，不触发实际部署
 - 新增组件时必须指定 `type` 字段
 

@@ -1,7 +1,7 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/model"
 	"fmt"
 	"testing"
 

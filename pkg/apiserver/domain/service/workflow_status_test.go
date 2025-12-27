@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 func TestGetTaskStatusIncludesAllComponents(t *testing.T) {

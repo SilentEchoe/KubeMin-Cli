@@ -6,11 +6,11 @@ import (
 )
 
 const (
-	REDIS             = "redis"
-	TIDB              = "tidb"
-	MYSQL             = "mysql"
-	DBNAME_KUBEMINCLI = "kubemincli"
-	NAMESPACE         = "kubemin-system"
+	Redis           = "redis"
+	TiDB            = "tidb"
+	MySQL           = "mysql"
+	DBNameKubeMinCLI = "kubemincli"
+	SystemNamespace = "kubemin-system"
 )
 
 const (
@@ -40,9 +40,9 @@ const (
 	DefaultTaskRevoker = "system"
 	DefaultNamespace   = "default"
 	DeployTimeout      = 60 * 20 // 20 minutes
-	DelTimeOut         = 30 * time.Second
-	JobNameRegx        = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
-	WorkflowRegx       = "^[a-zA-Z0-9-]+$"
+	DeleteTimeout  = 30 * time.Second
+	JobNameRegex   = "^[a-z\u4e00-\u9fa5][a-z0-9\u4e00-\u9fa5-]{0,31}$"
+	WorkflowRegex  = "^[a-zA-Z0-9-]+$"
 
 	// ServerJob JobType 的类型分为几种：1.无状态服务 2.存储服务 3.网络服务
 	ServerJob JobType = "webservice"
@@ -117,7 +117,7 @@ const (
 	StatusBlocked        Status = "blocked"                        //阻塞
 	QueueItemPending     Status = "pending"                        //等待调度
 	StatusChanged        Status = "changed"                        //改变
-	StatusNotRun         Status = "notRun"                         //没有运行
+	StatusNotRun         Status = "not_run"                        //没有运行
 	StatusPrepare        Status = "prepare"                        //准备
 	StatusReject         Status = "reject"                         //拒绝
 	StatusDistributed    Status = "distributed"                    //分布式

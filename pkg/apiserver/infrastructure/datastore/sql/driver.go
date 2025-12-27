@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm/clause"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 // Driver is a unified implementation of SQL driver of datastore

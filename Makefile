@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 # Module / binaries
-MODULE      ?= KubeMin-Cli
+MODULE      ?= kubemin-cli
 BINARY_NAME ?= kubemin-cli
 
 

@@ -17,12 +17,12 @@
           {
             "name": "cache",
             "type": "ephemeral",
-            "mountPath": "/tmp/cache"
+            "mount_path": "/tmp/cache"
           },
           {
             "name": "logs",
             "type": "ephemeral",
-            "mountPath": "/var/log/nginx"
+            "mount_path": "/var/log/nginx"
           }
         ]
       }

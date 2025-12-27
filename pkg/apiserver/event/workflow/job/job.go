@@ -16,11 +16,11 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
-	"KubeMin-Cli/pkg/apiserver/workflow/signal"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/informer"
+	"kubemin-cli/pkg/apiserver/workflow/signal"
 )
 
 type JobCtl interface {

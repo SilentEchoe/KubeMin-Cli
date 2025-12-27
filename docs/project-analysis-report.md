@@ -590,7 +590,7 @@ func (c *applicationsServiceImpl) ListApplications(ctx context.Context, opts Lis
 ```go
 type CacheWithLocalFallback struct {
     local  *sync.Map
-    remote ICache
+    remote Cache
     ttl    time.Duration
 }
 ```

@@ -1,8 +1,8 @@
 package model
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/config"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 func init() {
@@ -66,17 +66,17 @@ func (a *Applications) Index() map[string]interface{} {
 // ApplicationComponent delivery database model 组件信息
 type ApplicationComponent struct {
 	ID            int            `json:"id" gorm:"primaryKey"`
-	AppID         string         `json:"appId"`
+	AppID         string         `json:"app_id"`
 	Name          string         `json:"name"`
 	Namespace     string         `json:"namespace"`
 	Image         string         `json:"image"`
 	Replicas      int32          `json:"replicas"`
-	ComponentType config.JobType `json:"componentType"`
+	ComponentType config.JobType `json:"component_type"`
 	Properties    *JSONStruct    `json:"properties,omitempty" gorm:"serializer:json"`
 	Traits        *JSONStruct    `json:"traits" gorm:"serializer:json"`
 	// 运行时状态（由 Informer 同步）
 	Status        string `json:"status"`        // Running/Pending/Failed/Unknown
-	ReadyReplicas int32  `json:"readyReplicas"` // 就绪副本数
+	ReadyReplicas int32  `json:"ready_replicas"` // 就绪副本数
 	BaseModel
 }
 

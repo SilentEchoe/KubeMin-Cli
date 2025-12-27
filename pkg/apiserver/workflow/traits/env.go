@@ -5,9 +5,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/config"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 // EnvsProcessor implements the user-friendly `envs` trait. It translates a
@@ -44,26 +44,26 @@ func (p *EnvsProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	}, nil
 }
 
-// EnvFromProcessor implements the `envFrom` trait for bulk importing env vars
+// EnvFromProcessor implements the `env_from` trait for bulk importing env vars
 // from ConfigMaps or Secrets.
 type EnvFromProcessor struct{}
 
 // Name returns the name of the trait.
 func (p *EnvFromProcessor) Name() string {
-	return "envFrom"
+	return "env_from"
 }
 
 // Process converts []spec.EnvFromSourceSpec into []corev1.EnvFromSource.
 func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 	envFromTraits, ok := ctx.TraitData.([]spec.EnvFromSourceSpec)
 	if !ok {
-		return nil, fmt.Errorf("unexpected type for envFrom trait: %T", ctx.TraitData)
+		return nil, fmt.Errorf("unexpected type for env_from trait: %T", ctx.TraitData)
 	}
 
 	var envFromSources []corev1.EnvFromSource
 	for _, trait := range envFromTraits {
 		if trait.SourceName == "" {
-			return nil, fmt.Errorf("envFrom trait requires a sourceName")
+			return nil, fmt.Errorf("env_from trait requires a source_name")
 		}
 		switch trait.Type {
 		case config.StorageTypeConfig:
@@ -79,7 +79,7 @@ func (p *EnvFromProcessor) Process(ctx *TraitContext) (*TraitResult, error) {
 				},
 			})
 		default:
-			return nil, fmt.Errorf("unsupported envFrom type: %s", trait.Type)
+			return nil, fmt.Errorf("unsupported env_from type: %s", trait.Type)
 		}
 	}
 

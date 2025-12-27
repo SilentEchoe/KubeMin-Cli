@@ -76,8 +76,8 @@
     "alias": "nginx",
     "project": "",
     "description": "Create Nginx",
-    "createTime": "2025-11-18T15:23:16.149212+08:00",
-    "updateTime": "2025-11-18T15:23:16.149213+08:00",
+    "create_time": "2025-11-18T15:23:16.149212+08:00",
+    "update_time": "2025-11-18T15:23:16.149213+08:00",
     "icon": "",
     "workflow_id": "45yj4eopg7fl99fz0hzfzdg8"
 }
@@ -91,7 +91,7 @@ curl http://{{127.0.0.1:8080}}/api/v1/applications/{{:APP_ID}}/workflow/exec
 curl -X POST \
   http://127.0.0.1:8080/api/v1/applications/7mcor3r4su789r99jhpxyzat/workflow/exec \
   -H 'Content-Type: application/json' \
-  -d '{"workflowId":"45yj4eopg7fl99fz0hzfzdg8"}'
+  -d '{"workflow_id":"45yj4eopg7fl99fz0hzfzdg8"}'
 ```
 
 
@@ -193,10 +193,10 @@ curl -X POST \
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "subPath": "mysql",
+            "mount_path": "/var/lib/mysql",
+            "sub_path": "mysql",
             "size": "1Gi",
-            "storageClass": "standard",
+            "storage_class": "standard",
             "create": true
           }
         ]
@@ -223,7 +223,7 @@ curl -X POST \
      -H 'Content-Type: application/json' \
      -d @payloads/mysql-store.json
    ```
-   记录响应中的 `appId` 与 `workflow_id`。
+   记录响应中的 `app_id` 与 `workflow_id`。
    
    ```json
    {
@@ -232,8 +232,8 @@ curl -X POST \
        "alias": "mysql",
        "project": "",
        "description": "Create MySQL store",
-       "createTime": "2025-11-20T13:38:57.959305+08:00",
-       "updateTime": "2025-11-20T13:38:57.962363+08:00",
+       "create_time": "2025-11-20T13:38:57.959305+08:00",
+       "update_time": "2025-11-20T13:38:57.962363+08:00",
        "icon": "",
        "workflow_id": "ftjlu1amurnn8yltipwv5fj1"
    }
@@ -243,9 +243,9 @@ curl -X POST \
    curl -X POST \
      http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
      -H 'Content-Type: application/json' \
-     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+     -d "{\"workflow_id\":\"${WORKFLOW_ID}\"}"
    ```
-   保存返回的 `taskId`。
+   保存返回的 `task_id`。
 3. 轮询任务状态直到结束：
    ```shell
    curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
@@ -349,7 +349,7 @@ curl -X POST \
      -d @payloads/config.json
    ```
 
-   记录响应中的 `appId` 与 `workflow_id`。
+   记录响应中的 `app_id` 与 `workflow_id`。
 
    ```json
    {
@@ -358,8 +358,8 @@ curl -X POST \
        "alias": "app-config",
        "project": "",
        "description": "TC003 config component creation",
-       "createTime": "2025-11-20T14:16:59.9162+08:00",
-       "updateTime": "2025-11-20T14:16:59.9162+08:00",
+       "create_time": "2025-11-20T14:16:59.9162+08:00",
+       "update_time": "2025-11-20T14:16:59.9162+08:00",
        "icon": "",
        "workflow_id": "kjk2efteq93lwims12e897gf"
    }
@@ -371,10 +371,10 @@ curl -X POST \
    curl -X POST \
      http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
      -H 'Content-Type: application/json' \
-     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+     -d "{\"workflow_id\":\"${WORKFLOW_ID}\"}"
    ```
 
-   保存返回的 `taskId`。
+   保存返回的 `task_id`。
 
 **验证点:**
 
@@ -474,14 +474,14 @@ curl -X POST \
      -H 'Content-Type: application/json' \
      -d @payloads/secret.json
    ```
-   记录响应中的 `appId` 与 `workflow_id`。
+   记录响应中的 `app_id` 与 `workflow_id`。
 
 2. 触发工作流：
    ```shell
    curl -X POST \
      http://127.0.0.1:8080/api/v1/applications/${APP_ID}/workflow/exec \
      -H 'Content-Type: application/json' \
-     -d "{\"workflowId\":\"${WORKFLOW_ID}\"}"
+     -d "{\"workflow_id\":\"${WORKFLOW_ID}\"}"
    ```
 
 **验证点:**
@@ -703,10 +703,10 @@ traits:
           {
             "name": "data-volume",
             "type": "persistent",
-            "mountPath": "/data",
-            "tmpCreate": true,
+            "mount_path": "/data",
+            "tmp_create": true,
             "size": "2Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -790,9 +790,9 @@ traits:
           {
             "name": "config-volume",
             "type": "config",
-            "sourceName": "app-config",
-            "mountPath": "/etc/config",
-            "readOnly": true
+            "source_name": "app-config",
+            "mount_path": "/etc/config",
+            "read_only": true
           }
         ]
       }
@@ -894,9 +894,9 @@ traits:
           {
             "name": "secret-volume",
             "type": "secret",
-            "sourceName": "app-secret",
-            "mountPath": "/etc/secrets",
-            "readOnly": true
+            "source_name": "app-secret",
+            "mount_path": "/etc/secrets",
+            "read_only": true
           }
         ]
       }
@@ -994,31 +994,31 @@ traits:
           {
             "name": "app-ingress",
             "namespace": "default",
-            "ingressClassName": "nginx",
+            "ingress_class_name": "nginx",
             "hosts": ["app.example.com"],
             "routes": [
               {
                 "path": "/",
-                "pathType": "Prefix",
+                "path_type": "Prefix",
                 "host": "app.example.com",
                 "backend": {
-                  "serviceName": "app-with-ingress",
-                  "servicePort": 8080
+                  "service_name": "app-with-ingress",
+                  "service_port": 8080
                 }
               },
               {
                 "path": "/api",
-                "pathType": "Prefix",
+                "path_type": "Prefix",
                 "host": "app.example.com",
                 "backend": {
-                  "serviceName": "app-with-ingress",
-                  "servicePort": 8080
+                  "service_name": "app-with-ingress",
+                  "service_port": 8080
                 }
               }
             ],
             "tls": [
               {
-                "secretName": "app-tls",
+                "secret_name": "app-tls",
                 "hosts": ["app.example.com"]
               }
             ]
@@ -1059,7 +1059,7 @@ traits:
     resourceVersion: "5286300"
     uid: 556e3c7a-4b6b-4068-9e70-92cb657cb47b
   spec:
-    ingressClassName: nginx
+    ingress_class_name: nginx
     rules:
     - host: app.example.com
       http:
@@ -1070,18 +1070,18 @@ traits:
               port:
                 number: 8080
           path: /
-          pathType: Prefix
+          path_type: Prefix
         - backend:
             service:
               name: app-with-ingress
               port:
                 number: 8080
           path: /api
-          pathType: Prefix
+          path_type: Prefix
     tls:
     - hosts:
       - app.example.com
-      secretName: app-tls
+      secret_name: app-tls
   status:
     loadBalancer: {}
   ```
@@ -1102,11 +1102,11 @@ traits:
 traits:
   - 类型: rbac
     属性:
-      serviceAccount: app-sa
+      service_account: app-sa
       roles:
         - 名称: app-role
         规则:
-          - apiGroups: [""]
+          - api_groups: [""]
           resources: ["pods"]
           verbs: ["get", "list"]
 ```
@@ -1129,18 +1129,18 @@ traits:
       "traits": {
         "rbac": [
           {
-            "serviceAccount": "app-sa",
+            "service_account": "app-sa",
             "namespace": "default",
-            "roleName": "app-role",
-            "bindingName": "app-role-binding",
+            "role_name": "app-role",
+            "binding_name": "app-role-binding",
             "rules": [
               {
-                "apiGroups": [""],
+                "api_groups": [""],
                 "resources": ["pods", "services"],
                 "verbs": ["get", "list", "watch"]
               },
               {
-                "apiGroups": [""],
+                "api_groups": [""],
                 "resources": ["configmaps"],
                 "verbs": ["get"]
               }
@@ -1195,7 +1195,7 @@ traits:
   
   
   
-  serviceAccount: app-sa
+  service_account: app-sa
   serviceAccountName: app-sa
   ```
 
@@ -1264,10 +1264,10 @@ traits:
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -1285,9 +1285,9 @@ traits:
         }
       },
       "traits": {
-        "envFrom": [
-          {"type": "configMap", "sourceName": "app-config"},
-          {"type": "secret", "sourceName": "app-secret"}
+        "env_from": [
+          {"type": "configMap", "source_name": "app-config"},
+          {"type": "secret", "source_name": "app-secret"}
         ]
       }
     }
@@ -1324,40 +1324,40 @@ traits:
   curl http://127.0.0.1:8080/api/v1/workflow/tasks/${TASK_ID}/status
   
   {
-      "taskId": "ojo3lk8k5y1dukall1t8npn0",
+      "task_id": "ojo3lk8k5y1dukall1t8npn0",
       "status": "completed",
-      "workflowId": "f6rx5ywixeat3tfnxqjtdgqp",
-      "workflowName": "test-app-012-dependency-ea7ff7qjd4ipclsb",
-      "appId": "ngfjmll19vd8562z4g70mk50",
+      "workflow_id": "f6rx5ywixeat3tfnxqjtdgqp",
+      "workflow_name": "test-app-012-dependency-ea7ff7qjd4ipclsb",
+      "app_id": "ngfjmll19vd8562z4g70mk50",
       "type": "workflow",
       "components": [
           {
               "name": "app-config",
               "type": "configmap_deploy",
               "status": "completed",
-              "startTime": 1765612402,
-              "endTime": 1765612402
+              "start_time": 1765612402,
+              "end_time": 1765612402
           },
           {
               "name": "app-secret",
               "type": "secret_deploy",
               "status": "completed",
-              "startTime": 1765612402,
-              "endTime": 1765612402
+              "start_time": 1765612402,
+              "end_time": 1765612402
           },
           {
               "name": "mysql-db",
               "type": "store_deploy",
               "status": "completed",
-              "startTime": 1765612402,
-              "endTime": 1765612407
+              "start_time": 1765612402,
+              "end_time": 1765612407
           },
           {
               "name": "backend-app",
               "type": "service_deploy",
               "status": "completed",
-              "startTime": 1765612407,
-              "endTime": 1765612409
+              "start_time": 1765612407,
+              "end_time": 1765612409
           }
       ]
   }
@@ -1512,10 +1512,10 @@ traits:
           {
             "name": "user-db-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -1537,10 +1537,10 @@ traits:
           {
             "name": "order-db-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -1600,16 +1600,16 @@ traits:
           {
             "name": "frontend-ingress",
             "namespace": "default",
-            "ingressClassName": "nginx",
+            "ingress_class_name": "nginx",
             "hosts": ["app.example.com"],
             "routes": [
               {
                 "path": "/",
-                "pathType": "Prefix",
+                "path_type": "Prefix",
                 "host": "app.example.com",
                 "backend": {
-                  "serviceName": "frontend",
-                  "servicePort": 80
+                  "service_name": "frontend",
+                  "service_port": 80
                 }
               }
             ]
@@ -2202,27 +2202,27 @@ wait
           {
             "name": "config-vol-1",
             "type": "config",
-            "sourceName": "large-config",
-            "mountPath": "/etc/config1",
-            "readOnly": true
+            "source_name": "large-config",
+            "mount_path": "/etc/config1",
+            "read_only": true
           },
           {
             "name": "config-vol-2",
             "type": "config",
-            "sourceName": "large-config",
-            "mountPath": "/etc/config2",
-            "readOnly": true
+            "source_name": "large-config",
+            "mount_path": "/etc/config2",
+            "read_only": true
           },
           {
             "name": "config-vol-3",
             "type": "config",
-            "sourceName": "large-config",
-            "mountPath": "/etc/config3",
-            "readOnly": true
+            "source_name": "large-config",
+            "mount_path": "/etc/config3",
+            "read_only": true
           }
         ],
-        "envFrom": [
-          {"type": "configMap", "sourceName": "large-config"}
+        "env_from": [
+          {"type": "configMap", "source_name": "large-config"}
         ]
       }
     }
@@ -2308,9 +2308,9 @@ wait
         }
       },
       "traits": {
-        "envFrom": [
-          {"type": "configMap", "sourceName": "config-with-dashes"},
-          {"type": "secret", "sourceName": "secret-with-dashes"}
+        "env_from": [
+          {"type": "configMap", "source_name": "config-with-dashes"},
+          {"type": "secret", "source_name": "secret-with-dashes"}
         ]
       }
     }
@@ -2384,7 +2384,7 @@ wait
   ```
 - [ ] 状态更新正常
 
-### 6.模板实例化测试 (Tem.id 克隆)
+### 6.模板实例化测试 (template.id 克隆)
 
 #### 测试项 TC023：单次克隆模板（tmp_enable=true）
 - 前置：模板应用已存在且 `tmp_enable=true`，包含 store + secret 组件。
@@ -2397,8 +2397,8 @@ wait
   "version": "1.0.3",
   "description": "mysql cloned from template",
   "component": [
-    { "name": "tenant-a-mysql", "type": "store", "Tem": { "id": "tmpl-mysql-id" }, "properties": { "env": { "MYSQL_DATABASE": "demo" } } },
-    { "name": "tenant-a-config", "type": "secret", "properties": { "secret": { "MYSQL_ROOT_PASSWORD": "d3loNWFjTFVjWUR5ZjF1VA==" } }, "Tem": { "id": "tmpl-mysql-id" } }
+    { "name": "tenant-a-mysql", "type": "store", "template": { "id": "tmpl-mysql-id" }, "properties": { "env": { "MYSQL_DATABASE": "demo" } } },
+    { "name": "tenant-a-config", "type": "secret", "properties": { "secret": { "MYSQL_ROOT_PASSWORD": "d3loNWFjTFVjWUR5ZjF1VA==" } }, "template": { "id": "tmpl-mysql-id" } }
   ]
 }
 ```
@@ -2409,10 +2409,10 @@ wait
   - 模板 `tmp_enable=true` 方可引用，`tmp_enable=false` 返回 400。
 
 #### 测试项 TC024：模板禁用/ID 缺失错误
-- 模板 `tmp_enable=false` 或 `Tem.id` 为空/不存在，返回 400/404，错误信息分别为 `template application is not enabled` / `template id is required` / `application name is not exist`。
+- 模板 `tmp_enable=false` 或 `template.id` 为空/不存在，返回 400/404，错误信息分别为 `template application is not enabled` / `template id is required` / `application name is not exist`。
 
 #### 测试项 TC025：同模板多条覆盖匹配
-- 同一 `Tem.id` 多条目仅用于覆盖（类型优先匹配），未匹配的模板组件按 baseName 或模板名生成新名称。
+- 同一 `template.id` 多条目仅用于覆盖（类型优先匹配），未匹配的模板组件按 baseName 或模板名生成新名称。
 - 校验组件命名、env/secret 覆盖结果与预期一致，组件数量不重复。
 
 
@@ -2461,8 +2461,8 @@ wait
     "project": "",
     "version": "1.0.0",
     "description": "My backend application",
-    "createTime": "2025-12-07T20:47:56.905968+08:00",
-    "updateTime": "2025-12-07T20:47:56.905968+08:00",
+    "create_time": "2025-12-07T20:47:56.905968+08:00",
+    "update_time": "2025-12-07T20:47:56.905968+08:00",
     "icon": "",
     "workflow_id": "adw9ccyo7n6f0iorzthrmo34",
     "tmp_enable": false
@@ -2471,13 +2471,13 @@ wait
 
 1.执行工作流
 
-**请求**：`POST /api/v1/applications/a8h07bwds3f2f4ewzbzyew5c/workflow/exec` body:`{"workflowId":"adw9ccyo7n6f0iorzthrmo34"}`
+**请求**：`POST /api/v1/applications/a8h07bwds3f2f4ewzbzyew5c/workflow/exec` body:`{"workflow_id":"adw9ccyo7n6f0iorzthrmo34"}`
 
 正常返回:
 
 ```json
 {
-    "taskId": "80639qtadaz8bogotvmok9vh"
+    "task_id": "80639qtadaz8bogotvmok9vh"
 }
 ```
 
@@ -2544,12 +2544,12 @@ spec:
 
 ```
 {
-    "appId": "a8h07bwds3f2f4ewzbzyew5c",
+    "app_id": "a8h07bwds3f2f4ewzbzyew5c",
     "version": "1.2.0",
-    "previousVersion": "1.0.0",
+    "previous_version": "1.0.0",
     "strategy": "rolling",
-    "taskId": "1esnitda8cxi85u4clapfn89",
-    "updatedComponents": [
+    "task_id": "1esnitda8cxi85u4clapfn89",
+    "updated_components": [
         "backend"
     ]
 }
@@ -2602,9 +2602,9 @@ spec:
     terminationMessagePath: /dev/termination-log
     terminationMessagePolicy: File
     volumeMounts:
-    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+    - mount_path: /var/run/secrets/kubernetes.io/serviceaccount
       name: kube-api-access-txlz8
-      readOnly: true
+      read_only: true
 ```
 
 

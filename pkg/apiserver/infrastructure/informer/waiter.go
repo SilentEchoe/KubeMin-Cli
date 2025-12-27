@@ -10,7 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 // ResourceReadyWaiter 资源就绪等待器 - 基于 Informer 事件驱动

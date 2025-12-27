@@ -4,8 +4,8 @@ import (
 	"net/http"
 	"strings"
 
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/domain/service"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 	"github.com/gin-gonic/gin"
 )
 
@@ -46,7 +46,7 @@ func normalizeWorkflowRequest(req *apis.CreateWorkflowRequest) {
 	req.Project = strings.ToLower(req.Project)
 	for i := range req.Component {
 		req.Component[i].Name = strings.ToLower(req.Component[i].Name)
-		req.Component[i].NameSpace = strings.ToLower(req.Component[i].NameSpace)
+		req.Component[i].Namespace = strings.ToLower(req.Component[i].Namespace)
 	}
 	for i := range req.Workflows {
 		req.Workflows[i].Name = strings.ToLower(req.Workflows[i].Name)

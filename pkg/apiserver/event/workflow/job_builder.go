@@ -15,12 +15,12 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/event/workflow/job"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 type StepExecution struct {

@@ -8,14 +8,14 @@
       "name": "backend",
       "type": "webservice",
       "image": "nginx:latest",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1
     },
     {
       "name": "backend",
       "type": "webservice",
       "image": "httpd:latest",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1
     }
   ],

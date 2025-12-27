@@ -78,7 +78,7 @@ func (m *MemCache) IsCacheDisabled() bool {
 }
 
 // GetRedisClient returns nil for MemCache since it doesn't use Redis.
-// This method satisfies the ICache interface for dependency injection.
+// This method satisfies the Cache interface for dependency injection.
 func (m *MemCache) GetRedisClient() *redis.Client {
 	return nil
 }
@@ -91,7 +91,7 @@ func (i *item) expired(now time.Time) bool {
 	return now.After(i.expiresAt)
 }
 
-func NewMemCache(noCache bool) ICache {
+func NewMemCache(noCache bool) Cache {
 	c := &MemCache{
 		noCache: noCache,
 		items:   make(map[string]*item),

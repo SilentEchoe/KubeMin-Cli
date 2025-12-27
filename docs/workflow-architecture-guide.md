@@ -78,7 +78,7 @@ type WorkflowStep struct {
     Name         string              `json:"name"`
     Mode         config.WorkflowMode `json:"mode,omitempty"`
     Properties   []Policies          `json:"properties,omitempty"`
-    SubSteps     []*WorkflowSubStep  `json:"subSteps,omitempty"`
+    SubSteps     []*WorkflowSubStep  `json:"sub_steps,omitempty"`
 }
 ```
 
@@ -134,7 +134,7 @@ func (w *WorkflowCtl) Run(ctx context.Context, concurrency int) error {
     // 创建带 traceID 的 logger
     logger := klog.FromContext(ctx).WithValues(
         "traceID", span.SpanContext().TraceID().String(),
-        "workflowName", workflowName,
+        "workflow_name", workflowName,
         "taskID", taskMeta.TaskID,
     )
     // ...
@@ -430,7 +430,7 @@ type Workflow struct {
 // domain/model/workflow_queue.go
 type WorkflowQueue struct {
     TaskID              string                  `gorm:"primaryKey" json:"task_id"`
-    ProjectID           string                  `json:"projectId"`
+    ProjectID           string                  `json:"project_id"`
     WorkflowName        string                  `json:"workflow_name"`
     AppID               string                  `json:"app_id"`
     WorkflowID          string                  `json:"workflow_id"`
@@ -942,7 +942,7 @@ func Cancel(ctx context.Context, taskID, reason string) error {
    │                             │─────────────────────────────>│
    │                             │                              │
    │                             │<─────────────────────────────│
-   │  返回 taskId                │                              │
+   │  返回 task_id                │                              │
    │<────────────────────────────│                              │
 ```
 
@@ -1115,7 +1115,7 @@ Workflow Steps 定义:
     {
       "name": "app-config-1",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -1128,7 +1128,7 @@ Workflow Steps 定义:
     {
       "name": "app-config-2",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -1141,7 +1141,7 @@ Workflow Steps 定义:
     {
       "name": "app-config-3",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -1155,7 +1155,7 @@ Workflow Steps 定义:
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 8080, "expose": true}],
@@ -1169,7 +1169,7 @@ Workflow Steps 定义:
       "name": "frontend",
       "type": "webservice",
       "image": "myregistry/frontend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 80, "expose": true}],
@@ -1276,7 +1276,7 @@ Priority 10 (Deployment):        ↓
     {
       "name": "config",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -1290,7 +1290,7 @@ Priority 10 (Deployment):        ↓
       "name": "api",
       "type": "webservice",
       "image": "myregistry/api:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 8080, "expose": true}],
@@ -1304,7 +1304,7 @@ Priority 10 (Deployment):        ↓
       "name": "web",
       "type": "webservice",
       "image": "myregistry/web:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 80, "expose": true}],
@@ -1605,12 +1605,12 @@ func (w *Workflow) workerBackoffDelay(current, min, max time.Duration) time.Dura
    │                             │                          │                        │
    │ POST /workflow/cancel       │                          │                        │
    │────────────────────────────>│                          │                        │
-   │   taskId, reason            │                          │                        │
+   │   task_id, reason            │                          │                        │
    │                             │                          │                        │
    │                             │  更新 DB: cancelled      │                        │
    │                             │─────────>                │                        │
    │                             │                          │                        │
-   │                             │  SET cancel:taskId       │                        │
+   │                             │  SET cancel:task_id       │                        │
    │                             │  "cancelled:reason"      │                        │
    │                             │─────────────────────────>│                        │
    │                             │                          │                        │

@@ -8,8 +8,8 @@ import (
 	"github.com/google/uuid"
 	"github.com/spf13/pflag"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/utils/profiling"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/utils/profiling"
 )
 
 type leaderConfig struct {
@@ -119,7 +119,7 @@ type RedisCacheConfig struct {
 	CacheDB   int64
 	UserName  string
 	Password  string
-	// CacheTTL sets default ttl for ICache entries
+	// CacheTTL sets default ttl for Cache entries
 	CacheTTL time.Duration
 	// KeyPrefix applied to cache keys in redis
 	KeyPrefix string
@@ -153,12 +153,12 @@ func NewConfig() *Config {
 			LockName: "apiserver-lock",
 			//Duration:  time.Second * 5,
 			Duration:  time.Minute * 60, //debug code
-			Namespace: NAMESPACE,
+			Namespace: SystemNamespace,
 		},
 		Datastore: datastore.Config{
-			Type:            MYSQL,
-			Database:        DBNAME_KUBEMINCLI,
-			URL:             fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNAME_KUBEMINCLI),
+			Type:            MySQL,
+			Database:        DBNameKubeMinCLI,
+			URL:             fmt.Sprintf("root:123456@tcp(127.0.0.1:3306)/%s?charset=utf8&parseTime=true", DBNameKubeMinCLI),
 			MaxIdleConns:    10,
 			MaxOpenConns:    100,
 			ConnMaxLifetime: 30 * time.Minute,
@@ -217,7 +217,7 @@ func (c *Config) Validate() []error {
 	if strings.TrimSpace(c.BindAddr) == "" {
 		errs = append(errs, fmt.Errorf("bind address cannot be empty"))
 	}
-	if c.Datastore.Type == MYSQL && strings.TrimSpace(c.Datastore.URL) == "" {
+	if c.Datastore.Type == MySQL && strings.TrimSpace(c.Datastore.URL) == "" {
 		errs = append(errs, fmt.Errorf("mysql url cannot be empty"))
 	}
 	if c.Cache.CacheType == ("redis") {

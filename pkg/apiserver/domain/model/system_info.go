@@ -7,7 +7,7 @@ func init() {
 // SystemInfo systemInfo model
 type SystemInfo struct {
 	BaseModel
-	InstallID string `json:"installID" gorm:"primaryKey"` //安装ID，主键
+	InstallID string `json:"install_id" gorm:"primaryKey"` //安装ID，主键
 }
 
 // TableName return custom table name
@@ -29,7 +29,7 @@ func (u *SystemInfo) PrimaryKey() string {
 func (u *SystemInfo) Index() map[string]interface{} {
 	index := make(map[string]interface{})
 	if u.InstallID != "" {
-		index["installID"] = u.InstallID
+		index["install_id"] = u.InstallID
 	}
 	return index
 }

@@ -13,12 +13,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/informer"
+	"kubemin-cli/pkg/apiserver/utils"
+	traitsPlu "kubemin-cli/pkg/apiserver/workflow/traits"
 )
 
 type DeployStatefulSetJobCtl struct {
@@ -305,7 +305,7 @@ func GenerateStoreService(component *model.ApplicationComponent) *GenerateServic
 							ImagePullPolicy: corev1.PullIfNotPresent,
 						},
 					},
-					TerminationGracePeriodSeconds: utils.ParseInt64(30),
+					TerminationGracePeriodSeconds: utils.Int64Ptr(30),
 				},
 			},
 		},

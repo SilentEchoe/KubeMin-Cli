@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
 
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
 )
 
 type mockHealthQueue struct {

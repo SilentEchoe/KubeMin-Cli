@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 // RBACProfileRepository defines the interface for RBAC profile data operations.

@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"unicode"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 	"github.com/go-playground/validator/v10"
 )
 

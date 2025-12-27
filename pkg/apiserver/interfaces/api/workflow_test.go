@@ -10,9 +10,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 type fakeWorkflowService struct {
@@ -154,7 +154,7 @@ func TestExecApplicationWorkflowEndpoint(t *testing.T) {
 	r := gin.New()
 	r.POST("/applications/:appID/workflow/exec", appHandler.execApplicationWorkflow)
 
-	body := `{"workflowId":"wf-123"}`
+	body := `{"workflow_id":"wf-123"}`
 	req := httptest.NewRequest(http.MethodPost, "/applications/app-1/workflow/exec", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
@@ -187,7 +187,7 @@ func TestCancelApplicationWorkflowEndpoint(t *testing.T) {
 	r := gin.New()
 	r.POST("/applications/:appID/workflow/cancel", appHandler.cancelApplicationWorkflow)
 
-	body := `{"taskId":"demo-task","user":"tester","reason":"manual stop"}`
+	body := `{"task_id":"demo-task","user":"tester","reason":"manual stop"}`
 	req := httptest.NewRequest(http.MethodPost, "/applications/app-2/workflow/cancel", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
@@ -374,7 +374,7 @@ func TestWorkflowCancelEndpointNotImplemented(t *testing.T) {
 	r := gin.New()
 	r.POST("/workflow/cancel", w.cancelWorkflowTask)
 
-	body := `{"taskId":"demo-task","user":"tester","reason":"manual stop"}`
+	body := `{"task_id":"demo-task","user":"tester","reason":"manual stop"}`
 	req := httptest.NewRequest(http.MethodPost, "/workflow/cancel", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	resp := httptest.NewRecorder()
@@ -444,7 +444,7 @@ func TestUpdateVersionEndpoint(t *testing.T) {
 			{"action": "add", "name": "cache", "type": "store", "image": "redis:7"},
 			{"action": "remove", "name": "old-worker"}
 		],
-		"autoExec": true,
+		"auto_exec": true,
 		"description": "Major version update"
 	}`
 	req := httptest.NewRequest(http.MethodPost, "/applications/app-123/version", strings.NewReader(body))

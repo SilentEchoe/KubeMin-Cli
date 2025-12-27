@@ -11,9 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/locker"
-	"KubeMin-Cli/pkg/apiserver/utils/cache"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/infrastructure/locker"
+	"kubemin-cli/pkg/apiserver/utils/cache"
 )
 
 var (

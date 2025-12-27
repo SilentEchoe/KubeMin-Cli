@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 // ConfigMapData 定义ConfigMap的数据结构
@@ -26,7 +26,7 @@ type SecretInput struct {
 	Type        string            `json:"type,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
 	URL         string            `json:"url,omitempty"`
-	FileName    string            `json:"fileName,omitempty"`
+	FileName    string            `json:"file_name,omitempty"`
 }
 
 func ExtractFileNameFromURLForSecret(url string) string {
@@ -54,7 +54,7 @@ type ConfigMapInput struct {
 	Annotations map[string]string `json:"annotations,omitempty"`
 	Data        map[string]string `json:"data,omitempty"`
 	URL         string            `json:"url,omitempty"`
-	FileName    string            `json:"fileName,omitempty"`
+	FileName    string            `json:"file_name,omitempty"`
 }
 
 // GenerateConf 根据 Data 或 URL 生成标准 ConfigMapData

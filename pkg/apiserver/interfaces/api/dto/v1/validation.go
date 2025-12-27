@@ -11,11 +11,11 @@ type ValidationError struct {
 }
 
 // TryApplicationRequest is the same as CreateApplicationsRequest
-// It accepts an optional appId to validate only workflow steps against an existing application.
-// When appId is provided, the request is treated as a workflow validation request using the
+// It accepts an optional app_id to validate only workflow steps against an existing application.
+// When app_id is provided, the request is treated as a workflow validation request using the
 // workflow steps from CreateApplicationsRequest.WorkflowSteps.
 type TryApplicationRequest struct {
-	AppID string `json:"appId,omitempty"`
+	AppID string `json:"app_id,omitempty"`
 	CreateApplicationsRequest
 }
 
@@ -30,7 +30,7 @@ type TryApplicationResponse struct {
 // TryWorkflowRequest is the request for the try workflow validation API
 type TryWorkflowRequest struct {
 	// WorkflowID is optional - if provided, validates against existing workflow
-	WorkflowID string `json:"workflowId,omitempty"`
+	WorkflowID string `json:"workflow_id,omitempty"`
 	// Name is the workflow name
 	Name string `json:"name,omitempty"`
 	// Alias is the workflow alias

@@ -8,7 +8,7 @@
     {
       "name": "app-config",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -22,7 +22,7 @@
     {
       "name": "app-secret",
       "type": "secret",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "secret": {
@@ -36,7 +36,7 @@
       "name": "mysql",
       "type": "store",
       "image": "mysql:8.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "ports": [{"port": 3306}],
@@ -49,28 +49,28 @@
           {
             "type": "persistent",
             "name": "mysql-data",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "10Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ],
         "probes": [
           {
             "type": "liveness",
-            "tcpSocket": {
+            "tcp_socket": {
               "port": 3306
             },
-            "initialDelaySeconds": 30,
-            "periodSeconds": 10
+            "initial_delay_seconds": 30,
+            "period_seconds": 10
           },
           {
             "type": "readiness",
-            "tcpSocket": {
+            "tcp_socket": {
               "port": 3306
             },
-            "initialDelaySeconds": 5,
-            "periodSeconds": 5
+            "initial_delay_seconds": 5,
+            "period_seconds": 5
           }
         ]
       }
@@ -79,7 +79,7 @@
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 3,
       "properties": {
         "ports": [{"port": 8080}],
@@ -91,49 +91,49 @@
         "probes": [
           {
             "type": "liveness",
-            "httpGet": {
+            "http_get": {
               "path": "/healthz",
               "port": 8080
             },
-            "initialDelaySeconds": 30,
-            "periodSeconds": 10,
-            "timeoutSeconds": 5,
-            "failureThreshold": 3
+            "initial_delay_seconds": 30,
+            "period_seconds": 10,
+            "timeout_seconds": 5,
+            "failure_threshold": 3
           },
           {
             "type": "readiness",
-            "httpGet": {
+            "http_get": {
               "path": "/ready",
               "port": 8080
             },
-            "initialDelaySeconds": 5,
-            "periodSeconds": 5
+            "initial_delay_seconds": 5,
+            "period_seconds": 5
           }
         ],
         "resources": {
           "cpu": "500m",
           "memory": "512Mi"
         },
-        "envFrom": [
+        "env_from": [
           {
             "type": "configMap",
-            "sourceName": "app-config"
+            "source_name": "app-config"
           },
           {
             "type": "secret",
-            "sourceName": "app-secret"
+            "source_name": "app-secret"
           }
         ],
         "envs": [
           {
             "name": "POD_NAME",
-            "valueFrom": {
+            "value_from": {
               "field": "metadata.name"
             }
           },
           {
             "name": "POD_IP",
-            "valueFrom": {
+            "value_from": {
               "field": "status.podIP"
             }
           }
@@ -142,15 +142,15 @@
           {
             "name": "backend-ingress",
             "namespace": "default",
-            "ingressClassName": "nginx",
+            "ingress_class_name": "nginx",
             "hosts": ["api.example.com"],
             "routes": [
               {
                 "path": "/api",
-                "pathType": "Prefix",
+                "path_type": "Prefix",
                 "backend": {
-                  "serviceName": "backend",
-                  "servicePort": 8080
+                  "service_name": "backend",
+                  "service_port": 8080
                 }
               }
             ]
@@ -158,15 +158,15 @@
         ],
         "rbac": [
           {
-            "serviceAccount": "backend-sa",
+            "service_account": "backend-sa",
             "rules": [
               {
-                "apiGroups": [""],
+                "api_groups": [""],
                 "resources": ["pods", "services"],
                 "verbs": ["get", "list", "watch"]
               },
               {
-                "apiGroups": [""],
+                "api_groups": [""],
                 "resources": ["configmaps"],
                 "verbs": ["get"]
               }

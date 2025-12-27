@@ -2,7 +2,7 @@
   "name": "test-multi-volume-sts",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "多 Volume StatefulSet 测试 - 验证多个 tmpCreate volume",
+  "description": "多 Volume StatefulSet 测试 - 验证多个 tmp_create volume",
   "component": [
     {
       "name": "postgres-db",
@@ -21,23 +21,23 @@
           {
             "name": "pg-data",
             "type": "persistent",
-            "mountPath": "/var/lib/postgresql/data",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/postgresql/data",
+            "tmp_create": true,
             "size": "10Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           },
           {
             "name": "pg-wal",
             "type": "persistent",
-            "mountPath": "/var/lib/postgresql/wal",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/postgresql/wal",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           },
           {
             "name": "pg-backup",
             "type": "ephemeral",
-            "mountPath": "/backup"
+            "mount_path": "/backup"
           }
         ]
       }

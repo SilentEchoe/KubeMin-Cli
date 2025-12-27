@@ -3,7 +3,7 @@ package model
 import (
 	"strconv"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 func init() {
@@ -14,13 +14,13 @@ type JobInfo struct {
 	ID          int    `json:"id" gorm:"primaryKey"`
 	Type        string `json:"type"`
 	WorkflowID  string `json:"workflow_id"`
-	ProductID   string `json:"product_Id"`
+	ProductID   string `json:"product_id"`
 	AppID       string `json:"app_id"`
 	TaskID      string `gorm:"column:taskid" json:"task_id"`
 	Status      string `bson:"status" json:"status"`
 	StartTime   int64  `bson:"start_time" json:"start_time"`
 	EndTime     int64  `bson:"end_time" json:"end_time"`
-	Info        string `json:"service_type"`
+	ServiceType string `json:"service_type"`
 	ServiceName string `json:"service_name"`
 	Error       string `json:"error"`
 	Production  bool   `json:"production"` // 是否生产

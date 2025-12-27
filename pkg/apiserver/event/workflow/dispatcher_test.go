@@ -8,8 +8,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	"kubemin-cli/pkg/apiserver/config"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
 )
 
 type fakeAckQueue struct {

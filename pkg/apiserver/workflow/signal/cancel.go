@@ -11,7 +11,7 @@ import (
 	"github.com/redis/go-redis/v9"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/utils/cache"
+	"kubemin-cli/pkg/apiserver/utils/cache"
 )
 
 const (

@@ -11,16 +11,16 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
-	"KubeMin-Cli/pkg/apiserver/utils/cache"
-	wf "KubeMin-Cli/pkg/apiserver/workflow"
-	"KubeMin-Cli/pkg/apiserver/workflow/signal"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/repository"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/utils/bcode"
+	"kubemin-cli/pkg/apiserver/utils/cache"
+	wf "kubemin-cli/pkg/apiserver/workflow"
+	"kubemin-cli/pkg/apiserver/workflow/signal"
 )
 
 type WorkflowService interface {
@@ -41,7 +41,7 @@ type workflowServiceImpl struct {
 	Store      datastore.DataStore  `inject:"datastore"`
 	KubeClient kubernetes.Interface `inject:"kubeClient"`
 	KubeConfig *rest.Config         `inject:"kubeConfig"`
-	Cache      cache.ICache         `inject:"cache"`
+	Cache      cache.Cache         `inject:"cache"`
 }
 
 // NewWorkflowService new workflow service
@@ -116,7 +116,7 @@ func ConvertComponent(req *apis.CreateComponentRequest, appID string) *model.App
 	return &model.ApplicationComponent{
 		Name:          req.Name,
 		AppID:         appID,
-		Namespace:     req.NameSpace,
+		Namespace:     req.Namespace,
 		Image:         req.Image,
 		Replicas:      req.Replicas,
 		ComponentType: req.ComponentType,

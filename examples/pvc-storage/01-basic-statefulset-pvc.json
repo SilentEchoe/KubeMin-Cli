@@ -2,7 +2,7 @@
   "name": "test-statefulset-pvc-basic",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "基本 StatefulSet PVC 测试 - tmpCreate 模式",
+  "description": "基本 StatefulSet PVC 测试 - tmp_create 模式",
   "component": [
     {
       "name": "mysql-primary",
@@ -21,8 +21,8 @@
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi"
           }
         ]

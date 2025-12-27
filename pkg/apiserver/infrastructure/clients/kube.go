@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	apiConfig "KubeMin-Cli/pkg/apiserver/config"
+	apiConfig "kubemin-cli/pkg/apiserver/config"
 )
 
 /*

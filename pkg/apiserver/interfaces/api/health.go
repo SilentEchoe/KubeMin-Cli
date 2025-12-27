@@ -6,7 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
 )
 
 func init() {

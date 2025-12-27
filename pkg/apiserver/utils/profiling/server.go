@@ -6,7 +6,7 @@ import (
 	"net/http/pprof"
 	"runtime"
 
-	"KubeMin-Cli/pkg/apiserver/utils/errhandler"
+	"kubemin-cli/pkg/apiserver/utils/errhandler"
 	"k8s.io/klog/v2"
 )
 

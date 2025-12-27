@@ -2,7 +2,7 @@
 
 ## 问题概述
 
-在 StatefulSet 中使用 `tmpCreate: true` 创建持久化存储时，VolumeMount 与 Volume 名称不匹配会导致 Pod 创建失败。
+在 StatefulSet 中使用 `tmp_create: true` 创建持久化存储时，VolumeMount 与 Volume 名称不匹配会导致 Pod 创建失败。
 
 ### 错误信息示例
 
@@ -38,7 +38,7 @@ spec:
         - name: mysql
           volumeMounts:
             - name: data  # ← 必须与 volumeClaimTemplate.metadata.name 匹配
-              mountPath: /var/lib/mysql
+              mount_path: /var/lib/mysql
 ```
 
 **关键点**：
@@ -71,7 +71,7 @@ if vol.TmpCreate {
 // VolumeMount 引用 volumeName = "mysql-data"
 volumeMounts = append(volumeMounts, corev1.VolumeMount{
     Name: volumeName,  // "mysql-data"
-    MountPath: mountPath,
+    MountPath: mount_path,
 })
 ```
 
@@ -81,7 +81,7 @@ volumeMounts = append(volumeMounts, corev1.VolumeMount{
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                              storage.go 处理                                      │
 ├─────────────────────────────────────────────────────────────────────────────────┤
-│  用户输入: name="mysql-data", tmpCreate=true                                      │
+│  用户输入: name="mysql-data", tmp_create=true                                      │
 │                                                                                 │
 │  1. volumeName = NormalizeLowerStrip("mysql-data") = "mysql-data"               │
 │  2. pvcName = PVCName("mysql-data", appID) = "pvc-mysql-data-xxx"               │
@@ -122,7 +122,7 @@ volumeMounts = append(volumeMounts, corev1.VolumeMount{
 │        containers:                                                              │
 │          - volumeMounts:                                                        │
 │              - name: mysql-data  # ❌ 引用的名称不存在！                          │
-│                mountPath: /var/lib/mysql                                        │
+│                mount_path: /var/lib/mysql                                        │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         ▼
@@ -166,7 +166,7 @@ if vol.TmpCreate {
 │        containers:                                                              │
 │          - volumeMounts:                                                        │
 │              - name: mysql-data  # ✅ 匹配成功                                   │
-│                mountPath: /var/lib/mysql                                        │
+│                mount_path: /var/lib/mysql                                        │
 └─────────────────────────────────────────────────────────────────────────────────┘
                                         │
                                         ▼
@@ -188,16 +188,16 @@ if vol.TmpCreate {
 
 ## 测试场景与用例
 
-### 场景 1: 基本 StatefulSet + tmpCreate
+### 场景 1: 基本 StatefulSet + tmp_create
 
-**测试目的**：验证 StatefulSet 使用 `tmpCreate: true` 时 PVC 正确创建
+**测试目的**：验证 StatefulSet 使用 `tmp_create: true` 时 PVC 正确创建
 
 ```json
 {
   "name": "test-statefulset-pvc-basic",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "基本 StatefulSet PVC 测试 - tmpCreate 模式",
+  "description": "基本 StatefulSet PVC 测试 - tmp_create 模式",
   "component": [
     {
       "name": "mysql-primary",
@@ -216,10 +216,10 @@ if vol.TmpCreate {
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -260,7 +260,7 @@ kubectl get pvc
 
 ### 场景 2: 多 Volume StatefulSet
 
-**测试目的**：验证多个 Volume 同时使用 tmpCreate
+**测试目的**：验证多个 Volume 同时使用 tmp_create
 
 ```json
 {
@@ -285,23 +285,23 @@ kubectl get pvc
           {
             "name": "pg-data",
             "type": "persistent",
-            "mountPath": "/var/lib/postgresql/data",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/postgresql/data",
+            "tmp_create": true,
             "size": "10Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           },
           {
             "name": "pg-wal",
             "type": "persistent",
-            "mountPath": "/var/lib/postgresql/wal",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/postgresql/wal",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           },
           {
             "name": "pg-backup",
             "type": "ephemeral",
-            "mountPath": "/backup"
+            "mount_path": "/backup"
           }
         ]
       }
@@ -339,9 +339,9 @@ kubectl get pvc | grep -E "pg-data|pg-wal"
 
 ---
 
-### 场景 3: 混合模式 - tmpCreate + 引用已有 PVC
+### 场景 3: 混合模式 - tmp_create + 引用已有 PVC
 
-**测试目的**：验证同时使用 tmpCreate 和引用已有 PVC
+**测试目的**：验证同时使用 tmp_create 和引用已有 PVC
 
 ```json
 {
@@ -363,16 +363,16 @@ kubectl get pvc | grep -E "pg-data|pg-wal"
           {
             "name": "app-data",
             "type": "persistent",
-            "mountPath": "/data",
-            "tmpCreate": true,
+            "mount_path": "/data",
+            "tmp_create": true,
             "size": "2Gi"
           },
           {
             "name": "shared-config",
             "type": "persistent",
-            "mountPath": "/config",
-            "tmpCreate": false,
-            "claimName": "existing-config-pvc"
+            "mount_path": "/config",
+            "tmp_create": false,
+            "claim_name": "existing-config-pvc"
           }
         ]
       }
@@ -411,9 +411,9 @@ EOF
 
 ---
 
-### 场景 4: Deployment + tmpCreate (负面测试)
+### 场景 4: Deployment + tmp_create (负面测试)
 
-**测试目的**：验证 Deployment 使用 tmpCreate 时的处理（应发出警告）
+**测试目的**：验证 Deployment 使用 tmp_create 时的处理（应发出警告）
 
 ```json
 {
@@ -435,8 +435,8 @@ EOF
           {
             "name": "web-data",
             "type": "persistent",
-            "mountPath": "/data",
-            "tmpCreate": true,
+            "mount_path": "/data",
+            "tmp_create": true,
             "size": "1Gi"
           }
         ]
@@ -459,7 +459,7 @@ EOF
 - PVC template 会被忽略
 - Pod 创建可能失败（因为 Volume 被移除但 VolumeMount 仍存在）
 
-**注意**：对于 Deployment，应使用 `tmpCreate: false` 并引用已有 PVC，或使用 ephemeral volume。
+**注意**：对于 Deployment，应使用 `tmp_create: false` 并引用已有 PVC，或使用 ephemeral volume。
 
 ---
 
@@ -490,9 +490,9 @@ EOF
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "subPath": "mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "sub_path": "mysql",
+            "tmp_create": true,
             "size": "10Gi"
           }
         ],
@@ -506,8 +506,8 @@ EOF
                 {
                   "name": "mysql-data",
                   "type": "persistent",
-                  "mountPath": "/var/lib/mysql",
-                  "subPath": "mysql"
+                  "mount_path": "/var/lib/mysql",
+                  "sub_path": "mysql"
                 }
               ]
             }
@@ -523,8 +523,8 @@ EOF
                 {
                   "name": "mysql-data",
                   "type": "persistent",
-                  "mountPath": "/var/lib/mysql",
-                  "subPath": "mysql"
+                  "mount_path": "/var/lib/mysql",
+                  "sub_path": "mysql"
                 }
               ]
             }
@@ -607,10 +607,10 @@ kubectl get pod <pod-name> -o jsonpath='{range .spec.initContainers[*]}{.name}: 
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -627,9 +627,9 @@ kubectl get pod <pod-name> -o jsonpath='{range .spec.initContainers[*]}{.name}: 
         }
       },
       "traits": {
-        "envFrom": [
-          {"type": "configMap", "sourceName": "app-config"},
-          {"type": "secret", "sourceName": "app-secret"}
+        "env_from": [
+          {"type": "configMap", "source_name": "app-config"},
+          {"type": "secret", "source_name": "app-secret"}
         ]
       }
     }
@@ -683,12 +683,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
-// TestStorageProcessor_StatefulSet_TmpCreate 验证 StatefulSet 使用 tmpCreate 时
+// TestStorageProcessor_StatefulSet_TmpCreate 验证 StatefulSet 使用 tmp_create 时
 // volumeClaimTemplate 名称与 VolumeMount 名称一致
 func TestStorageProcessor_StatefulSet_TmpCreate(t *testing.T) {
 	processor := &StorageProcessor{}
@@ -789,9 +789,9 @@ func TestProcessor_StatefulSet_VolumeClaimTemplates(t *testing.T) {
 		"显式 Volume 应该被移除，StatefulSet 会自动创建")
 }
 
-// TestStorageProcessor_NonStatefulSet_TmpCreate 验证非 StatefulSet 使用 tmpCreate 的警告
+// TestStorageProcessor_NonStatefulSet_TmpCreate 验证非 StatefulSet 使用 tmp_create 的警告
 func TestStorageProcessor_NonStatefulSet_TmpCreate(t *testing.T) {
-	// 对于 Deployment，tmpCreate=true 应该发出警告
+	// 对于 Deployment，tmp_create=true 应该发出警告
 	// 因为 Deployment 不支持 volumeClaimTemplates
 }
 ```
@@ -834,7 +834,7 @@ kubectl logs -n kube-system -l component=kube-controller-manager | grep <sts-nam
 
 ## 版本兼容性
 
-| 版本 | tmpCreate 行为 | 注意事项 |
+| 版本 | tmp_create 行为 | 注意事项 |
 |------|---------------|---------|
 | < 修复版本 | 使用 naming 函数生成 PVC 名称 | 导致名称不匹配 |
 | >= 修复版本 | 使用 volumeName 作为模板名称 | 正确工作 |

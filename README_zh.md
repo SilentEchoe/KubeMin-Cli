@@ -230,10 +230,6 @@ pkg/apiserver/
 3. **特征系统**：通过特征处理器实现可扩展的组件增强
 4. **领导者选举**：基于 Kubernetes Lease 的分布式模式领导者选举
 
-## 贡献
-
-我们欢迎贡献！请查看 [CONTRIBUTING.md](CONTRIBUTING.md) 了解指南。
-
 ## 许可证
 
 本项目采用 Apache License 2.0 许可证 - 详情请见 [LICENSE](LICENSE) 文件。

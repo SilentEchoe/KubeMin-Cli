@@ -1,7 +1,7 @@
 package bcode
 
 import (
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
@@ -12,8 +12,8 @@ import (
 // Bcode business error code
 type Bcode struct {
 	HTTPCode     int32  `json:"-"`
-	BusinessCode int32  `json:"BusinessCode"`
-	Message      string `json:"Message"`
+	BusinessCode int32  `json:"business_code"`
+	Message      string `json:"message"`
 }
 
 func (b Bcode) Error() string {
@@ -40,8 +40,8 @@ func ReturnError(c *gin.Context, err error) {
 	var bcode *Bcode
 	if errors.As(err, &bcode) {
 		c.JSON(int(bcode.HTTPCode), gin.H{
-			"Code":    bcode.BusinessCode,
-			"Message": bcode.Message,
+			"business_code": bcode.BusinessCode,
+			"message":       bcode.Message,
 		})
 		return
 	}
@@ -64,9 +64,9 @@ func ReturnError(c *gin.Context, err error) {
 	}
 
 	c.JSON(http.StatusInternalServerError, gin.H{
-		"HTTPCode":     http.StatusInternalServerError,
-		"BusinessCode": 500,
-		"Message":      err.Error(),
+		"http_code":     http.StatusInternalServerError,
+		"business_code": 500,
+		"message":       err.Error(),
 	})
 	return
 }

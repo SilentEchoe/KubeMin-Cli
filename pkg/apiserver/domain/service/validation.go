@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
-	"KubeMin-Cli/pkg/apiserver/domain/spec"
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/repository"
+	"kubemin-cli/pkg/apiserver/domain/spec"
+	apisv1 "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 var (
@@ -50,7 +50,7 @@ var (
 		"":                                    true, // Empty is allowed (defaults to StepByStep)
 	}
 
-	// Valid envFrom types
+	// Valid env_from types
 	validEnvFromTypes = map[string]bool{
 		"secret":    true,
 		"configMap": true,
@@ -264,9 +264,9 @@ func (v *validationServiceImpl) validateTraits(traits apisv1.Traits, fieldPrefix
 		errors = append(errors, v.validateIngressTrait(ingress, fmt.Sprintf("%s.ingress[%d]", fieldPrefix, i))...)
 	}
 
-	// Validate EnvFrom traits
+	// Validate env_from traits
 	for i, envFrom := range traits.EnvFrom {
-		errors = append(errors, v.validateEnvFromTrait(envFrom, fmt.Sprintf("%s.envFrom[%d]", fieldPrefix, i))...)
+		errors = append(errors, v.validateEnvFromTrait(envFrom, fmt.Sprintf("%s.env_from[%d]", fieldPrefix, i))...)
 	}
 
 	// Validate Envs traits
@@ -301,12 +301,12 @@ func (v *validationServiceImpl) validateStorageTrait(storage spec.StorageTraitSp
 		})
 	}
 
-	// Validate mountPath
+	// Validate mount_path
 	if storage.MountPath == "" {
 		errors = append(errors, apisv1.ValidationError{
-			Field:   fmt.Sprintf("%s.mountPath", field),
+			Field:   fmt.Sprintf("%s.mount_path", field),
 			Code:    apisv1.ErrCodeMissingRequiredField,
-			Message: "storage mountPath is required",
+			Message: "storage mount_path is required",
 		})
 	}
 
@@ -321,12 +321,12 @@ func (v *validationServiceImpl) validateStorageTrait(storage spec.StorageTraitSp
 		}
 	}
 
-	// Validate sourceName for config/secret types
+	// Validate source_name for config/secret types
 	if (storage.Type == config.StorageTypeConfig || storage.Type == config.StorageTypeSecret) && storage.SourceName == "" && storage.Name == "" {
 		errors = append(errors, apisv1.ValidationError{
-			Field:   fmt.Sprintf("%s.sourceName", field),
+			Field:   fmt.Sprintf("%s.source_name", field),
 			Code:    apisv1.ErrCodeMissingRequiredField,
-			Message: "sourceName or name is required for config/secret storage types",
+			Message: "source_name or name is required for config/secret storage types",
 		})
 	}
 
@@ -368,13 +368,13 @@ func (v *validationServiceImpl) validateProbeTrait(probe spec.ProbeTraitsSpec, f
 		errors = append(errors, apisv1.ValidationError{
 			Field:   field,
 			Code:    apisv1.ErrCodeInvalidProbeConfig,
-			Message: "probe must specify exactly one of exec, httpGet, or tcpSocket",
+			Message: "probe must specify exactly one of exec, http_get, or tcp_socket",
 		})
 	} else if probeMethodCount > 1 {
 		errors = append(errors, apisv1.ValidationError{
 			Field:   field,
 			Code:    apisv1.ErrCodeInvalidProbeConfig,
-			Message: "probe must specify exactly one of exec, httpGet, or tcpSocket, not multiple",
+			Message: "probe must specify exactly one of exec, http_get, or tcp_socket, not multiple",
 		})
 	}
 
@@ -382,9 +382,9 @@ func (v *validationServiceImpl) validateProbeTrait(probe spec.ProbeTraitsSpec, f
 	if probe.HTTPGet != nil {
 		if probe.HTTPGet.Port <= 0 {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.httpGet.port", field),
+				Field:   fmt.Sprintf("%s.http_get.port", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
-				Message: "httpGet probe port is required and must be positive",
+				Message: "http_get probe port is required and must be positive",
 			})
 		}
 	}
@@ -393,9 +393,9 @@ func (v *validationServiceImpl) validateProbeTrait(probe spec.ProbeTraitsSpec, f
 	if probe.TCPSocket != nil {
 		if probe.TCPSocket.Port <= 0 {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.tcpSocket.port", field),
+				Field:   fmt.Sprintf("%s.tcp_socket.port", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
-				Message: "tcpSocket probe port is required and must be positive",
+				Message: "tcp_socket probe port is required and must be positive",
 			})
 		}
 	}
@@ -507,9 +507,9 @@ func (v *validationServiceImpl) validateIngressTrait(ingress spec.IngressTraitsS
 	for i, route := range ingress.Routes {
 		if route.Backend.ServiceName == "" {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.routes[%d].backend.serviceName", field, i),
-				Code:    apisv1.ErrCodeMissingServiceName,
-				Message: "ingress route backend serviceName is required",
+			Field:   fmt.Sprintf("%s.routes[%d].backend.service_name", field, i),
+			Code:    apisv1.ErrCodeMissingServiceName,
+			Message: "ingress route backend service_name is required",
 			})
 		}
 	}
@@ -517,7 +517,7 @@ func (v *validationServiceImpl) validateIngressTrait(ingress spec.IngressTraitsS
 	return errors
 }
 
-// validateEnvFromTrait validates an envFrom trait
+// validateEnvFromTrait validates an env_from trait
 func (v *validationServiceImpl) validateEnvFromTrait(envFrom spec.EnvFromSourceSpec, field string) []apisv1.ValidationError {
 	var errors []apisv1.ValidationError
 
@@ -526,22 +526,22 @@ func (v *validationServiceImpl) validateEnvFromTrait(envFrom spec.EnvFromSourceS
 		errors = append(errors, apisv1.ValidationError{
 			Field:   fmt.Sprintf("%s.type", field),
 			Code:    apisv1.ErrCodeMissingRequiredField,
-			Message: "envFrom type is required",
+			Message: "env_from type is required",
 		})
 	} else if !validEnvFromTypes[envFrom.Type] {
 		errors = append(errors, apisv1.ValidationError{
 			Field:   fmt.Sprintf("%s.type", field),
 			Code:    apisv1.ErrCodeInvalidEnvFromType,
-			Message: fmt.Sprintf("invalid envFrom type: %s, must be one of: secret, configMap", envFrom.Type),
+			Message: fmt.Sprintf("invalid env_from type: %s, must be one of: secret, configMap", envFrom.Type),
 		})
 	}
 
-	// Validate sourceName
+	// Validate source_name
 	if envFrom.SourceName == "" {
 		errors = append(errors, apisv1.ValidationError{
-			Field:   fmt.Sprintf("%s.sourceName", field),
+			Field:   fmt.Sprintf("%s.source_name", field),
 			Code:    apisv1.ErrCodeMissingRequiredField,
-			Message: "envFrom sourceName is required",
+			Message: "env_from source_name is required",
 		})
 	}
 
@@ -578,15 +578,15 @@ func (v *validationServiceImpl) validateEnvsTrait(env spec.SimplifiedEnvSpec, fi
 
 	if sourceCount == 0 {
 		errors = append(errors, apisv1.ValidationError{
-			Field:   fmt.Sprintf("%s.valueFrom", field),
+			Field:   fmt.Sprintf("%s.value_from", field),
 			Code:    apisv1.ErrCodeInvalidEnvValueSource,
-			Message: "env valueFrom must specify exactly one of static, secret, config, or field",
+			Message: "env value_from must specify exactly one of static, secret, config, or field",
 		})
 	} else if sourceCount > 1 {
 		errors = append(errors, apisv1.ValidationError{
-			Field:   fmt.Sprintf("%s.valueFrom", field),
+			Field:   fmt.Sprintf("%s.value_from", field),
 			Code:    apisv1.ErrCodeInvalidEnvValueSource,
-			Message: "env valueFrom must specify exactly one of static, secret, config, or field, not multiple",
+			Message: "env value_from must specify exactly one of static, secret, config, or field, not multiple",
 		})
 	}
 
@@ -594,14 +594,14 @@ func (v *validationServiceImpl) validateEnvsTrait(env spec.SimplifiedEnvSpec, fi
 	if env.ValueFrom.Secret != nil {
 		if env.ValueFrom.Secret.Name == "" {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.valueFrom.secret.name", field),
+				Field:   fmt.Sprintf("%s.value_from.secret.name", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
 				Message: "secret name is required",
 			})
 		}
 		if env.ValueFrom.Secret.Key == "" {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.valueFrom.secret.key", field),
+				Field:   fmt.Sprintf("%s.value_from.secret.key", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
 				Message: "secret key is required",
 			})
@@ -612,14 +612,14 @@ func (v *validationServiceImpl) validateEnvsTrait(env spec.SimplifiedEnvSpec, fi
 	if env.ValueFrom.Config != nil {
 		if env.ValueFrom.Config.Name == "" {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.valueFrom.config.name", field),
+				Field:   fmt.Sprintf("%s.value_from.config.name", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
 				Message: "configMap name is required",
 			})
 		}
 		if env.ValueFrom.Config.Key == "" {
 			errors = append(errors, apisv1.ValidationError{
-				Field:   fmt.Sprintf("%s.valueFrom.config.key", field),
+				Field:   fmt.Sprintf("%s.value_from.config.key", field),
 				Code:    apisv1.ErrCodeMissingRequiredField,
 				Message: "configMap key is required",
 			})

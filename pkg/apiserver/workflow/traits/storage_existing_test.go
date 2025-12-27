@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 func TestStorageProcessor_ExistingPVCUsesGivenName(t *testing.T) {

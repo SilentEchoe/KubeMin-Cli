@@ -2,7 +2,7 @@
   "name": "test-mixed-pvc-mode",
   "namespace": "default",
   "version": "1.0.0",
-  "description": "混合 PVC 模式测试 - tmpCreate + 引用已有 PVC",
+  "description": "混合 PVC 模式测试 - tmp_create + 引用已有 PVC",
   "component": [
     {
       "name": "app-server",
@@ -17,16 +17,16 @@
           {
             "name": "app-data",
             "type": "persistent",
-            "mountPath": "/data",
-            "tmpCreate": true,
+            "mount_path": "/data",
+            "tmp_create": true,
             "size": "2Gi"
           },
           {
             "name": "shared-config",
             "type": "persistent",
-            "mountPath": "/config",
-            "tmpCreate": false,
-            "claimName": "existing-config-pvc"
+            "mount_path": "/config",
+            "tmp_create": false,
+            "claim_name": "existing-config-pvc"
           }
         ]
       }

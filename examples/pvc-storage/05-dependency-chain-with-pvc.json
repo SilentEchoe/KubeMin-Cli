@@ -44,10 +44,10 @@
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "tmp_create": true,
             "size": "5Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ]
       }
@@ -65,9 +65,9 @@
         }
       },
       "traits": {
-        "envFrom": [
-          {"type": "configMap", "sourceName": "app-config"},
-          {"type": "secret", "sourceName": "app-secret"}
+        "env_from": [
+          {"type": "configMap", "source_name": "app-config"},
+          {"type": "secret", "source_name": "app-secret"}
         ]
       }
     }

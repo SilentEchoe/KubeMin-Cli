@@ -9,7 +9,7 @@
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 8080}]
@@ -27,14 +27,14 @@
                 {
                   "type": "config",
                   "name": "app-config",
-                  "sourceName": "my-configmap",
-                  "mountPath": "/config",
-                  "readOnly": true
+                  "source_name": "my-configmap",
+                  "mount_path": "/config",
+                  "read_only": true
                 },
                 {
                   "type": "ephemeral",
                   "name": "shared-data",
-                  "mountPath": "/app/config"
+                  "mount_path": "/app/config"
                 }
               ]
             }
@@ -52,7 +52,7 @@
                 {
                   "type": "ephemeral",
                   "name": "app-logs",
-                  "mountPath": "/var/log/app"
+                  "mount_path": "/var/log/app"
                 }
               ],
               "resources": {
@@ -66,7 +66,7 @@
           {
             "type": "ephemeral",
             "name": "app-logs",
-            "mountPath": "/var/log/app"
+            "mount_path": "/var/log/app"
           }
         ]
       }

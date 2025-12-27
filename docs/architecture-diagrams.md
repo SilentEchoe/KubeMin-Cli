@@ -778,8 +778,8 @@ const (
 | 条件 | 状态 |
 |------|------|
 | `ready == true` (ReadyReplicas == Replicas) | Running |
-| `readyReplicas > 0` | Pending |
-| `replicas > 0 && readyReplicas == 0` | Pending |
+| `ready_replicas > 0` | Pending |
+| `replicas > 0 && ready_replicas == 0` | Pending |
 | `replicas == 0` (资源被删除或缩容为 0) | Failed |
 
 ### 5.7 数据库字段
@@ -964,7 +964,7 @@ flowchart LR
 ## 7. 项目目录结构
 
 ```
-KubeMin-Cli/
+kubemin-cli/
 ├── cmd/                              # 入口点
 │   ├── main.go                       # 主程序入口
 │   └── server/

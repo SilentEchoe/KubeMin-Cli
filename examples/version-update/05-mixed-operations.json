@@ -31,7 +31,7 @@
       "name": "deprecated-worker"
     }
   ],
-  "autoExec": true,
+  "auto_exec": true,
   "description": "Major architecture refactoring - v3.0.0"
 }
 

@@ -4,7 +4,7 @@ import corev1 "k8s.io/api/core/v1"
 
 // NodeSelectionSpec describes node scheduling constraints.
 type NodeSelectionSpec struct {
-	NodeSelector map[string]string   `json:"nodeSelector,omitempty"`
+	NodeSelector map[string]string   `json:"node_selector,omitempty"`
 	Affinity     *corev1.Affinity    `json:"affinity,omitempty"`
 	Tolerations  []corev1.Toleration `json:"tolerations,omitempty"`
 }

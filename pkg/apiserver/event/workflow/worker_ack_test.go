@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/kubernetes/fake"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 type workflowAckTestStore struct {

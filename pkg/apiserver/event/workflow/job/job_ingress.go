@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 
 	networkingv1 "k8s.io/api/networking/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -46,7 +46,7 @@ func (c *DeployIngressJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {

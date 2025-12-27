@@ -1,6 +1,6 @@
 package model
 
-import "KubeMin-Cli/pkg/apiserver/config"
+import "kubemin-cli/pkg/apiserver/config"
 
 func init() {
 	RegisterModel(&Workflow{})
@@ -30,15 +30,15 @@ type WorkflowSteps struct {
 type WorkflowStep struct {
 	Name         string              `json:"name"`
 	Level        int                 `json:"level,omitempty"`
-	WorkflowType config.JobType      `json:"workflowType,omitempty"`
+	WorkflowType config.JobType      `json:"workflow_type,omitempty"`
 	Mode         config.WorkflowMode `json:"mode,omitempty"`
 	Properties   []Policies          `json:"properties,omitempty"`
-	SubSteps     []*WorkflowSubStep  `json:"subSteps,omitempty"`
+	SubSteps     []*WorkflowSubStep  `json:"sub_steps,omitempty"`
 }
 
 type WorkflowSubStep struct {
 	Name         string         `json:"name"`
-	WorkflowType config.JobType `json:"workflowType,omitempty"`
+	WorkflowType config.JobType `json:"workflow_type,omitempty"`
 	Properties   []Policies     `json:"properties,omitempty"`
 }
 

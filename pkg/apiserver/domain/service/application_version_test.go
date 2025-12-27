@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	apisv1 "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/utils/bcode"
 )
 
 func TestUpdateVersionWithImageUpdate(t *testing.T) {

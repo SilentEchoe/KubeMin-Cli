@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/config"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 // StorageProcessor wires storage into Pods via Volumes/VolumeMounts. It supports

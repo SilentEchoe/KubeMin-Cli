@@ -230,10 +230,6 @@ pkg/apiserver/
 3. **Trait System**: Extensible component augmentation through trait processors
 4. **Leader Election**: Kubernetes Lease-based leader election for distributed mode
 
-## Contributing
-
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ## License
 
 This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

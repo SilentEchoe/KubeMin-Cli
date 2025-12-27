@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 func TestDetermineStepConcurrency(t *testing.T) {

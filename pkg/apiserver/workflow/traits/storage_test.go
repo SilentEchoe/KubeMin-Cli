@@ -7,8 +7,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 const userInputJSON = `
@@ -17,15 +17,15 @@ const userInputJSON = `
     {
       "type": "persistent",
       "name": "data",
-      "mountPath": "/var/lib/mysql",
-      "subPath": "mysql",
+      "mount_path": "/var/lib/mysql",
+      "sub_path": "mysql",
       "size": "5Gi",
-      "tmpCreate": true
+      "tmp_create": true
     },
     {
       "type": "ephemeral",
       "name": "conf",
-      "mountPath": "/etc/mysql/conf.d"
+      "mount_path": "/etc/mysql/conf.d"
     }
   ],
   "sidecar": [
@@ -36,8 +36,8 @@ const userInputJSON = `
           {
             "type": "persistent",
             "name": "data",
-            "mountPath": "/var/lib/mysql",
-            "subPath": "mysql"
+            "mount_path": "/var/lib/mysql",
+            "sub_path": "mysql"
           }
         ]
       }
@@ -51,8 +51,8 @@ const userInputJSON = `
           {
             "type": "persistent",
             "name": "data",
-            "mountPath": "/var/lib/mysql",
-            "subPath": "mysql"
+            "mount_path": "/var/lib/mysql",
+            "sub_path": "mysql"
           }
         ]
       }

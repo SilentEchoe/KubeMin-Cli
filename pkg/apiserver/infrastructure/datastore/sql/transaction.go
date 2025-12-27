@@ -5,7 +5,7 @@ import (
 
 	"gorm.io/gorm"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 // WithTransaction runs fn within a database transaction.

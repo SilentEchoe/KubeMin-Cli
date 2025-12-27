@@ -1,6 +1,6 @@
 package model
 
-import "KubeMin-Cli/pkg/apiserver/domain/spec"
+import "kubemin-cli/pkg/apiserver/domain/spec"
 
 type (
 	IngressTraitsSpec = spec.IngressTraitsSpec

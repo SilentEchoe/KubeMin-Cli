@@ -21,12 +21,12 @@ import (
 	"k8s.io/klog/v2"
 	"k8s.io/utils/pointer"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	traitsPlu "KubeMin-Cli/pkg/apiserver/workflow/traits"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/informer"
+	"kubemin-cli/pkg/apiserver/utils"
+	traitsPlu "kubemin-cli/pkg/apiserver/workflow/traits"
 )
 
 type DeployJobCtl struct {
@@ -57,7 +57,7 @@ func (c *DeployJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {

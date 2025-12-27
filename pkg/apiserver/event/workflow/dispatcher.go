@@ -9,10 +9,10 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/repository"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
 )
 
 // Note: Worker resilience constants are defined in config/consts.go:
@@ -23,10 +23,10 @@ import (
 
 // TaskDispatch is the minimal payload for dispatching a workflow task to a worker.
 type TaskDispatch struct {
-	TaskID     string `json:"taskId"`
-	WorkflowID string `json:"workflowId"`
-	ProjectID  string `json:"projectId"`
-	AppID      string `json:"appId"`
+	TaskID     string `json:"task_id"`
+	WorkflowID string `json:"workflow_id"`
+	ProjectID  string `json:"project_id"`
+	AppID      string `json:"app_id"`
 }
 
 func MarshalTaskDispatch(t TaskDispatch) ([]byte, error) { return json.Marshal(t) }

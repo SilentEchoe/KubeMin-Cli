@@ -8,7 +8,7 @@ import (
 	miniredis "github.com/alicebob/miniredis/v2"
 	"github.com/redis/go-redis/v9"
 
-	"KubeMin-Cli/pkg/apiserver/utils/cache"
+	"kubemin-cli/pkg/apiserver/utils/cache"
 )
 
 func TestCancelWatcherReceivesSignal(t *testing.T) {

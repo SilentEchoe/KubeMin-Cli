@@ -1,6 +1,6 @@
 {
   "_comment": "Request for POST /applications/:appID/workflow/try",
-  "workflowId": "",
+  "workflow_id": "",
   "name": "new-workflow",
   "alias": "New Deployment Workflow",
   "workflow": [

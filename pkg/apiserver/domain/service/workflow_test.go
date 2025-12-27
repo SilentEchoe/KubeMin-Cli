@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 type failingDataStore struct {

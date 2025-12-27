@@ -1,7 +1,7 @@
 package model
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 func init() {
@@ -10,7 +10,7 @@ func init() {
 
 type WorkflowQueue struct {
 	TaskID              string                  `gorm:"primaryKey;type:varchar(255)" json:"task_id"` //任务ID，自生成
-	ProjectID           string                  `json:"projectId"`                                   //所属项目
+	ProjectID           string                  `json:"project_id"`                                   //所属项目
 	WorkflowName        string                  `json:"workflow_name"`                               //工作流名称(唯一)
 	AppID               string                  `json:"app_id"`
 	WorkflowID          string                  `gorm:"column:workflowId" json:"workflow_id"`

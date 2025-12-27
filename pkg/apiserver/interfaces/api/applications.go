@@ -7,11 +7,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	assembler "KubeMin-Cli/pkg/apiserver/interfaces/api/assembler/v1"
-	apis "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/service"
+	assembler "kubemin-cli/pkg/apiserver/interfaces/api/assembler/v1"
+	apis "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/utils/bcode"
 )
 
 type applications struct {
@@ -323,7 +323,7 @@ func (app *applications) updateVersion(c *gin.Context) {
 // @Tags applications
 // @Accept json
 // @Produce json
-// @Param request body apis.TryApplicationRequest true "Application configuration to validate (optional appId to validate workflow against an existing application)"
+// @Param request body apis.TryApplicationRequest true "Application configuration to validate (optional app_id to validate workflow against an existing application)"
 // @Success 200 {object} apis.TryApplicationResponse "Validation result with detailed errors if any"
 // @Router /applications/try [post]
 func (app *applications) tryApplication(c *gin.Context) {

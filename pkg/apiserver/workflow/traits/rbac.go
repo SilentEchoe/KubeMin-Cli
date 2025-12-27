@@ -7,9 +7,9 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/config"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 // RBACProcessor materializes RBAC resources (ServiceAccount, Role/ClusterRole, RoleBinding)

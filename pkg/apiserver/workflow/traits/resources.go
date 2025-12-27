@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 // ResourcesProcessor applies compute resources (cpu/memory/gpu) to a container.

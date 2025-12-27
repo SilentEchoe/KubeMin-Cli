@@ -8,14 +8,14 @@
       "name": "backend",
       "type": "webservice",
       "image": "nginx:latest",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "traits": {
         "probes": [
           {
             "type": "liveness",
-            "initialDelaySeconds": 30,
-            "periodSeconds": 10
+            "initial_delay_seconds": 30,
+            "period_seconds": 10
           }
         ]
       }
@@ -32,7 +32,7 @@
     {
       "field": "component[0].traits.probes[0]",
       "code": "INVALID_PROBE_CONFIG",
-      "message": "probe must specify exactly one of exec, httpGet, or tcpSocket"
+      "message": "probe must specify exactly one of exec, http_get, or tcp_socket"
     }
   ]
 }

@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	apisv1 "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 func TestCreateApplications_UpdatePreservesWorkflowID(t *testing.T) {
@@ -45,7 +45,7 @@ func TestCreateApplications_UpdatePreservesWorkflowID(t *testing.T) {
 	req := apisv1.CreateApplicationsRequest{
 		ID:        app.ID,
 		Name:      "demo",
-		NameSpace: app.Namespace,
+		Namespace: app.Namespace,
 		Version:   "2.0.0",
 		Component: []apisv1.CreateComponentRequest{{
 			Name:          "c1",

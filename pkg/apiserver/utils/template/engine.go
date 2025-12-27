@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/model"
 )
 
 // Engine 模板引擎接口

@@ -87,12 +87,12 @@ Traits属性用于为"组件"附加一些特性，比如为组件附加新增存
   "storage": [
           {
             "type":"persistent", //稳定存储
-            "mountPath":"/data",
+            "mount_path":"/data",
             "size": "20",
           },
           {
             "type":"ephemeral" //暂时存储
-            "mountPath":"/data",
+            "mount_path":"/data",
           },
           {
             "type":"config" //配置文件信息(限制大小)
@@ -110,7 +110,7 @@ Traits属性用于为"组件"附加一些特性，比如为组件附加新增存
 
 #### storage 存储
 
-Storage支持多种存储方式，比如`persistent`稳定存储，它对应的是Kubernetes中的 PersistentVolumeClaim 和 VolumeMount 属性。在KubeMin-Cli中为了简化表达使用: `{"type":"persistent","mountPath":"/data","size": "20"}`Json格式对组件提出存储方面的附加追述。
+Storage支持多种存储方式，比如`persistent`稳定存储，它对应的是Kubernetes中的 PersistentVolumeClaim 和 VolumeMount 属性。在KubeMin-Cli中为了简化表达使用: `{"type":"persistent","mount_path":"/data","size": "20"}`Json格式对组件提出存储方面的附加追述。
 
 | **type**     | **对应 Kubernetes 资源**            | 说明                                                         |
 | ------------ | ----------------------------------- | ------------------------------------------------------------ |
@@ -131,7 +131,7 @@ Storage支持多种存储方式，比如`persistent`稳定存储，它对应的�
 {
   "name":"data",
   "type":"persistent", //稳定存储
-  "mountPath":"/data",
+  "mount_path":"/data",
   "size": "20Gi",
 },
 //如果创建了一个临时存储，那么意味着volumes里面会多一个名为conf的emptyDir类型的配置
@@ -143,7 +143,7 @@ Storage支持多种存储方式，比如`persistent`稳定存储，它对应的�
 {
   "name": "config-map",
   "type": "config", //配置文件挂载
-  "sourceName":"m2507151323j3fnrk-mysql",
+  "source_name":"m2507151323j3fnrk-mysql",
 }
 ```
 
@@ -172,19 +172,19 @@ spec:
       env:
         # 定义环境变量
         - name: PLAYER_INITIAL_LIVES # 请注意这里和 ConfigMap 中的键名是不一样的
-          valueFrom:
+          value_from:
             configMapKeyRef:
               name: game-demo           # 这个值来自 ConfigMap
               key: player_initial_lives # 需要取值的键
         - name: UI_PROPERTIES_FILE_NAME
-          valueFrom:
+          value_from:
             configMapKeyRef:
               name: game-demo
               key: ui_properties_file_name
       volumeMounts:
       - name: config
-        mountPath: "/config"
-        readOnly: true
+        mount_path: "/config"
+        read_only: true
   volumes:
   # 你可以在 Pod 级别设置卷，然后将其挂载到 Pod 内的容器中
   - name: config
@@ -204,8 +204,8 @@ spec:
 ```yaml
  volumeMounts:
       - name: config
-        mountPath: "/config"
-        readOnly: true
+        mount_path: "/config"
+        read_only: true
 volumes:
   # 你可以在 Pod 级别设置卷，然后将其挂载到 Pod 内的容器中
   - name: config
@@ -235,14 +235,14 @@ player.maximum-lives=5
 ```json
 {
   "name": "my-awesome-app",
-  "componentType": "webservice",
+  "component_type": "webservice",
   "image": "nginx:latest",
   "replicas": 2,
   "traits": {
     "envs": [
       {
         "name": "DATABASE_PASSWORD",
-        "valueFrom": {
+        "value_from": {
           "secret": {
             "name": "project/db-credentials",
             "key": "password"
@@ -251,7 +251,7 @@ player.maximum-lives=5
       },
       {
         "name": "API_ENDPOINT",
-        "valueFrom": {
+        "value_from": {
           "config": {
             "name": "environment/app-settings",
             "key": "api-url"
@@ -282,8 +282,8 @@ spec:
     image: redis
     volumeMounts:
     - name: foo
-      mountPath: "/etc/foo"
-      readOnly: true
+      mount_path: "/etc/foo"
+      read_only: true
   volumes:
   - name: foo
     configMap:
@@ -297,10 +297,10 @@ KubeMin-Cli 中将这种配置项当作文件使用的方式，使用特征中�
   "storage": [
           {
             "name": "foo",//自定义挂载名,如果不定义则自动生成
-            "sourceName":"myconfigmap",//引用ConfigMap资源的名称
+            "source_name":"myconfigmap",//引用ConfigMap资源的名称
             "type":"config",
-            "mountPath":"/etc/foo",
-            "readOnly":true //默认只读
+            "mount_path":"/etc/foo",
+            "read_only":true //默认只读
           }
         ],
       }
@@ -326,7 +326,7 @@ spec:
     - name: app
       command: ["/bin/sh", "-c", "printenv"]
       image: busybox:latest
-      envFrom:
+      env_from:
         - configMapRef:
             name: myconfigmap
 ```
@@ -335,10 +335,10 @@ spec:
 
 ```json
 "traits": {
-  "envFrom": [
+  "env_from": [
           {
             "type":"config",
-            "sourceName":"myconfigmap"
+            "source_name":"myconfigmap"
           }
         ],
       }

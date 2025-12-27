@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/utils"
 )
 
 const (

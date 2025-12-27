@@ -21,11 +21,11 @@
           {
             "name": "mysql-data",
             "type": "persistent",
-            "mountPath": "/var/lib/mysql",
-            "subPath": "mysql",
-            "tmpCreate": true,
+            "mount_path": "/var/lib/mysql",
+            "sub_path": "mysql",
+            "tmp_create": true,
             "size": "10Gi",
-            "storageClass": "standard"
+            "storage_class": "standard"
           }
         ],
         "sidecar": [
@@ -38,8 +38,8 @@
                 {
                   "name": "mysql-data",
                   "type": "persistent",
-                  "mountPath": "/var/lib/mysql",
-                  "subPath": "mysql"
+                  "mount_path": "/var/lib/mysql",
+                  "sub_path": "mysql"
                 }
               ]
             }
@@ -55,8 +55,8 @@
                 {
                   "name": "mysql-data",
                   "type": "persistent",
-                  "mountPath": "/var/lib/mysql",
-                  "subPath": "mysql"
+                  "mount_path": "/var/lib/mysql",
+                  "sub_path": "mysql"
                 }
               ]
             }

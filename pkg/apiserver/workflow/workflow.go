@@ -7,8 +7,8 @@ import (
 
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
 )
 
 // LintWorkflow 验证工作流是否符合标准
@@ -20,7 +20,7 @@ func LintWorkflow(workflow *model.Workflow) error {
 		return err
 	}
 	// 判断工作流的名称是否符合正则表达式的规范
-	match, err := regexp.MatchString(config.WorkflowRegx, workflow.Name)
+	match, err := regexp.MatchString(config.WorkflowRegex, workflow.Name)
 	if err != nil {
 		klog.Errorf("reg compile failed: %v", err)
 		return err

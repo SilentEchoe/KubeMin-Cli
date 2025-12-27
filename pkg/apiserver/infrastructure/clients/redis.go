@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 	"github.com/redis/go-redis/v9"
 )
 

@@ -6,9 +6,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/spec"
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/spec"
+	apisv1 "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
 )
 
 func TestValidationService_TryApplication_ValidConfig(t *testing.T) {
@@ -17,14 +17,14 @@ func TestValidationService_TryApplication_ValidConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Version:   "1.0.0",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
 				ComponentType: config.ServerJob,
 				Image:         "nginx:latest",
-				NameSpace:     "default",
+				Namespace:     "default",
 				Replicas:      1,
 			},
 		},
@@ -89,7 +89,7 @@ func TestValidationService_TryApplication_DuplicateComponentName(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -123,7 +123,7 @@ func TestValidationService_TryApplication_MissingImage(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -152,7 +152,7 @@ func TestValidationService_TryApplication_InvalidComponentType(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -180,7 +180,7 @@ func TestValidationService_TryApplication_InvalidProbeConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -190,7 +190,7 @@ func TestValidationService_TryApplication_InvalidProbeConfig(t *testing.T) {
 					Probes: []spec.ProbeTraitsSpec{
 						{
 							Type: "liveness",
-							// Missing probe method (exec, httpGet, or tcpSocket)
+							// Missing probe method (exec, http_get, or tcp_socket)
 						},
 					},
 				},
@@ -217,7 +217,7 @@ func TestValidationService_TryApplication_ValidProbeConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -252,7 +252,7 @@ func TestValidationService_TryApplication_NestedTraitForbidden(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -298,7 +298,7 @@ func TestValidationService_TryApplication_WorkflowComponentNotFound(t *testing.T
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -334,7 +334,7 @@ func TestValidationService_TryApplication_InvalidWorkflowMode(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -370,7 +370,7 @@ func TestValidationService_TryApplication_InvalidStorageType(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -407,7 +407,7 @@ func TestValidationService_TryApplication_MissingRBACRules(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -444,7 +444,7 @@ func TestValidationService_TryApplication_MissingIngressRoutes(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -485,7 +485,7 @@ func TestValidationService_TryApplication_CompleteValidConfig(t *testing.T) {
 	staticValue := "production"
 	req := apisv1.CreateApplicationsRequest{
 		Name:        "demo-app",
-		NameSpace:   "default",
+		Namespace:   "default",
 		Version:     "1.0.0",
 		Project:     "demo-project",
 		Description: "A complete demo application",
@@ -493,7 +493,7 @@ func TestValidationService_TryApplication_CompleteValidConfig(t *testing.T) {
 			{
 				Name:          "app-config",
 				ComponentType: config.ConfJob,
-				NameSpace:     "default",
+				Namespace:     "default",
 				Replicas:      1,
 				Properties: apisv1.Properties{
 					Conf: map[string]string{
@@ -506,7 +506,7 @@ func TestValidationService_TryApplication_CompleteValidConfig(t *testing.T) {
 				Name:          "backend",
 				ComponentType: config.ServerJob,
 				Image:         "myregistry/backend:v1.0.0",
-				NameSpace:     "default",
+				Namespace:     "default",
 				Replicas:      2,
 				Properties: apisv1.Properties{
 					Ports: []spec.Ports{{Port: 8080}},
@@ -591,7 +591,7 @@ func TestValidationService_TryApplication_MultipleProbeTypes(t *testing.T) {
 	// Test that multiple probe methods in one probe config is invalid
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -634,7 +634,7 @@ func TestValidationService_TryApplication_ValidEnvFromConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -671,7 +671,7 @@ func TestValidationService_TryApplication_InvalidEnvFromType(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -708,7 +708,7 @@ func TestValidationService_TryApplication_MissingEnvSourceName(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -746,7 +746,7 @@ func TestValidationService_TryApplication_ValidEnvsConfig(t *testing.T) {
 	staticValue := "production"
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -802,7 +802,7 @@ func TestValidationService_TryApplication_InvalidEnvValueSource(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -839,7 +839,7 @@ func TestValidationService_TryApplication_MissingStorageMountPath(t *testing.T) 
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -877,7 +877,7 @@ func TestValidationService_TryApplication_InvalidStorageSize(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -917,7 +917,7 @@ func TestValidationService_TryApplication_MissingRBACVerbs(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -960,7 +960,7 @@ func TestValidationService_TryApplication_ValidRBACConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -999,7 +999,7 @@ func TestValidationService_TryApplication_MissingIngressServiceName(t *testing.T
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1044,7 +1044,7 @@ func TestValidationService_TryApplication_ValidIngressConfig(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1087,7 +1087,7 @@ func TestValidationService_TryApplication_InitContainerMissingImage(t *testing.T
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1126,7 +1126,7 @@ func TestValidationService_TryApplication_SidecarMissingImage(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1163,7 +1163,7 @@ func TestValidationService_TryApplication_NestedInitForbidden(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1213,7 +1213,7 @@ func TestValidationService_TryApplication_WorkflowSubStepComponentNotFound(t *te
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1255,7 +1255,7 @@ func TestValidationService_TryApplication_DuplicateWorkflowStepName(t *testing.T
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1296,7 +1296,7 @@ func TestValidationService_TryApplication_EmptyWorkflowStep(t *testing.T) {
 
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "backend",
@@ -1333,7 +1333,7 @@ func TestValidationService_TryApplication_ConfigTypeNoImageRequired(t *testing.T
 	// Config type component should not require an image
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "app-config",
@@ -1365,7 +1365,7 @@ func TestValidationService_TryApplication_SecretTypeNoImageRequired(t *testing.T
 	// Secret type component should not require an image
 	req := apisv1.CreateApplicationsRequest{
 		Name:      "my-app",
-		NameSpace: "default",
+		Namespace: "default",
 		Component: []apisv1.CreateComponentRequest{
 			{
 				Name:          "app-secret",

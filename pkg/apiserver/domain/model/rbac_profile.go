@@ -1,6 +1,6 @@
 package model
 
-import spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+import spec "kubemin-cli/pkg/apiserver/domain/spec"
 
 func init() {
 	RegisterModel(&RBACProfile{})

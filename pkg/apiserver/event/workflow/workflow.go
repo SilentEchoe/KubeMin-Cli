@@ -10,11 +10,11 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/service"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
 )
 
 type Workflow struct {

@@ -1,16 +1,16 @@
 package mysql
 
 import (
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/model"
 	"context"
 
 	mysqlgorm "gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/sql"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/sqlnamer"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore/sql"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore/sqlnamer"
 )
 
 type mysql struct {

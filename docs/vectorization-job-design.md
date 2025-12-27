@@ -375,7 +375,7 @@ type BehaviorConfig struct {
 package model
 
 import (
-    "KubeMin-Cli/pkg/apiserver/config"
+    "kubemin-cli/pkg/apiserver/config"
     "time"
 )
 
@@ -1127,12 +1127,12 @@ import (
     "github.com/google/uuid"
     "k8s.io/klog/v2"
     
-    "KubeMin-Cli/pkg/apiserver/config"
-    "KubeMin-Cli/pkg/apiserver/domain/model"
-    "KubeMin-Cli/pkg/apiserver/domain/spec"
-    "KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-    "KubeMin-Cli/pkg/apiserver/infrastructure/storage"
-    "KubeMin-Cli/pkg/apiserver/infrastructure/vectorize"
+    "kubemin-cli/pkg/apiserver/config"
+    "kubemin-cli/pkg/apiserver/domain/model"
+    "kubemin-cli/pkg/apiserver/domain/spec"
+    "kubemin-cli/pkg/apiserver/infrastructure/datastore"
+    "kubemin-cli/pkg/apiserver/infrastructure/storage"
+    "kubemin-cli/pkg/apiserver/infrastructure/vectorize"
 )
 
 // VectorJobCtl 向量化 Job 控制器
@@ -1164,7 +1164,7 @@ func NewVectorJobCtl(job *model.JobTask, store datastore.DataStore, ack func()) 
 }
 
 func (c *VectorJobCtl) Run(ctx context.Context) error {
-    logger := klog.FromContext(ctx).WithValues("jobName", c.job.Name, "jobType", c.job.JobType)
+    logger := klog.FromContext(ctx).WithValues("jobName", c.job.Name, "job_type", c.job.JobType)
     
     c.job.Status = config.StatusRunning
     c.ack()
@@ -2272,26 +2272,26 @@ spec:
             cpu: "4"
             nvidia.com/gpu: 1
         livenessProbe:
-          httpGet:
+          http_get:
             path: /health
             port: 8080
-          initialDelaySeconds: 120
-          periodSeconds: 30
+          initial_delay_seconds: 120
+          period_seconds: 30
         readinessProbe:
-          httpGet:
+          http_get:
             path: /health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 10
+          initial_delay_seconds: 60
+          period_seconds: 10
         volumeMounts:
         - name: model-cache
-          mountPath: /data
+          mount_path: /data
         - name: shm
-          mountPath: /dev/shm
+          mount_path: /dev/shm
       volumes:
       - name: model-cache
         persistentVolumeClaim:
-          claimName: embedding-model-cache
+          claim_name: embedding-model-cache
       - name: shm
         emptyDir:
           medium: Memory
@@ -2361,7 +2361,7 @@ spec:
             cpu: "4"
         volumeMounts:
         - name: ollama-data
-          mountPath: /root/.ollama
+          mount_path: /root/.ollama
         env:
         - name: OLLAMA_HOST
           value: "0.0.0.0"
@@ -2377,7 +2377,7 @@ spec:
       volumes:
       - name: ollama-data
         persistentVolumeClaim:
-          claimName: ollama-data
+          claim_name: ollama-data
 ---
 apiVersion: v1
 kind: Service
@@ -2452,11 +2452,11 @@ spec:
             cpu: "4"
         volumeMounts:
         - name: milvus-data
-          mountPath: /var/lib/milvus
+          mount_path: /var/lib/milvus
       volumes:
       - name: milvus-data
         persistentVolumeClaim:
-          claimName: milvus-data
+          claim_name: milvus-data
 ---
 apiVersion: v1
 kind: Service
@@ -2592,7 +2592,7 @@ volumes:
 ```json
 {
   "name": "docs-vectorizer",
-  "componentType": "vectorize",
+  "component_type": "vectorize",
   "properties": {
     "source": {
       "type": "s3",
@@ -2669,7 +2669,7 @@ volumes:
  │                          │  status = waiting        │                        │
  │                          │─────────────────────────>│                        │
  │                          │                          │                        │
- │  返回 taskId             │                          │                        │
+ │  返回 task_id             │                          │                        │
  │<─────────────────────────│                          │                        │
  │                          │                          │                        │
  │                          │         Dispatcher       │                        │
@@ -2707,11 +2707,11 @@ volumes:
 
 ```bash
 # 查询任务状态
-GET /api/v1/vectorize/tasks/{taskId}/status
+GET /api/v1/vectorize/tasks/{task_id}/status
 
 # 响应示例
 {
-  "taskId": "task-123",
+  "task_id": "task-123",
   "status": "running",
   "progress": 45,
   "stats": {
@@ -2720,7 +2720,7 @@ GET /api/v1/vectorize/tasks/{taskId}/status
     "failedDocuments": 2,
     "totalVectors": 4500
   },
-  "startTime": "2025-01-15T10:00:00Z"
+  "start_time": "2025-01-15T10:00:00Z"
 }
 ```
 
@@ -2740,7 +2740,7 @@ GET /api/v1/vectorize/tasks/{taskId}/status
 
 ```json
 {
-  "taskId": "task-123",
+  "task_id": "task-123",
   "event": "progress",  // progress, completed, failed
   "progress": 45,
   "stats": {...},
@@ -2757,10 +2757,10 @@ GET /api/v1/vectorize/tasks/{taskId}/status
 | 方法 | 路径 | 描述 |
 |------|------|------|
 | POST | `/api/v1/vectorize/tasks` | 创建向量化任务 |
-| GET | `/api/v1/vectorize/tasks/:taskId` | 获取任务详情 |
-| GET | `/api/v1/vectorize/tasks/:taskId/status` | 获取任务状态 |
-| POST | `/api/v1/vectorize/tasks/:taskId/cancel` | 取消任务 |
-| DELETE | `/api/v1/vectorize/tasks/:taskId` | 删除任务及其向量 |
+| GET | `/api/v1/vectorize/tasks/:task_id` | 获取任务详情 |
+| GET | `/api/v1/vectorize/tasks/:task_id/status` | 获取任务状态 |
+| POST | `/api/v1/vectorize/tasks/:task_id/cancel` | 取消任务 |
+| DELETE | `/api/v1/vectorize/tasks/:task_id` | 删除任务及其向量 |
 | GET | `/api/v1/vectorize/tasks` | 列表查询任务 |
 
 ### 8.2 请求/响应示例
@@ -2773,8 +2773,8 @@ Content-Type: application/json
 
 {
   "name": "knowledge-base-sync",
-  "projectId": "proj-001",
-  "appId": "app-001",
+  "project_id": "proj-001",
+  "app_id": "app-001",
   "spec": {
     "source": {
       "type": "s3",
@@ -2801,7 +2801,7 @@ Content-Type: application/json
 
 # 响应
 {
-  "taskId": "vec-task-20250115-abc123",
+  "task_id": "vec-task-20250115-abc123",
   "status": "waiting",
   "createdAt": "2025-01-15T10:00:00Z"
 }
@@ -2814,7 +2814,7 @@ GET /api/v1/vectorize/tasks/vec-task-20250115-abc123/status
 
 # 响应
 {
-  "taskId": "vec-task-20250115-abc123",
+  "task_id": "vec-task-20250115-abc123",
   "status": "running",
   "progress": 67,
   "stats": {
@@ -2827,7 +2827,7 @@ GET /api/v1/vectorize/tasks/vec-task-20250115-abc123/status
     "embeddingTimeMs": 30000,
     "storageTimeMs": 5000
   },
-  "startTime": "2025-01-15T10:00:00Z"
+  "start_time": "2025-01-15T10:00:00Z"
 }
 ```
 

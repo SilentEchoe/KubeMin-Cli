@@ -19,22 +19,22 @@ import (
 	"k8s.io/klog/v2"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
-	"KubeMin-Cli/pkg/apiserver/domain/service"
-	"KubeMin-Cli/pkg/apiserver/event"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/clients"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore/mysql"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/informer"
-	msg "KubeMin-Cli/pkg/apiserver/infrastructure/messaging"
-	"KubeMin-Cli/pkg/apiserver/interfaces/api"
-	"KubeMin-Cli/pkg/apiserver/interfaces/api/middleware"
-	"KubeMin-Cli/pkg/apiserver/utils/cache"
-	"KubeMin-Cli/pkg/apiserver/utils/container"
-	"KubeMin-Cli/pkg/apiserver/utils/kube"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/repository"
+	"kubemin-cli/pkg/apiserver/domain/service"
+	"kubemin-cli/pkg/apiserver/event"
+	"kubemin-cli/pkg/apiserver/event/workflow/job"
+	"kubemin-cli/pkg/apiserver/infrastructure/clients"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore/mysql"
+	"kubemin-cli/pkg/apiserver/infrastructure/informer"
+	msg "kubemin-cli/pkg/apiserver/infrastructure/messaging"
+	"kubemin-cli/pkg/apiserver/interfaces/api"
+	"kubemin-cli/pkg/apiserver/interfaces/api/middleware"
+	"kubemin-cli/pkg/apiserver/utils/cache"
+	"kubemin-cli/pkg/apiserver/utils/container"
+	"kubemin-cli/pkg/apiserver/utils/kube"
 )
 
 // APIServer interface for call api server
@@ -48,7 +48,7 @@ type restServer struct {
 	beanContainer   *container.Container
 	cfg             config.Config
 	dataStore       datastore.DataStore
-	cache           cache.ICache
+	cache           cache.Cache
 	KubeClient      kubernetes.Interface `inject:"kubeClient"` //inject 是注入IOC的name，如果tag中包含inject 那么必须有对应的容器注入服务,必须大写，小写会无法访问
 	KubeConfig      *rest.Config         `inject:"kubeConfig"`
 	Queue           msg.Queue            `inject:"queue"`
@@ -112,7 +112,7 @@ func (s *restServer) buildIoCContainer() error {
 	s.dataStore = ds
 
 	// Initialize cache implementation. Prefer redis if configured; fallback to memory.
-	var iCache cache.ICache
+	var iCache cache.Cache
 	switch strings.ToLower(s.cfg.Cache.CacheType) {
 	case string(cache.CacheTypeRedis):
 		rcli, err := clients.EnsureRedis(s.cfg.Cache)
@@ -121,7 +121,7 @@ func (s *restServer) buildIoCContainer() error {
 			iCache = cache.New(false, cache.CacheTypeMem)
 		} else {
 			cache.SetGlobalRedisClient(rcli)
-			iCache = cache.NewRedisICache(rcli, false, s.cfg.Cache.CacheTTL, s.cfg.Cache.KeyPrefix)
+			iCache = cache.NewRedisCache(rcli, false, s.cfg.Cache.CacheTTL, s.cfg.Cache.KeyPrefix)
 		}
 	default:
 		iCache = cache.New(false, cache.CacheTypeMem)
@@ -402,7 +402,7 @@ func (s *restServer) setupLeaderElection(errChan chan error) (*leaderelection.Le
 	restCfg := ctrl.GetConfigOrDie()
 	ns := s.cfg.LeaderConfig.Namespace
 	if ns == "" {
-		ns = config.NAMESPACE
+		ns = config.SystemNamespace
 	}
 	rl, err := resourcelock.NewFromKubeconfig(resourcelock.LeasesResourceLock, ns, s.cfg.LeaderConfig.LockName, resourcelock.ResourceLockConfig{
 		Identity: s.cfg.LeaderConfig.ID,

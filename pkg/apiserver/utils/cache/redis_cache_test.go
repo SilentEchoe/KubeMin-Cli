@@ -20,11 +20,11 @@ func newTestRedisClient(t *testing.T) (*miniredis.Miniredis, *redis.Client) {
 	return s, cli
 }
 
-func TestRedisICache_Basic(t *testing.T) {
+func TestRedisCache_Basic(t *testing.T) {
 	s, cli := newTestRedisClient(t)
 	defer s.Close()
 
-	c := NewRedisICacheWithClient(cli, false)
+	c := NewRedisCacheWithClient(cli, false)
 	require.NoError(t, c.Store("k", "v"))
 
 	require.True(t, c.Exists("k"))
@@ -33,11 +33,11 @@ func TestRedisICache_Basic(t *testing.T) {
 	require.Equal(t, "v", got)
 }
 
-func TestRedisICache_List(t *testing.T) {
+func TestRedisCache_List(t *testing.T) {
 	s, cli := newTestRedisClient(t)
 	defer s.Close()
 
-	c := NewRedisICacheWithClient(cli, false)
+	c := NewRedisCacheWithClient(cli, false)
 	require.NoError(t, c.Store("k1", "v1"))
 	require.NoError(t, c.Store("k2", "v2"))
 
@@ -52,19 +52,19 @@ func TestRedisICache_List(t *testing.T) {
 	require.True(t, m["v1"] && m["v2"])
 }
 
-func TestRedisICache_NoCacheFlag(t *testing.T) {
+func TestRedisCache_NoCacheFlag(t *testing.T) {
 	s, cli := newTestRedisClient(t)
 	defer s.Close()
-	c := NewRedisICacheWithClient(cli, true)
+	c := NewRedisCacheWithClient(cli, true)
 	require.True(t, c.IsCacheDisabled())
 }
 
-func TestRedisICache_CustomTTLAndPrefix(t *testing.T) {
+func TestRedisCache_CustomTTLAndPrefix(t *testing.T) {
 	s, cli := newTestRedisClient(t)
 	defer s.Close()
 	ttl := 2 * time.Second
 	prefix := "t:"
-	c := NewRedisICache(cli, false, ttl, prefix).(*RedisICache)
+	c := NewRedisCache(cli, false, ttl, prefix).(*RedisCache)
 	require.NoError(t, c.Store("kk", "vv"))
 
 	// Key should exist with prefix

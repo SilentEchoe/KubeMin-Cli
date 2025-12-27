@@ -12,9 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
 )
 
 // DeployServiceAccountJobCtl creates or updates a ServiceAccount resource.
@@ -48,7 +48,7 @@ func (c *DeployServiceAccountJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {
@@ -204,7 +204,7 @@ func (c *DeployRoleJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {
@@ -357,7 +357,7 @@ func (c *DeployRoleBindingJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {
@@ -510,7 +510,7 @@ func (c *DeployClusterRoleJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {
@@ -656,7 +656,7 @@ func (c *DeployClusterRoleBindingJobCtl) Clean(ctx context.Context) {
 	if len(refs) == 0 {
 		return
 	}
-	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DelTimeOut)
+	cleanupCtx, cancel := context.WithTimeout(context.Background(), config.DeleteTimeout)
 	defer cancel()
 	for _, ref := range refs {
 		if !ref.Created {

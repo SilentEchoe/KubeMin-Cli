@@ -204,7 +204,7 @@ type GatewayRoute struct {
     Path string `json:"path,omitempty"`
     
     // PathType 路径匹配类型: prefix, exact, regex
-    PathType string `json:"pathType,omitempty"`
+    PathType string `json:"path_type,omitempty"`
     
     // Host 路由级别的主机名（覆盖全局 Hosts）
     Host string `json:"host,omitempty"`
@@ -234,10 +234,10 @@ type GatewayRoute struct {
 // GatewayBackend 后端服务定义
 type GatewayBackend struct {
     // ServiceName 服务名称
-    ServiceName string `json:"serviceName"`
+    ServiceName string `json:"service_name"`
     
     // ServicePort 服务端口
-    ServicePort int32 `json:"servicePort,omitempty"`
+    ServicePort int32 `json:"service_port,omitempty"`
     
     // Weight 权重（用于流量分割）
     Weight int32 `json:"weight,omitempty"`
@@ -249,7 +249,7 @@ type GatewayTLS struct {
     Mode string `json:"mode,omitempty"`
     
     // SecretName 证书 Secret 名称
-    SecretName string `json:"secretName,omitempty"`
+    SecretName string `json:"secret_name,omitempty"`
     
     // Hosts 适用的域名
     Hosts []string `json:"hosts,omitempty"`
@@ -331,7 +331,7 @@ import (
     "context"
     "sigs.k8s.io/controller-runtime/pkg/client"
     
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 // GatewayAdapter 网关适配器接口
@@ -431,7 +431,7 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "sigs.k8s.io/controller-runtime/pkg/client"
     
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 type IngressAdapter struct{}
@@ -471,10 +471,10 @@ func (a *IngressAdapter) Build(ctx context.Context, gwSpec *spec.GatewayTraitSpe
             host = gwSpec.Hosts[0]
         }
         
-        pathType := a.convertPathType(route.PathType)
+        path_type := a.convertPathType(route.PathType)
         path := networkingv1.HTTPIngressPath{
             Path:     route.Path,
-            PathType: &pathType,
+            PathType: &path_type,
             Backend: networkingv1.IngressBackend{
                 Service: &networkingv1.IngressServiceBackend{
                     Name: route.Backend.ServiceName,
@@ -542,7 +542,7 @@ import (
     "sigs.k8s.io/controller-runtime/pkg/client"
     gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
     
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 type GatewayAPIAdapter struct{}
@@ -589,9 +589,9 @@ func (a *GatewayAPIAdapter) Build(ctx context.Context, gwSpec *spec.GatewayTrait
         // 匹配条件
         match := gatewayv1.HTTPRouteMatch{}
         if route.Path != "" {
-            pathType := a.convertPathType(route.PathType)
+            path_type := a.convertPathType(route.PathType)
             match.Path = &gatewayv1.HTTPPathMatch{
-                Type:  &pathType,
+                Type:  &path_type,
                 Value: &route.Path,
             }
         }
@@ -672,7 +672,7 @@ import (
     metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
     "sigs.k8s.io/controller-runtime/pkg/client"
     
-    spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+    spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 type IstioAdapter struct{}
@@ -802,7 +802,7 @@ type Traits struct {
     Ingress   []IngressTraitsSpec `json:"ingress,omitempty"`
     
     RBAC      []RBACPolicySpec    `json:"rbac,omitempty"`
-    EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
+    EnvFrom   []EnvFromSourceSpec `json:"env_from,omitempty"`
     Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
     Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
     Resources *ResourceTraitsSpec `json:"resources,omitempty"`
@@ -825,13 +825,13 @@ type Traits struct {
           {
             "path": "/v1",
             "backend": {
-              "serviceName": "api-service",
-              "servicePort": 8080
+              "service_name": "api-service",
+              "service_port": 8080
             }
           }
         ],
         "tls": {
-          "secretName": "api-tls"
+          "secret_name": "api-tls"
         }
       }
     ]
@@ -851,10 +851,10 @@ type Traits struct {
         "routes": [
           {
             "path": "/v1",
-            "pathType": "prefix",
+            "path_type": "prefix",
             "backend": {
-              "serviceName": "api-service",
-              "servicePort": 8080
+              "service_name": "api-service",
+              "service_port": 8080
             }
           }
         ],
@@ -879,22 +879,22 @@ type Traits struct {
           {
             "path": "/api",
             "backend": {
-              "serviceName": "api-service",
-              "servicePort": 8080
+              "service_name": "api-service",
+              "service_port": 8080
             }
           },
           {
             "path": "/web",
             "backend": {
-              "serviceName": "web-service",
-              "servicePort": 3000
+              "service_name": "web-service",
+              "service_port": 3000
             }
           },
           {
             "path": "/static",
             "backend": {
-              "serviceName": "cdn-service",
-              "servicePort": 80
+              "service_name": "cdn-service",
+              "service_port": 80
             }
           }
         ]
@@ -917,8 +917,8 @@ type Traits struct {
           {
             "path": "/api",
             "backend": {
-              "serviceName": "api-v2",
-              "servicePort": 8080,
+              "service_name": "api-v2",
+              "service_port": 8080,
               "weight": 90
             },
             "timeout": {
@@ -953,8 +953,8 @@ type Traits struct {
           {
             "path": "/api",
             "backend": {
-              "serviceName": "api-v1",
-              "servicePort": 8080,
+              "service_name": "api-v1",
+              "service_port": 8080,
               "weight": 90
             }
           },
@@ -964,8 +964,8 @@ type Traits struct {
               "x-canary": "true"
             },
             "backend": {
-              "serviceName": "api-v2",
-              "servicePort": 8080,
+              "service_name": "api-v2",
+              "service_port": 8080,
               "weight": 10
             }
           }
@@ -1021,13 +1021,13 @@ gantt
       {
         "name": "api-ingress",
         "hosts": ["api.example.com"],
-        "ingressClassName": "nginx",
+        "ingress_class_name": "nginx",
         "routes": [
           {
             "path": "/v1",
             "backend": {
-              "serviceName": "api-service",
-              "servicePort": 8080
+              "service_name": "api-service",
+              "service_port": 8080
             }
           }
         ]
@@ -1050,13 +1050,13 @@ gantt
           {
             "path": "/v1",
             "backend": {
-              "serviceName": "api-service",
-              "servicePort": 8080
+              "service_name": "api-service",
+              "service_port": 8080
             }
           }
         ],
         "providerConfig": {
-          "ingressClassName": "nginx"
+          "ingress_class_name": "nginx"
         }
       }
     ]

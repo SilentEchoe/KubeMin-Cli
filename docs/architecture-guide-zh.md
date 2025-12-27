@@ -173,7 +173,7 @@ Informer 状态同步机制用于实时监听 Kubernetes 资源变化，并将�
 
 
 
-Informer 依赖以下 Labels 来识别和过滤资源，为减少内存消耗，Informer 仅监听带有 `kube-min-cli-appId` 标签的资源，这样 Informer 不会缓存集群中其他应用的 Deployment/StatefulSet，显著降低内存占用。
+Informer 依赖以下 Labels 来识别和过滤资源，为减少内存消耗，Informer 仅监听带有 `kube-min-cli-appId` 标签的资源，这样 Informer 不会缓存集群中其他应用的 Deployment/StatefulSet。
 
 | Label Key                    | 说明     | 示例值                     |
 | ---------------------------- | -------- | -------------------------- |
@@ -202,8 +202,8 @@ const (
 | 条件                                        | 状态    |
 | ------------------------------------------- | ------- |
 | `ready == true` (ReadyReplicas == Replicas) | Running |
-| `readyReplicas > 0`                         | Pending |
-| `replicas > 0 && readyReplicas == 0`        | Pending |
+| `ready_replicas > 0`                         | Pending |
+| `replicas > 0 && ready_replicas == 0`        | Pending |
 | `replicas == 0` (资源被删除或缩容为 0)      | Failed  |
 
 
@@ -253,7 +253,7 @@ const (
     {
       "name": "app-config-1",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -265,7 +265,7 @@ const (
     {
       "name": "app-config-2",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -277,7 +277,7 @@ const (
     {
       "name": "app-config-3",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -291,7 +291,7 @@ const (
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 8080, "expose": true}],
@@ -305,7 +305,7 @@ const (
       "name": "frontend",
       "type": "webservice",
       "image": "myregistry/frontend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 80, "expose": true}],
@@ -704,15 +704,15 @@ k.reader = kafka.NewReader(kafka.ReaderConfig{
 | 字段                  | 类型    | 限制 | 默认值 | 说明                        |
 | --------------------- | ------- | ---- | ------ | --------------------------- |
 | name                  | string  | 必填 | -      | 环境变量名称                |
-| valueFrom             | object  | 必填 | -      | 值来源，四种来源选其一      |
-| valueFrom.static      | *string | 可选 | -      | 静态字符串值                |
-| valueFrom.secret      | object  | 可选 | -      | 从 Secret 中读取            |
-| valueFrom.secret.name | string  | 必填 | -      | Secret 资源名称             |
-| valueFrom.secret.key  | string  | 必填 | -      | Secret 中的 key             |
-| valueFrom.config      | object  | 可选 | -      | 从 ConfigMap 中读取         |
-| valueFrom.config.name | string  | 必填 | -      | ConfigMap 资源名称          |
-| valueFrom.config.key  | string  | 必填 | -      | ConfigMap 中的 key          |
-| valueFrom.field       | *string | 可选 | -      | 从 Pod 字段读取（FieldRef） |
+| value_from             | object  | 必填 | -      | 值来源，四种来源选其一      |
+| value_from.static      | *string | 可选 | -      | 静态字符串值                |
+| value_from.secret      | object  | 可选 | -      | 从 Secret 中读取            |
+| value_from.secret.name | string  | 必填 | -      | Secret 资源名称             |
+| value_from.secret.key  | string  | 必填 | -      | Secret 中的 key             |
+| value_from.config      | object  | 可选 | -      | 从 ConfigMap 中读取         |
+| value_from.config.name | string  | 必填 | -      | ConfigMap 资源名称          |
+| value_from.config.key  | string  | 必填 | -      | ConfigMap 中的 key          |
+| value_from.field       | *string | 可选 | -      | 从 Pod 字段读取（FieldRef） |
 
 #### 值来源类型
 
@@ -744,13 +744,13 @@ k.reader = kafka.NewReader(kafka.ReaderConfig{
   "envs": [
     {
       "name": "APP_ENV",
-      "valueFrom": {
+      "value_from": {
         "static": "production"
       }
     },
     {
       "name": "LOG_LEVEL",
-      "valueFrom": {
+      "value_from": {
         "static": "info"
       }
     }
@@ -777,7 +777,7 @@ env:
   "envs": [
     {
       "name": "DB_PASSWORD",
-      "valueFrom": {
+      "value_from": {
         "secret": {
           "name": "db-credentials",
           "key": "password"
@@ -786,7 +786,7 @@ env:
     },
     {
       "name": "API_KEY",
-      "valueFrom": {
+      "value_from": {
         "secret": {
           "name": "api-secrets",
           "key": "key"
@@ -802,12 +802,12 @@ env:
 ```yaml
 env:
   - name: DB_PASSWORD
-    valueFrom:
+    value_from:
       secretKeyRef:
         name: db-credentials
         key: password
   - name: API_KEY
-    valueFrom:
+    value_from:
       secretKeyRef:
         name: api-secrets
         key: key
@@ -822,7 +822,7 @@ env:
   "envs": [
     {
       "name": "DATABASE_URL",
-      "valueFrom": {
+      "value_from": {
         "config": {
           "name": "app-config",
           "key": "database_url"
@@ -838,7 +838,7 @@ env:
 ```yaml
 env:
   - name: DATABASE_URL
-    valueFrom:
+    value_from:
       configMapKeyRef:
         name: app-config
         key: database_url
@@ -853,19 +853,19 @@ env:
   "envs": [
     {
       "name": "POD_NAME",
-      "valueFrom": {
+      "value_from": {
         "field": "metadata.name"
       }
     },
     {
       "name": "POD_IP",
-      "valueFrom": {
+      "value_from": {
         "field": "status.podIP"
       }
     },
     {
       "name": "NODE_NAME",
-      "valueFrom": {
+      "value_from": {
         "field": "spec.nodeName"
       }
     }
@@ -878,17 +878,17 @@ env:
 ```yaml
 env:
   - name: POD_NAME
-    valueFrom:
+    value_from:
       fieldRef:
         apiVersion: v1
         fieldPath: metadata.name
   - name: POD_IP
-    valueFrom:
+    value_from:
       fieldRef:
         apiVersion: v1
         fieldPath: status.podIP
   - name: NODE_NAME
-    valueFrom:
+    value_from:
       fieldRef:
         apiVersion: v1
         fieldPath: spec.nodeName
@@ -903,13 +903,13 @@ env:
   "envs": [
     {
       "name": "APP_NAME",
-      "valueFrom": {
+      "value_from": {
         "static": "my-service"
       }
     },
     {
       "name": "DB_HOST",
-      "valueFrom": {
+      "value_from": {
         "config": {
           "name": "db-config",
           "key": "host"
@@ -918,7 +918,7 @@ env:
     },
     {
       "name": "DB_PASSWORD",
-      "valueFrom": {
+      "value_from": {
         "secret": {
           "name": "db-credentials",
           "key": "password"
@@ -927,7 +927,7 @@ env:
     },
     {
       "name": "INSTANCE_ID",
-      "valueFrom": {
+      "value_from": {
         "field": "metadata.name"
       }
     }
@@ -939,7 +939,7 @@ env:
 
 #### 注意事项
 
-1. **单一来源**：每个环境变量的 `valueFrom` 只能指定一种来源
+1. **单一来源**：每个环境变量的 `value_from` 只能指定一种来源
 2. **资源存在**：引用的 Secret 或 ConfigMap 必须在同一命名空间中存在
 3. **敏感数据**：敏感信息应使用 `secret` 来源，避免使用 `static`
 4. **与 Properties.Env 区别**：`envs` Trait 支持动态引用，而 `properties.env` 仅支持静态值
@@ -957,7 +957,7 @@ EnvFrom Trait 用于从 ConfigMap 或 Secret 批量导入所有键值对作为�
 | 字段       | 类型   | 限制 | 默认值 | 说明                              |
 | ---------- | ------ | ---- | ------ | --------------------------------- |
 | type       | string | 必填 | -      | 来源类型：`secret` 或 `configMap` |
-| sourceName | string | 必填 | -      | ConfigMap 或 Secret 的资源名称    |
+| source_name | string | 必填 | -      | ConfigMap 或 Secret 的资源名称    |
 
 #### 使用示例
 
@@ -965,10 +965,10 @@ EnvFrom Trait 用于从 ConfigMap 或 Secret 批量导入所有键值对作为�
 
 ```json
 {
-  "envFrom": [
+  "env_from": [
     {
       "type": "configMap",
-      "sourceName": "app-config"
+      "source_name": "app-config"
     }
   ]
 }
@@ -977,7 +977,7 @@ EnvFrom Trait 用于从 ConfigMap 或 Secret 批量导入所有键值对作为�
 **生成结果**：
 
 ```yaml
-envFrom:
+env_from:
   - configMapRef:
       name: app-config
 ```
@@ -999,10 +999,10 @@ data:
 
 ```json
 {
-  "envFrom": [
+  "env_from": [
     {
       "type": "secret",
-      "sourceName": "app-secrets"
+      "source_name": "app-secrets"
     }
   ]
 }
@@ -1011,7 +1011,7 @@ data:
 **生成结果**：
 
 ```yaml
-envFrom:
+env_from:
   - secretRef:
       name: app-secrets
 ```
@@ -1020,14 +1020,14 @@ envFrom:
 
 ```json
 {
-  "envFrom": [
+  "env_from": [
     {
       "type": "configMap",
-      "sourceName": "app-config"
+      "source_name": "app-config"
     },
     {
       "type": "secret",
-      "sourceName": "app-secrets"
+      "source_name": "app-secrets"
     }
   ]
 }
@@ -1036,7 +1036,7 @@ envFrom:
 **生成结果**：
 
 ```yaml
-envFrom:
+env_from:
   - configMapRef:
       name: app-config
   - secretRef:
@@ -1049,8 +1049,8 @@ envFrom:
 
 1. **键名冲突**：如果多个来源有相同的 key，后定义的会覆盖先定义的
 2. **资源必须存在**：引用的 ConfigMap/Secret 必须事先存在
-3. **与 Envs 配合**：可以同时使用 `envFrom` 批量导入和 `envs` 单独定义
-4. **无法选择性导入**：`envFrom` 会导入所有键值对，如需选择性导入请使用 `envs`
+3. **与 Envs 配合**：可以同时使用 `env_from` 批量导入和 `envs` 单独定义
+4. **无法选择性导入**：`env_from` 会导入所有键值对，如需选择性导入请使用 `envs`
 
 
 
@@ -1156,8 +1156,8 @@ Storage Trait 用于将存储卷挂载到容器中，支持多种存储类型。
 | persistent   | PersistentVolumeClaim + VolumeMount | 稳定的存储，使用`PersistentVolumeClaim`卷用于将持久卷(PersistentVolume)挂载到Pod中。这种方式可以为Pod提供一个**稳定的存储方式，不会因为重启/Pod崩溃而丢失容器内持久化存储的文件**。 |
 | ephemeral    | emptyDir + VolumeMount              | 临时存储，对于定义了 `emptyDir` 卷的 Pod，在 Pod 被指派到某节点时此卷会被创建。 就像其名称所表示的那样，`emptyDir` 卷最初是空的。尽管 Pod 中的容器挂载 `emptyDir` 卷的路径可能相同也可能不同，但这些容器都可以读写 `emptyDir` 卷中相同的文件。 当 Pod 因为某些原因被从节点上删除时，`emptyDir` 卷中的数据也会被**永久删除**。 |
 | ~~hostPath~~ | ~~hostPath + VolumeMount~~          | hostPath 可以让**主机节点文件系统上的文件或目录挂载到Pod中**，比如运行一个需要访问节点级系统组件的容器；让存储在主机系统上的配置文件可以被[静态 Pod](https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/static-pod/) 以只读方式访问。<br />**这种方式存在许多安全风险，所以系统中不支持。** |
-| config       | ConfigMap + VolumeMount 或 EnvFrom  | ConfigMap 对象中存储的数据可以被 `configMap` 类型的卷引用，然后被 Pod 中运行的容器化应用使用。<br />但是：1.你必须先[创建 ConfigMap](https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/configure-pod-configmap/#create-a-configmap)， 才能使用它。2.ConfigMap 总是以 `readOnly` 的模式挂载。3.某容器以 [`subPath`](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#using-subpath) 卷挂载方式使用 ConfigMap 时， 若 ConfigMap 发生变化，此容器将无法接收更新。4.文本数据挂载成文件时采用 UTF-8 字符编码。如果使用其他字符编码形式，可使用 `binaryData` 字段。 |
-| secret       | Secret + VolumeMount 或 EnvFrom     | `secret` 卷用来给 Pod 传递敏感信息，例如密码。你可以将 Secret 存储在 Kubernetes API 服务器上，然后以文件的形式挂载到 Pod 中，无需直接与 Kubernetes 耦合。 <br />但是：1.使用前你必须在 Kubernetes API 中创建 Secret。2.Secret 总是以 `readOnly` 的模式挂载。 3.容器以 [`subPath`](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#using-subpath) 卷挂载方式使用 Secret 时，将无法接收 Secret 的更新。 |
+| config       | ConfigMap + VolumeMount 或 EnvFrom  | ConfigMap 对象中存储的数据可以被 `configMap` 类型的卷引用，然后被 Pod 中运行的容器化应用使用。<br />但是：1.你必须先[创建 ConfigMap](https://kubernetes.io/zh-cn/docs/tasks/configure-pod-container/configure-pod-configmap/#create-a-configmap)， 才能使用它。2.ConfigMap 总是以 `read_only` 的模式挂载。3.某容器以 [`sub_path`](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#using-subpath) 卷挂载方式使用 ConfigMap 时， 若 ConfigMap 发生变化，此容器将无法接收更新。4.文本数据挂载成文件时采用 UTF-8 字符编码。如果使用其他字符编码形式，可使用 `binaryData` 字段。 |
+| secret       | Secret + VolumeMount 或 EnvFrom     | `secret` 卷用来给 Pod 传递敏感信息，例如密码。你可以将 Secret 存储在 Kubernetes API 服务器上，然后以文件的形式挂载到 Pod 中，无需直接与 Kubernetes 耦合。 <br />但是：1.使用前你必须在 Kubernetes API 中创建 Secret。2.Secret 总是以 `read_only` 的模式挂载。 3.容器以 [`sub_path`](https://kubernetes.io/zh-cn/docs/concepts/storage/volumes/#using-subpath) 卷挂载方式使用 Secret 时，将无法接收 Secret 的更新。 |
 
 #### **字段详解**
 
@@ -1165,26 +1165,26 @@ Storage Trait 用于将存储卷挂载到容器中，支持多种存储类型。
 | ---------- | ------ | ---- | ------------- | ------------------------------------------------------------ |
 | name       | string | 必填 | -             | 存储卷的唯一名称标识符，用于生成 Kubernetes Volume 名称。必须符合 DNS-1123 子域名规范（小写字母、数字、连字符）。 |
 | type       | string | 必填 | -             | 存储类型，决定底层 Kubernetes 资源类型。支持的值见上列 [存储类型](#存储类型) 章节。 |
-| mountPath  | string | 必填 | `/mnt/<name>` | 容器内挂载路径。若未指定，默认为 `/mnt/<volume-name>`。      |
-| subPath    | string | 可选 | `""`          | 挂载 Volume 内的子路径。用于将同一 Volume 的不同子目录挂载到不同位置。 |
-| readOnly   | bool   | 可选 | `false`       | 是否以只读模式挂载。设置为 `true` 时容器无法写入该挂载点。   |
-| sourceName | string | 可选 | `name`        | 仅用于 ConfigMap/Secret 类型。指定实际 ConfigMap 或 Secret 资源的名称。若为空，则使用 `name` 字段的值。 |
+| mount_path  | string | 必填 | `/mnt/<name>` | 容器内挂载路径。若未指定，默认为 `/mnt/<volume-name>`。      |
+| sub_path    | string | 可选 | `""`          | 挂载 Volume 内的子路径。用于将同一 Volume 的不同子目录挂载到不同位置。 |
+| read_only   | bool   | 可选 | `false`       | 是否以只读模式挂载。设置为 `true` 时容器无法写入该挂载点。   |
+| source_name | string | 可选 | `name`        | 仅用于 ConfigMap/Secret 类型。指定实际 ConfigMap 或 Secret 资源的名称。若为空，则使用 `name` 字段的值。 |
 | size       | string | 可选 | `"1Gi"`       | PVC 请求的存储容量。格式遵循 Kubernetes 资源量规范（如 `5Gi`、`100Mi`）。 |
 
 持久化存储专用字段，即下列字段仅在`type: "persistent"` 时生效：
 
 | 字段         | 类型   | 限制 | 默认值  | 说明                                                         |
 | ------------ | ------ | ---- | ------- | ------------------------------------------------------------ |
-| tmpCreate    | bool   | 可选 | `false` | **是否使用模式控制**：<br/>• `true`：动态创建新的 PVC，PVC 名称格式为 `pvc-<name>-<appID>`<br/>• `false`：引用已存在的 PVC(默认模式) |
-| claimName    | string | 可选 |         | 预留字段，**当前代码未实现**。Volume 引用的 PVC 名称由 `TmpCreate` 决定：为 `true` 时使用生成名称，为 `false` 时使用 `name` 字段。 |
-| storageClass | string | 可选 |         | 指定 PVC 使用的 StorageClass。若为空，使用集群默认 StorageClass。 |
+| tmp_create    | bool   | 可选 | `false` | **是否使用模式控制**：<br/>• `true`：动态创建新的 PVC，PVC 名称格式为 `pvc-<name>-<appID>`<br/>• `false`：引用已存在的 PVC(默认模式) |
+| claim_name    | string | 可选 |         | 预留字段，**当前代码未实现**。Volume 引用的 PVC 名称由 `TmpCreate` 决定：为 `true` 时使用生成名称，为 `false` 时使用 `name` 字段。 |
+| storage_class | string | 可选 |         | 指定 PVC 使用的 StorageClass。若为空，使用集群默认 StorageClass。 |
 |              |        |      |         |                                                              |
 
 #### **逻辑详解**
 
-1.当 `type="persistent"` 时，系统**始终会创建 PVC 对象**，但根据 `tmpCreate` 字段决定命名和注解：
+1.当 `type="persistent"` 时，系统**始终会创建 PVC 对象**，但根据 `tmp_create` 字段决定命名和注解：
 
-1.1 tmpCreate = true（模板创建模式）使用volumeClaimTemplates的方式自动创建PVC
+1.1 tmp_create = true（模板创建模式）使用volumeClaimTemplates的方式自动创建PVC
 
 ```yaml
 volumeClaimTemplates:
@@ -1201,7 +1201,7 @@ volumeClaimTemplates:
 
 
 
-1.2 tmpCreate = false（直接创建模式）
+1.2 tmp_create = false（直接创建模式）
 
 直接使用 `name` 字段作为 PVC 名称;创建基础 PVC 对象（无特殊注解）;Volume 引用该 PVC 名称;
 
@@ -1219,10 +1219,10 @@ volumeClaimTemplates:
     {
       "type": "persistent",
       "name": "mysql-data",
-      "mountPath": "/var/lib/mysql",
-      "tmpCreate": true,
+      "mount_path": "/var/lib/mysql",
+      "tmp_create": true,
       "size": "10Gi",
-      "storageClass": "fast-ssd"
+      "storage_class": "fast-ssd"
     }
   ]
 }
@@ -1244,7 +1244,7 @@ volumeClaimTemplates:
     {
       "type": "persistent", //使用稳定存储类型
       "name": "shared-data",
-      "mountPath": "/data", //挂载目录(可选)，如果为空挂载到默认的目录下
+      "mount_path": "/data", //挂载目录(可选)，如果为空挂载到默认的目录下
       "size": "5Gi", //存储大小
       "TmpCreate": false
     }
@@ -1268,7 +1268,7 @@ volumeClaimTemplates:
     {
       "type": "ephemeral",
       "name": "cache",
-      "mountPath": "/tmp/cache"
+      "mount_path": "/tmp/cache"
     }
   ]
 }
@@ -1289,9 +1289,9 @@ volumeClaimTemplates:
     {
       "type": "config",
       "name": "app-config",
-      "sourceName": "my-configmap",
-      "mountPath": "/etc/config",
-      "readOnly": true
+      "source_name": "my-configmap",
+      "mount_path": "/etc/config",
+      "read_only": true
     }
   ]
 }
@@ -1323,9 +1323,9 @@ volumeClaimTemplates:
     {
       "type": "secret",
       "name": "certs",
-      "sourceName": "tls-secret",
-      "mountPath": "/etc/ssl/certs",
-      "readOnly": true
+      "source_name": "tls-secret",
+      "mount_path": "/etc/ssl/certs",
+      "read_only": true
     }
   ]
 }
@@ -1346,8 +1346,8 @@ volumeClaimTemplates:
     {
       "type": "persistent",
       "name": "data",
-      "mountPath": "/var/lib/mysql",
-      "subPath": "mysql",
+      "mount_path": "/var/lib/mysql",
+      "sub_path": "mysql",
       "TmpCreate": true,
       "size": "5Gi"
     }
@@ -1358,7 +1358,7 @@ volumeClaimTemplates:
 **生成结果**：
 
 - 仅挂载 PVC 中的 `mysql` 子目录到 `/var/lib/mysql`
-- 同一 PVC 可被多个容器以不同 subPath 挂载
+- 同一 PVC 可被多个容器以不同 sub_path 挂载
 
 
 
@@ -1370,7 +1370,7 @@ volumeClaimTemplates:
     {
       "type": "persistent",
       "name": "shared-data",
-      "mountPath": "/data",
+      "mount_path": "/data",
       "TmpCreate": true,
       "size": "5Gi"
     }
@@ -1386,7 +1386,7 @@ volumeClaimTemplates:
           {
             "type": "ephemeral",
             "name": "shared-data",
-            "mountPath": "/init-data"
+            "mount_path": "/init-data"
           }
         ]
       }
@@ -1401,8 +1401,8 @@ volumeClaimTemplates:
           {
             "type": "ephemeral",
             "name": "shared-data",
-            "mountPath": "/backup-source",
-            "readOnly": true
+            "mount_path": "/backup-source",
+            "read_only": true
           }
         ]
       }
@@ -1419,7 +1419,7 @@ volumeClaimTemplates:
 
 - 系统会自动去重：同名 Volume 只创建一次，各容器的 VolumeMount 独立配置
 
-- 各容器可使用不同的 `mountPath` 和 `readOnly` 设置
+- 各容器可使用不同的 `mount_path` 和 `read_only` 设置
 
   
 
@@ -1435,15 +1435,15 @@ volumeClaimTemplates:
 
 3. **StorageClass**：确保指定的 StorageClass 在目标集群中存在，否则 PVC 将处于 Pending 状态
 
-4. **SubPath 与空目录**：使用 `subPath` 时，如果子目录不存在，Kubernetes 不会自动创建，可能导致挂载失败
+4. **SubPath 与空目录**：使用 `sub_path` 时，如果子目录不存在，Kubernetes 不会自动创建，可能导致挂载失败
 
-5. **只读模式**：对于 ConfigMap 和 Secret 类型，建议始终设置 `readOnly: true`
+5. **只读模式**：对于 ConfigMap 和 Secret 类型，建议始终设置 `read_only: true`
 
 6. **Volume 去重**：当多个容器（主容器、Init、Sidecar）声明同名存储时，系统只创建一个 Volume，但各自的 VolumeMount 独立配置
 
 7. **多容器共享存储**：Init/Sidecar 容器共享主容器的 PVC 时，应使用 `type: ephemeral` 声明挂载意图，避免重复声明 `type: persistent` 导致创建多余的 PVC 对象
 
-8. **claimName 字段**：该字段当前未实现，请勿依赖此字段指定已存在的 PVC 名称
+8. **claim_name 字段**：该字段当前未实现，请勿依赖此字段指定已存在的 PVC 名称
 
 
 
@@ -1462,11 +1462,11 @@ Probes Trait 用于定义容器的健康检查探针，Kubernetes 根据探针�
 | 字段                | 类型   | 限制 | 默认值 | 说明                                       |
 | ------------------- | ------ | ---- | ------ | ------------------------------------------ |
 | type                | string | 必填 | -      | 探针类型：`liveness`/`readiness`/`startup` |
-| initialDelaySeconds | int32  | 可选 | 0      | 容器启动后延迟多少秒开始探测               |
-| periodSeconds       | int32  | 可选 | 10     | 探测间隔秒数                               |
-| timeoutSeconds      | int32  | 可选 | 1      | 探测超时秒数                               |
-| failureThreshold    | int32  | 可选 | 3      | 连续失败多少次视为失败                     |
-| successThreshold    | int32  | 可选 | 1      | 连续成功多少次视为成功                     |
+| initial_delay_seconds | int32  | 可选 | 0      | 容器启动后延迟多少秒开始探测               |
+| period_seconds       | int32  | 可选 | 10     | 探测间隔秒数                               |
+| timeout_seconds      | int32  | 可选 | 1      | 探测超时秒数                               |
+| failure_threshold    | int32  | 可选 | 3      | 连续失败多少次视为失败                     |
+| success_threshold    | int32  | 可选 | 1      | 连续成功多少次视为成功                     |
 
 探测方式（三选一）
 
@@ -1474,14 +1474,14 @@ Probes Trait 用于定义容器的健康检查探针，Kubernetes 根据探针�
 | -------------- | -------- | --------------------- |
 | exec           | object   | 执行命令探测          |
 | exec.command   | []string | 要执行的命令          |
-| httpGet        | object   | HTTP GET 探测         |
-| httpGet.path   | string   | HTTP 请求路径         |
-| httpGet.port   | int      | HTTP 请求端口         |
-| httpGet.host   | string   | 主机名（可选）        |
-| httpGet.scheme | string   | HTTP 或 HTTPS（可选） |
-| tcpSocket      | object   | TCP 端口探测          |
-| tcpSocket.port | int      | TCP 端口              |
-| tcpSocket.host | string   | 主机名（可选）        |
+| http_get        | object   | HTTP GET 探测         |
+| http_get.path   | string   | HTTP 请求路径         |
+| http_get.port   | int      | HTTP 请求端口         |
+| http_get.host   | string   | 主机名（可选）        |
+| http_get.scheme | string   | HTTP 或 HTTPS（可选） |
+| tcp_socket      | object   | TCP 端口探测          |
+| tcp_socket.port | int      | TCP 端口              |
+| tcp_socket.host | string   | 主机名（可选）        |
 
 探针类型说明
 
@@ -1502,23 +1502,23 @@ Probes Trait 用于定义容器的健康检查探针，Kubernetes 根据探针�
   "probes": [
     {
       "type": "liveness",
-      "httpGet": {
+      "http_get": {
         "path": "/healthz",
         "port": 8080
       },
-      "initialDelaySeconds": 30,
-      "periodSeconds": 10,
-      "timeoutSeconds": 5,
-      "failureThreshold": 3
+      "initial_delay_seconds": 30,
+      "period_seconds": 10,
+      "timeout_seconds": 5,
+      "failure_threshold": 3
     },
     {
       "type": "readiness",
-      "httpGet": {
+      "http_get": {
         "path": "/ready",
         "port": 8080
       },
-      "initialDelaySeconds": 5,
-      "periodSeconds": 5
+      "initial_delay_seconds": 5,
+      "period_seconds": 5
     }
   ]
 }
@@ -1528,19 +1528,19 @@ Probes Trait 用于定义容器的健康检查探针，Kubernetes 根据探针�
 
 ```yaml
 livenessProbe:
-  httpGet:
+  http_get:
     path: /healthz
     port: 8080
-  initialDelaySeconds: 30
-  periodSeconds: 10
-  timeoutSeconds: 5
-  failureThreshold: 3
+  initial_delay_seconds: 30
+  period_seconds: 10
+  timeout_seconds: 5
+  failure_threshold: 3
 readinessProbe:
-  httpGet:
+  http_get:
     path: /ready
     port: 8080
-  initialDelaySeconds: 5
-  periodSeconds: 5
+  initial_delay_seconds: 5
+  period_seconds: 5
 ```
 
 
@@ -1552,19 +1552,19 @@ readinessProbe:
   "probes": [
     {
       "type": "liveness",
-      "tcpSocket": {
+      "tcp_socket": {
         "port": 3306
       },
-      "initialDelaySeconds": 30,
-      "periodSeconds": 15
+      "initial_delay_seconds": 30,
+      "period_seconds": 15
     },
     {
       "type": "readiness",
-      "tcpSocket": {
+      "tcp_socket": {
         "port": 3306
       },
-      "initialDelaySeconds": 5,
-      "periodSeconds": 10
+      "initial_delay_seconds": 5,
+      "period_seconds": 10
     }
   ]
 }
@@ -1574,15 +1574,15 @@ readinessProbe:
 
 ```yaml
 livenessProbe:
-  tcpSocket:
+  tcp_socket:
     port: 3306
-  initialDelaySeconds: 30
-  periodSeconds: 15
+  initial_delay_seconds: 30
+  period_seconds: 15
 readinessProbe:
-  tcpSocket:
+  tcp_socket:
     port: 3306
-  initialDelaySeconds: 5
-  periodSeconds: 10
+  initial_delay_seconds: 5
+  period_seconds: 10
 ```
 
 
@@ -1597,8 +1597,8 @@ readinessProbe:
       "exec": {
         "command": ["cat", "/tmp/healthy"]
       },
-      "initialDelaySeconds": 5,
-      "periodSeconds": 5
+      "initial_delay_seconds": 5,
+      "period_seconds": 5
     }
   ]
 }
@@ -1612,8 +1612,8 @@ livenessProbe:
     command:
       - cat
       - /tmp/healthy
-  initialDelaySeconds: 5
-  periodSeconds: 5
+  initial_delay_seconds: 5
+  period_seconds: 5
 ```
 
 
@@ -1625,29 +1625,29 @@ livenessProbe:
   "probes": [
     {
       "type": "startup",
-      "httpGet": {
+      "http_get": {
         "path": "/healthz",
         "port": 8080
       },
-      "initialDelaySeconds": 0,
-      "periodSeconds": 10,
-      "failureThreshold": 30
+      "initial_delay_seconds": 0,
+      "period_seconds": 10,
+      "failure_threshold": 30
     },
     {
       "type": "liveness",
-      "httpGet": {
+      "http_get": {
         "path": "/healthz",
         "port": 8080
       },
-      "periodSeconds": 10
+      "period_seconds": 10
     },
     {
       "type": "readiness",
-      "httpGet": {
+      "http_get": {
         "path": "/ready",
         "port": 8080
       },
-      "periodSeconds": 5
+      "period_seconds": 5
     }
   ]
 }
@@ -1657,29 +1657,29 @@ livenessProbe:
 
 ```yaml
 startupProbe:
-  httpGet:
+  http_get:
     path: /healthz
     port: 8080
-  periodSeconds: 10
-  failureThreshold: 30       # 允许最多 300s (30*10s) 完成启动
+  period_seconds: 10
+  failure_threshold: 30       # 允许最多 300s (30*10s) 完成启动
 livenessProbe:
-  httpGet:
+  http_get:
     path: /healthz
     port: 8080
-  periodSeconds: 10          # startup 成功后才开始执行
+  period_seconds: 10          # startup 成功后才开始执行
 readinessProbe:
-  httpGet:
+  http_get:
     path: /ready
     port: 8080
-  periodSeconds: 5           # startup 成功后才开始执行
+  period_seconds: 5           # startup 成功后才开始执行
 ```
 
 #### 注意事项
 
-1. **单一探测方式**：每个探针只能指定 `exec`、`httpGet`、`tcpSocket` 中的一个
+1. **单一探测方式**：每个探针只能指定 `exec`、`http_get`、`tcp_socket` 中的一个
 2. **每种类型唯一**：同一组件的每种探针类型只能定义一个
 3. **启动探针优先**：配置 `startup` 探针时，其他探针在启动成功前不会执行
-4. **合理配置阈值**：根据应用特性合理设置 `initialDelaySeconds` 和 `failureThreshold`
+4. **合理配置阈值**：根据应用特性合理设置 `initial_delay_seconds` 和 `failure_threshold`
 5. **端点可用性**：确保探测端点在容器启动后尽快可用
 
 
@@ -1697,7 +1697,7 @@ Init Trait 用于定义在主容器启动前运行的初始化容器。初始化
 | properties.image   | string            | 必填 | -      | 容器镜像                                 |
 | properties.command | []string          | 可选 | -      | 容器启动命令                             |
 | properties.env     | map[string]string | 可选 | -      | 环境变量键值对                           |
-| traits             | traits            | 可选 | -      | 嵌套 Traits，支持 storage、envs、envFrom |
+| traits             | traits            | 可选 | -      | 嵌套 Traits，支持 storage、envs、env_from |
 
 1. 系统为每个 Init Trait 创建一个 InitContainer
 2. 如果 `name` 为空，自动生成格式为 `<组件名>-init-<随机字符>` 的名称
@@ -1751,14 +1751,14 @@ Init Trait 用于定义在主容器启动前运行的初始化容器。初始化
           {
             "type": "config",
             "name": "app-config",
-            "sourceName": "my-configmap",
-            "mountPath": "/config",
-            "readOnly": true
+            "source_name": "my-configmap",
+            "mount_path": "/config",
+            "read_only": true
           },
           {
             "type": "ephemeral",
             "name": "shared-data",
-            "mountPath": "/app/config"
+            "mount_path": "/app/config"
           }
         ]
       }
@@ -1798,7 +1798,7 @@ Sidecar Trait 用于定义与主容器并行运行的辅助容器，常用于日
 | command | []string          | 可选 | -      | 容器启动命令                                                |
 | args    | []string          | 可选 | -      | 命令参数                                                    |
 | env     | map[string]string | 可选 | -      | 环境变量键值对                                              |
-| traits  | traits            | 可选 | -      | 嵌套 Traits，支持 storage、envs、envFrom、probes、resources |
+| traits  | traits            | 可选 | -      | 嵌套 Traits，支持 storage、envs、env_from、probes、resources |
 
 #### 逻辑详解
 
@@ -1827,7 +1827,7 @@ Sidecar Trait 用于定义与主容器并行运行的辅助容器，常用于日
           {
             "type": "ephemeral",
             "name": "app-logs",
-            "mountPath": "/var/log/app"
+            "mount_path": "/var/log/app"
           }
         ],
         "resources": {
@@ -1866,19 +1866,19 @@ Sidecar Trait 用于定义与主容器并行运行的辅助容器，常用于日
           {
             "type": "config",
             "name": "envoy-config",
-            "sourceName": "envoy-configmap",
-            "mountPath": "/etc/envoy"
+            "source_name": "envoy-configmap",
+            "mount_path": "/etc/envoy"
           }
         ],
         "probes": [
           {
             "type": "readiness",
-            "httpGet": {
+            "http_get": {
               "path": "/ready",
               "port": 9901
             },
-            "initialDelaySeconds": 5,
-            "periodSeconds": 10
+            "initial_delay_seconds": 5,
+            "period_seconds": 10
           }
         ],
         "resources": {
@@ -1916,11 +1916,11 @@ Sidecar Trait 用于定义与主容器并行运行的辅助容器，常用于日
         "probes": [
           {
             "type": "liveness",
-            "httpGet": {
+            "http_get": {
               "path": "/metrics",
               "port": 9100
             },
-            "periodSeconds": 30
+            "period_seconds": 30
           }
         ]
       }
@@ -1958,26 +1958,26 @@ RBAC Trait 用于创建 Kubernetes RBAC 资源，为组件配置细粒度的权�
 
 | 字段                         | 类型              | 限制 | 默认值           | 说明                                |
 | ---------------------------- | ----------------- | ---- | ---------------- | ----------------------------------- |
-| serviceAccount               | string            | 可选 | `<组件名>-sa`    | ServiceAccount 名称                 |
+| service_account               | string            | 可选 | `<组件名>-sa`    | ServiceAccount 名称                 |
 | namespace                    | string            | 可选 | 组件命名空间     | 资源所在命名空间                    |
-| clusterScope                 | bool              | 可选 | `false`          | 是否创建集群级角色                  |
-| roleName                     | string            | 可选 | `<sa名>-role`    | Role/ClusterRole 名称               |
-| bindingName                  | string            | 可选 | `<sa名>-binding` | RoleBinding/ClusterRoleBinding 名称 |
-| serviceAccountLabels         | map[string]string | 可选 | -                | ServiceAccount 标签                 |
-| serviceAccountAnnotations    | map[string]string | 可选 | -                | ServiceAccount 注解                 |
-| roleLabels                   | map[string]string | 可选 | -                | Role 标签                           |
-| bindingLabels                | map[string]string | 可选 | -                | RoleBinding 标签                    |
-| automountServiceAccountToken | *bool             | 可选 | -                | 是否自动挂载 SA Token               |
+| cluster_scope                 | bool              | 可选 | `false`          | 是否创建集群级角色                  |
+| role_name                     | string            | 可选 | `<sa名>-role`    | Role/ClusterRole 名称               |
+| binding_name                  | string            | 可选 | `<sa名>-binding` | RoleBinding/ClusterRoleBinding 名称 |
+| service_account_labels         | map[string]string | 可选 | -                | ServiceAccount 标签                 |
+| service_account_annotations    | map[string]string | 可选 | -                | ServiceAccount 注解                 |
+| role_labels                   | map[string]string | 可选 | -                | Role 标签                           |
+| binding_labels                | map[string]string | 可选 | -                | RoleBinding 标签                    |
+| automount_service_account_token | *bool             | 可选 | -                | 是否自动挂载 SA Token               |
 | rules                        | []object          | 必填 | -                | 权限规则列表                        |
 
 **Rules 权限规则**
 
 | 字段            | 类型     | 限制 | 默认值 | 说明                    |
 | --------------- | -------- | ---- | ------ | ----------------------- |
-| apiGroups       | []string | 可选 | -      | API 组，`""` 表示核心组 |
+| api_groups       | []string | 可选 | -      | API 组，`""` 表示核心组 |
 | resources       | []string | 可选 | -      | 资源类型                |
-| resourceNames   | []string | 可选 | -      | 具体资源名称            |
-| nonResourceURLs | []string | 可选 | -      | 非资源 URL              |
+| resource_names   | []string | 可选 | -      | 具体资源名称            |
+| non_resource_urls | []string | 可选 | -      | 非资源 URL              |
 | verbs           | []string | 必填 | -      | 操作动词                |
 
 **常用 API Groups**
@@ -2014,10 +2014,10 @@ RBAC Trait 用于创建 Kubernetes RBAC 资源，为组件配置细粒度的权�
 {
   "rbac": [
     {
-      "serviceAccount": "pod-reader",
+      "service_account": "pod-reader",
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["pods"],
           "verbs": ["get", "list", "watch"]
         }
@@ -2047,7 +2047,7 @@ kind: Role
 metadata:
   name: pod-reader-role
 rules:
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["pods"]
     verbs: ["get", "list", "watch"]
 
@@ -2073,10 +2073,10 @@ roleRef:
 {
   "rbac": [
     {
-      "serviceAccount": "config-reader",
+      "service_account": "config-reader",
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["configmaps", "secrets"],
           "verbs": ["get", "list"]
         }
@@ -2092,15 +2092,15 @@ roleRef:
 {
   "rbac": [
     {
-      "serviceAccount": "deployment-manager",
+      "service_account": "deployment-manager",
       "rules": [
         {
-          "apiGroups": ["apps"],
+          "api_groups": ["apps"],
           "resources": ["deployments"],
           "verbs": ["get", "list", "watch", "create", "update", "patch", "delete"]
         },
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["pods"],
           "verbs": ["get", "list", "watch"]
         }
@@ -2116,16 +2116,16 @@ roleRef:
 {
   "rbac": [
     {
-      "serviceAccount": "cluster-admin-sa",
-      "clusterScope": true,
+      "service_account": "cluster-admin-sa",
+      "cluster_scope": true,
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["nodes"],
           "verbs": ["get", "list", "watch"]
         },
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["namespaces"],
           "verbs": ["get", "list"]
         }
@@ -2149,10 +2149,10 @@ kind: ClusterRole
 metadata:
   name: cluster-admin-sa-role
 rules:
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["nodes"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["namespaces"]
     verbs: ["get", "list"]
 
@@ -2177,12 +2177,12 @@ roleRef:
 {
   "rbac": [
     {
-      "serviceAccount": "specific-config-reader",
+      "service_account": "specific-config-reader",
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["configmaps"],
-          "resourceNames": ["app-config", "feature-flags"],
+          "resource_names": ["app-config", "feature-flags"],
           "verbs": ["get"]
         }
       ]
@@ -2198,9 +2198,9 @@ roleRef:
 
 ```yaml
 rules:
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["configmaps"]
-    resourceNames: ["app-config", "feature-flags"]
+    resource_names: ["app-config", "feature-flags"]
     verbs: ["get"]
 ```
 
@@ -2210,31 +2210,31 @@ rules:
 {
   "rbac": [
     {
-      "serviceAccount": "backend-sa",
-      "roleName": "backend-role",
-      "bindingName": "backend-binding",
-      "automountServiceAccountToken": false,
-      "serviceAccountLabels": {
+      "service_account": "backend-sa",
+      "role_name": "backend-role",
+      "binding_name": "backend-binding",
+      "automount_service_account_token": false,
+      "service_account_labels": {
         "app": "backend",
         "env": "production"
       },
-      "serviceAccountAnnotations": {
+      "service_account_annotations": {
         "description": "Backend service account"
       },
-      "roleLabels": {
+      "role_labels": {
         "app": "backend"
       },
-      "bindingLabels": {
+      "binding_labels": {
         "app": "backend"
       },
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["pods", "services"],
           "verbs": ["get", "list", "watch"]
         },
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["configmaps"],
           "verbs": ["get"]
         }
@@ -2249,7 +2249,7 @@ rules:
 - ServiceAccount 名称：`backend-sa`（自定义）
 - Role 名称：`backend-role`（自定义）
 - RoleBinding 名称：`backend-binding`（自定义）
-- automountServiceAccountToken：`false`（提高安全性）
+- automount_service_account_token：`false`（提高安全性）
 - 所有资源带自定义标签
 
 ```yaml
@@ -2263,7 +2263,7 @@ metadata:
     env: production
   annotations:
     description: Backend service account
-automountServiceAccountToken: false
+automount_service_account_token: false
 
 # Role
 apiVersion: rbac.authorization.k8s.io/v1
@@ -2273,10 +2273,10 @@ metadata:
   labels:
     app: backend
 rules:
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["pods", "services"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
+  - api_groups: [""]
     resources: ["configmaps"]
     verbs: ["get"]
 
@@ -2296,21 +2296,21 @@ metadata:
 {
   "rbac": [
     {
-      "serviceAccount": "primary-sa",
+      "service_account": "primary-sa",
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["pods"],
           "verbs": ["get", "list"]
         }
       ]
     },
     {
-      "serviceAccount": "secondary-sa",
-      "clusterScope": true,
+      "service_account": "secondary-sa",
+      "cluster_scope": true,
       "rules": [
         {
-          "apiGroups": [""],
+          "api_groups": [""],
           "resources": ["nodes"],
           "verbs": ["get", "list"]
         }
@@ -2337,9 +2337,9 @@ metadata:
 
 1. **Verbs 必填**：每个 rule 必须指定至少一个 verb
 2. **最小权限原则**：只授予必要的权限
-3. **命名空间隔离**：非 `clusterScope` 的角色只在指定命名空间生效
+3. **命名空间隔离**：非 `cluster_scope` 的角色只在指定命名空间生效
 4. **ServiceAccount 绑定**：第一个 RBAC 策略的 ServiceAccount 会被设置到 Pod
-5. **automountServiceAccountToken**：设置为 `false` 可提高安全性
+5. **automount_service_account_token**：设置为 `false` 可提高安全性
 6. **多策略处理**：配置多个 RBAC 策略时，各自创建独立的资源集合
 
 
@@ -2361,8 +2361,8 @@ Ingress Trait 用于创建 Kubernetes Ingress 资源，将外部 HTTP/HTTPS 流�
 | hosts            | []string          | 可选 | -                  | 全局主机名列表       |
 | label            | map[string]string | 可选 | -                  | 标签                 |
 | annotations      | map[string]string | 可选 | -                  | 注解                 |
-| ingressClassName | string            | 可选 | -                  | Ingress Class 名称   |
-| defaultPathType  | string            | 可选 | `Prefix`           | 默认路径匹配类型     |
+| ingress_class_name | string            | 可选 | -                  | Ingress Class 名称   |
+| default_path_type  | string            | 可选 | `Prefix`           | 默认路径匹配类型     |
 | tls              | []object          | 可选 | -                  | TLS 配置             |
 | routes           | []object          | 必填 | -                  | 路由规则             |
 
@@ -2370,7 +2370,7 @@ Ingress Trait 用于创建 Kubernetes Ingress 资源，将外部 HTTP/HTTPS 流�
 
 | 字段       | 类型     | 说明                 |
 | ---------- | -------- | -------------------- |
-| secretName | string   | TLS 证书 Secret 名称 |
+| secret_name | string   | TLS 证书 Secret 名称 |
 | hosts      | []string | 该证书适用的主机列表 |
 
 **Routes 路由规则**
@@ -2378,11 +2378,11 @@ Ingress Trait 用于创建 Kubernetes Ingress 资源，将外部 HTTP/HTTPS 流�
 | 字段                | 类型   | 限制 | 默认值   | 说明                                          |
 | ------------------- | ------ | ---- | -------- | --------------------------------------------- |
 | path                | string | 可选 | `/`      | URL 路径                                      |
-| pathType            | string | 可选 | `Prefix` | 路径类型：Prefix/Exact/ImplementationSpecific |
+| path_type            | string | 可选 | `Prefix` | 路径类型：Prefix/Exact/ImplementationSpecific |
 | host                | string | 可选 | -        | 路由级主机名（覆盖全局 hosts）                |
 | backend             | object | 必填 | -        | 后端服务配置                                  |
-| backend.serviceName | string | 必填 | -        | 服务名称                                      |
-| backend.servicePort | int32  | 可选 | 80       | 服务端口                                      |
+| backend.service_name | string | 必填 | -        | 服务名称                                      |
+| backend.service_port | int32  | 可选 | 80       | 服务端口                                      |
 | rewrite             | object | 可选 | -        | 路径重写配置                                  |
 
 **Rewrite 重写配置**
@@ -2402,13 +2402,13 @@ Ingress Trait 用于创建 Kubernetes Ingress 资源，将外部 HTTP/HTTPS 流�
   "ingress": [
     {
       "name": "my-app-ingress",
-      "ingressClassName": "nginx",
+      "ingress_class_name": "nginx",
       "routes": [
         {
           "path": "/",
           "backend": {
-            "serviceName": "my-app-service",
-            "servicePort": 80
+            "service_name": "my-app-service",
+            "service_port": 80
           }
         }
       ]
@@ -2430,12 +2430,12 @@ kind: Ingress
 metadata:
   name: my-app-ingress
 spec:
-  ingressClassName: nginx
+  ingress_class_name: nginx
   rules:
     - http:
         paths:
           - path: /
-            pathType: Prefix
+            path_type: Prefix
             backend:
               service:
                 name: my-app-service
@@ -2450,21 +2450,21 @@ spec:
   "ingress": [
     {
       "name": "api-ingress",
-      "ingressClassName": "nginx",
+      "ingress_class_name": "nginx",
       "hosts": ["api.example.com"],
       "routes": [
         {
           "path": "/v1",
           "backend": {
-            "serviceName": "api-v1",
-            "servicePort": 8080
+            "service_name": "api-v1",
+            "service_port": 8080
           }
         },
         {
           "path": "/v2",
           "backend": {
-            "serviceName": "api-v2",
-            "servicePort": 8080
+            "service_name": "api-v2",
+            "service_port": 8080
           }
         }
       ]
@@ -2480,10 +2480,10 @@ spec:
   "ingress": [
     {
       "name": "secure-ingress",
-      "ingressClassName": "nginx",
+      "ingress_class_name": "nginx",
       "tls": [
         {
-          "secretName": "tls-secret",
+          "secret_name": "tls-secret",
           "hosts": ["secure.example.com"]
         }
       ],
@@ -2492,8 +2492,8 @@ spec:
           "host": "secure.example.com",
           "path": "/",
           "backend": {
-            "serviceName": "secure-app",
-            "servicePort": 443
+            "service_name": "secure-app",
+            "service_port": 443
           }
         }
       ]
@@ -2510,17 +2510,17 @@ spec:
 
 ```yaml
 spec:
-  ingressClassName: nginx
+  ingress_class_name: nginx
   tls:
     - hosts:
         - secure.example.com
-      secretName: tls-secret
+      secret_name: tls-secret
   rules:
     - host: secure.example.com
       http:
         paths:
           - path: /
-            pathType: Prefix
+            path_type: Prefix
             backend:
               service:
                 name: secure-app
@@ -2535,18 +2535,18 @@ spec:
   "ingress": [
     {
       "name": "rewrite-ingress",
-      "ingressClassName": "nginx",
+      "ingress_class_name": "nginx",
       "annotations": {
         "nginx.ingress.kubernetes.io/use-regex": "true"
       },
       "routes": [
         {
           "path": "/api(/.*)",
-          "pathType": "ImplementationSpecific",
+          "path_type": "ImplementationSpecific",
           "host": "app.example.com",
           "backend": {
-            "serviceName": "backend-service",
-            "servicePort": 8080
+            "service_name": "backend-service",
+            "service_port": 8080
           },
           "rewrite": {
             "type": "regexReplace",
@@ -2566,13 +2566,13 @@ spec:
   "ingress": [
     {
       "name": "multi-host-ingress",
-      "ingressClassName": "nginx",
+      "ingress_class_name": "nginx",
       "label": {
         "app": "multi-tenant"
       },
       "tls": [
         {
-          "secretName": "wildcard-tls",
+          "secret_name": "wildcard-tls",
           "hosts": ["*.example.com"]
         }
       ],
@@ -2581,32 +2581,32 @@ spec:
           "host": "app1.example.com",
           "path": "/",
           "backend": {
-            "serviceName": "app1-service",
-            "servicePort": 80
+            "service_name": "app1-service",
+            "service_port": 80
           }
         },
         {
           "host": "app2.example.com",
           "path": "/",
           "backend": {
-            "serviceName": "app2-service",
-            "servicePort": 80
+            "service_name": "app2-service",
+            "service_port": 80
           }
         },
         {
           "host": "api.example.com",
           "path": "/users",
           "backend": {
-            "serviceName": "user-service",
-            "servicePort": 8080
+            "service_name": "user-service",
+            "service_port": 8080
           }
         },
         {
           "host": "api.example.com",
           "path": "/orders",
           "backend": {
-            "serviceName": "order-service",
-            "servicePort": 8080
+            "service_name": "order-service",
+            "service_port": 8080
           }
         }
       ]
@@ -2650,8 +2650,8 @@ spec:
 
 | 父 Trait | 可嵌套的 Traits                                         | 排除的 Traits |
 | -------- | ------------------------------------------------------- | ------------- |
-| Init     | storage, envs, envFrom, resources,probes,rbac、ingress  | init, sidecar |
-| Sidecar  | storage, envs, envFrom, probes, resources,rbac、ingress | init, sidecar |
+| Init     | storage, envs, env_from, resources,probes,rbac、ingress  | init, sidecar |
+| Sidecar  | storage, envs, env_from, probes, resources,rbac、ingress | init, sidecar |
 
 
 

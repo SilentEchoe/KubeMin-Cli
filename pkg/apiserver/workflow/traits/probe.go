@@ -6,7 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 )
 
 const (
@@ -86,7 +86,7 @@ func (p *ProbeProcessor) convertSpecToKubeProbe(spec spec.ProbeTraitsSpec) (*cor
 		handlerCount++
 	}
 	if handlerCount != 1 {
-		return nil, fmt.Errorf("exactly one of 'exec', 'httpGet', or 'tcpSocket' must be specified for a probe")
+		return nil, fmt.Errorf("exactly one of 'exec', 'http_get', or 'tcp_socket' must be specified for a probe")
 	}
 
 	if spec.Exec != nil {

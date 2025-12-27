@@ -73,7 +73,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
     {
       "field": "component[1].traits.probes[0]",
       "code": "INVALID_PROBE_CONFIG",
-      "message": "probe must specify exactly one of exec, httpGet, or tcpSocket"
+      "message": "probe must specify exactly one of exec, http_get, or tcp_socket"
     },
     {
       "field": "workflow[0].components[2]",
@@ -100,7 +100,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
       "name": "backend",
       "type": "webservice",
       "image": "nginx:1.24",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [
@@ -139,7 +139,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
     {
       "name": "app-config",
       "type": "config",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "properties": {
         "conf": {
@@ -152,7 +152,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 3,
       "properties": {
         "ports": [{"port": 8080, "expose": true}],
@@ -162,21 +162,21 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
         "probes": [
           {
             "type": "liveness",
-            "httpGet": {
+            "http_get": {
               "path": "/healthz",
               "port": 8080
             },
-            "initialDelaySeconds": 30,
-            "periodSeconds": 10
+            "initial_delay_seconds": 30,
+            "period_seconds": 10
           },
           {
             "type": "readiness",
-            "httpGet": {
+            "http_get": {
               "path": "/ready",
               "port": 8080
             },
-            "initialDelaySeconds": 5,
-            "periodSeconds": 5
+            "initial_delay_seconds": 5,
+            "period_seconds": 5
           }
         ],
         "resources": {
@@ -187,23 +187,23 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
           {
             "type": "persistent",
             "name": "data",
-            "mountPath": "/data",
-            "tmpCreate": true,
+            "mount_path": "/data",
+            "tmp_create": true,
             "size": "10Gi"
           }
         ],
-        "envFrom": [
+        "env_from": [
           {
             "type": "configMap",
-            "sourceName": "app-config"
+            "source_name": "app-config"
           }
         ],
         "rbac": [
           {
-            "serviceAccount": "backend-sa",
+            "service_account": "backend-sa",
             "rules": [
               {
-                "apiGroups": [""],
+                "api_groups": [""],
                 "resources": ["pods"],
                 "verbs": ["get", "list", "watch"]
               }
@@ -213,13 +213,13 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
         "ingress": [
           {
             "name": "backend-ingress",
-            "ingressClassName": "nginx",
+            "ingress_class_name": "nginx",
             "routes": [
               {
                 "path": "/api",
                 "backend": {
-                  "serviceName": "backend",
-                  "servicePort": 8080
+                  "service_name": "backend",
+                  "service_port": 8080
                 }
               }
             ]
@@ -255,7 +255,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
       "name": "backend",
       "type": "webservice",
       "image": "myregistry/backend:v1.0.0",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "traits": {
         "init": [
@@ -270,9 +270,9 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
                 {
                   "type": "config",
                   "name": "app-config",
-                  "sourceName": "my-configmap",
-                  "mountPath": "/config",
-                  "readOnly": true
+                  "source_name": "my-configmap",
+                  "mount_path": "/config",
+                  "read_only": true
                 }
               ]
             }
@@ -310,7 +310,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
 
 ```json
 {
-  "workflowId": "",
+  "workflow_id": "",
   "name": "new-workflow",
   "alias": "New Deployment Workflow",
   "workflow": [
@@ -418,7 +418,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
     {
       "field": "component[0].traits.probes[0]",
       "code": "INVALID_PROBE_CONFIG",
-      "message": "probe must specify exactly one of exec, httpGet, or tcpSocket"
+      "message": "probe must specify exactly one of exec, http_get, or tcp_socket"
     }
   ]
 }
@@ -546,7 +546,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
 | `MISSING_RBAC_VERBS` | RBAC 规则缺少 verbs |
 | `MISSING_INGRESS_ROUTES` | Ingress 缺少路由 |
 | `MISSING_SERVICE_NAME` | Ingress 路由缺少服务名称 |
-| `INVALID_ENVFROM_TYPE` | envFrom 类型无效 |
+| `INVALID_ENVFROM_TYPE` | env_from 类型无效 |
 | `INVALID_ENV_VALUE_SOURCE` | 环境变量值来源无效 |
 
 ### 工作流错误
@@ -594,22 +594,22 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
 ### Traits 嵌套规则
 
 - `init` 和 `sidecar` Trait 支持嵌套以下 Traits:
-  - `storage`, `envs`, `envFrom`, `probes`, `resources`, `rbac`, `ingress`
+  - `storage`, `envs`, `env_from`, `probes`, `resources`, `rbac`, `ingress`
 - **禁止**在 `init` 或 `sidecar` 中再嵌套 `init` 或 `sidecar`
 
 ### 探针规则
 
 - `type` 必填，可选值: `liveness`, `readiness`, `startup`
-- 探测方法**三选一**: `exec`, `httpGet`, `tcpSocket`
+- 探测方法**三选一**: `exec`, `http_get`, `tcp_socket`
 - 不能同时指定多个探测方法
-- `httpGet` 和 `tcpSocket` 的 `port` 必须为正整数
+- `http_get` 和 `tcp_socket` 的 `port` 必须为正整数
 
 ### 存储规则
 
 - `type` 必填，可选值: `persistent`, `ephemeral`, `config`, `secret`
-- `mountPath` 必填
-- `persistent` 类型配合 `tmpCreate: true` 时，`size` 需要符合 Kubernetes 资源量格式 (如 `1Gi`, `500Mi`)
-- `config` 和 `secret` 类型需要指定 `sourceName` 或 `name`
+- `mount_path` 必填
+- `persistent` 类型配合 `tmp_create: true` 时，`size` 需要符合 Kubernetes 资源量格式 (如 `1Gi`, `500Mi`)
+- `config` 和 `secret` 类型需要指定 `source_name` 或 `name`
 
 ### RBAC 规则
 
@@ -619,7 +619,7 @@ curl -X POST http://localhost:8080/api/v1/applications/your-app-id/workflow/try 
 ### Ingress 规则
 
 - `routes` 数组必填且不能为空
-- 每个 route 的 `backend.serviceName` 必填
+- 每个 route 的 `backend.service_name` 必填
 
 ## 使用建议
 

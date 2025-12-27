@@ -9,7 +9,7 @@
       "name": "backend",
       "type": "webservice",
       "image": "nginx:1.24",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 2,
       "properties": {
         "ports": [{"port": 8080}],

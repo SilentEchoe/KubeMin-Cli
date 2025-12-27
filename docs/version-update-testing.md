@@ -48,8 +48,8 @@
   "name": "my-backend-app",
   "version": "1.0.0",
   "workflow_id": "wf-789def",
-  "createTime": "2024-01-15T10:30:00Z",
-  "updateTime": "2024-01-15T10:30:00Z"
+  "create_time": "2024-01-15T10:30:00Z",
+  "update_time": "2024-01-15T10:30:00Z"
 }
 ```
 
@@ -77,20 +77,20 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "1.1.0",
-  "previousVersion": "1.0.0",
+  "previous_version": "1.0.0",
   "strategy": "rolling",
-  "taskId": "task-update-001",
-  "updatedComponents": ["backend"],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "task-update-001",
+  "updated_components": ["backend"],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 
 ### 步骤 3：查看更新状态
 
-使用返回的 `taskId` 查询工作流执行状态：
+使用返回的 `task_id` 查询工作流执行状态：
 
 **请求**：`GET /api/v1/workflow/tasks/task-update-001/status`
 
@@ -98,18 +98,18 @@
 
 ```json
 {
-  "taskId": "task-update-001",
+  "task_id": "task-update-001",
   "status": "completed",
-  "workflowId": "wf-789def",
-  "workflowName": "my-backend-app-workflow",
-  "appId": "abc123xyz456",
+  "workflow_id": "wf-789def",
+  "workflow_name": "my-backend-app-workflow",
+  "app_id": "abc123xyz456",
   "components": [
     {
       "name": "backend",
       "type": "deploy",
       "status": "completed",
-      "startTime": 1705312200,
-      "endTime": 1705312260
+      "start_time": 1705312200,
+      "end_time": 1705312260
     }
   ]
 }
@@ -146,14 +146,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "1.1.1",
-  "previousVersion": "1.1.0",
+  "previous_version": "1.1.0",
   "strategy": "rolling",
-  "taskId": "task-scale-002",
-  "updatedComponents": ["backend"],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "task-scale-002",
+  "updated_components": ["backend"],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 
@@ -200,14 +200,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "2.0.0",
-  "previousVersion": "1.1.1",
+  "previous_version": "1.1.1",
   "strategy": "rolling",
-  "taskId": "task-add-003",
-  "updatedComponents": [],
-  "addedComponents": ["redis-cache"],
-  "removedComponents": []
+  "task_id": "task-add-003",
+  "updated_components": [],
+  "added_components": ["redis-cache"],
+  "removed_components": []
 }
 ```
 
@@ -222,7 +222,7 @@
   "components": [
     {
       "id": 1,
-      "appId": "abc123xyz456",
+      "app_id": "abc123xyz456",
       "name": "backend",
       "namespace": "default",
       "image": "myapp/backend:v1.1.0",
@@ -231,7 +231,7 @@
     },
     {
       "id": 2,
-      "appId": "abc123xyz456",
+      "app_id": "abc123xyz456",
       "name": "redis-cache",
       "namespace": "default",
       "image": "redis:7-alpine",
@@ -271,14 +271,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "2.1.0",
-  "previousVersion": "2.0.0",
+  "previous_version": "2.0.0",
   "strategy": "rolling",
-  "taskId": "task-remove-004",
-  "updatedComponents": [],
-  "addedComponents": [],
-  "removedComponents": ["legacy-worker"]
+  "task_id": "task-remove-004",
+  "updated_components": [],
+  "added_components": [],
+  "removed_components": ["legacy-worker"]
 }
 ```
 
@@ -332,7 +332,7 @@
       "name": "old-scheduler"
     }
   ],
-  "autoExec": true,
+  "auto_exec": true,
   "description": "Major architecture refactoring - v3.0.0"
 }
 ```
@@ -341,14 +341,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "3.0.0",
-  "previousVersion": "2.1.0",
+  "previous_version": "2.1.0",
   "strategy": "rolling",
-  "taskId": "task-refactor-005",
-  "updatedComponents": ["backend"],
-  "addedComponents": ["message-queue"],
-  "removedComponents": ["old-scheduler"]
+  "task_id": "task-refactor-005",
+  "updated_components": ["backend"],
+  "added_components": ["message-queue"],
+  "removed_components": ["old-scheduler"]
 }
 ```
 
@@ -365,7 +365,7 @@
 ```json
 {
   "version": "3.0.1",
-  "autoExec": false,
+  "auto_exec": false,
   "description": "Documentation update - no deployment needed"
 }
 ```
@@ -374,18 +374,18 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "3.0.1",
-  "previousVersion": "3.0.0",
+  "previous_version": "3.0.0",
   "strategy": "rolling",
-  "taskId": "",
-  "updatedComponents": [],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "",
+  "updated_components": [],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 
-> **注意**：`taskId` 为空，表示没有触发工作流执行。
+> **注意**：`task_id` 为空，表示没有触发工作流执行。
 
 ---
 
@@ -416,14 +416,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "3.1.0-canary",
-  "previousVersion": "3.0.1",
+  "previous_version": "3.0.1",
   "strategy": "canary",
-  "taskId": "task-canary-006",
-  "updatedComponents": ["backend"],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "task-canary-006",
+  "updated_components": ["backend"],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 
@@ -445,9 +445,9 @@
 
 ```json
 {
-  "HTTPCode": 404,
-  "BusinessCode": 10005,
-  "Message": "application name is not exist"
+  "http_code": 404,
+  "business_code": 10005,
+  "message": "application name is not exist"
 }
 ```
 
@@ -467,9 +467,9 @@
 
 ```json
 {
-  "HTTPCode": 400,
-  "BusinessCode": 10000,
-  "Message": "Key: 'UpdateVersionRequest.Version' Error:Field validation for 'Version' failed on the 'required' tag"
+  "http_code": 400,
+  "business_code": 10000,
+  "message": "Key: 'UpdateVersionRequest.Version' Error:Field validation for 'Version' failed on the 'required' tag"
 }
 ```
 
@@ -490,14 +490,14 @@
 
 ```json
 {
-  "appId": "abc123xyz456",
+  "app_id": "abc123xyz456",
   "version": "1.2.0",
-  "previousVersion": "1.1.0",
+  "previous_version": "1.1.0",
   "strategy": "rolling",
-  "taskId": "",
-  "updatedComponents": [],
-  "addedComponents": [],
-  "removedComponents": []
+  "task_id": "",
+  "updated_components": [],
+  "added_components": [],
+  "removed_components": []
 }
 ```
 

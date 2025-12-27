@@ -18,18 +18,8 @@ func SetGlobalRedisClient(cli *redis.Client) {
 // GetGlobalRedisClient returns the shared redis client if set.
 func GetGlobalRedisClient() *redis.Client { return redisClient }
 
-// Low-level helper preserved for lock initialization to access the global client.
+// RedisCache implements Cache using Redis as backend with a default TTL.
 type RedisCache struct {
-	redisClient *redis.Client
-}
-
-// NewRedisCache returns a handle to the global client (used by lock.go).
-func NewRedisCache(_ int) *RedisCache {
-	return &RedisCache{redisClient: redisClient}
-}
-
-// RedisICache implements ICache using Redis as backend with a default TTL.
-type RedisICache struct {
 	cli       *redis.Client
 	noCache   bool
 	ttl       time.Duration
@@ -39,17 +29,17 @@ type RedisICache struct {
 const defaultTTL = 24 * time.Hour
 const defaultKeyPrefix = "kubemin:cache:"
 
-// NewRedisICacheWithClient creates an ICache backed by the provided client.
+// NewRedisCacheWithClient creates an Cache backed by the provided client.
 // If cli is nil, falls back to in-memory cache to remain functional.
-func NewRedisICacheWithClient(cli *redis.Client, noCache bool) ICache {
+func NewRedisCacheWithClient(cli *redis.Client, noCache bool) Cache {
 	if cli == nil {
 		return NewMemCache(noCache)
 	}
-	return &RedisICache{cli: cli, noCache: noCache, ttl: defaultTTL, keyPrefix: defaultKeyPrefix}
+	return &RedisCache{cli: cli, noCache: noCache, ttl: defaultTTL, keyPrefix: defaultKeyPrefix}
 }
 
-// NewRedisICache creates an ICache with custom ttl and prefix.
-func NewRedisICache(cli *redis.Client, noCache bool, ttl time.Duration, prefix string) ICache {
+// NewRedisCache creates an Cache with custom ttl and prefix.
+func NewRedisCache(cli *redis.Client, noCache bool, ttl time.Duration, prefix string) Cache {
 	if cli == nil {
 		return NewMemCache(noCache)
 	}
@@ -59,21 +49,21 @@ func NewRedisICache(cli *redis.Client, noCache bool, ttl time.Duration, prefix s
 	if prefix == "" {
 		prefix = defaultKeyPrefix
 	}
-	return &RedisICache{cli: cli, noCache: noCache, ttl: ttl, keyPrefix: prefix}
+	return &RedisCache{cli: cli, noCache: noCache, ttl: ttl, keyPrefix: prefix}
 }
 
 // defaultOpTimeout is the default timeout for Redis cache operations.
 const defaultOpTimeout = 5 * time.Second
 
-func (c *RedisICache) key(k string) string { return c.keyPrefix + k }
+func (c *RedisCache) key(k string) string { return c.keyPrefix + k }
 
-func (c *RedisICache) Store(key string, data string) error {
+func (c *RedisCache) Store(key string, data string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
 	defer cancel()
 	return c.cli.Set(ctx, c.key(key), data, c.ttl).Err()
 }
 
-func (c *RedisICache) Load(key string) (string, error) {
+func (c *RedisCache) Load(key string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
 	defer cancel()
 	val, err := c.cli.Get(ctx, c.key(key)).Result()
@@ -85,7 +75,7 @@ func (c *RedisICache) Load(key string) (string, error) {
 
 // List returns the cached values for keys under the prefix.
 // For performance, this uses SCAN; if keys are many, this can be expensive.
-func (c *RedisICache) List() ([]string, error) {
+func (c *RedisCache) List() ([]string, error) {
 	var (
 		cursor uint64
 		out    []string
@@ -121,16 +111,16 @@ func (c *RedisICache) List() ([]string, error) {
 	return out, nil
 }
 
-func (c *RedisICache) Exists(key string) bool {
+func (c *RedisCache) Exists(key string) bool {
 	ctx, cancel := context.WithTimeout(context.Background(), defaultOpTimeout)
 	defer cancel()
 	n, err := c.cli.Exists(ctx, c.key(key)).Result()
 	return err == nil && n == 1
 }
 
-func (c *RedisICache) IsCacheDisabled() bool { return c.noCache }
+func (c *RedisCache) IsCacheDisabled() bool { return c.noCache }
 
 // GetRedisClient returns the underlying Redis client for dependency injection.
 // This allows components like distributed locks and cancellation signals to
-// obtain the Redis client through the ICache interface instead of global variables.
-func (c *RedisICache) GetRedisClient() *redis.Client { return c.cli }
+// obtain the Redis client through the Cache interface instead of global variables.
+func (c *RedisCache) GetRedisClient() *redis.Client { return c.cli }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"KubeMin-Cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/config"
 )
 
 // cleanupContextKey is the private key used to stash cleanup tracker data in the context.

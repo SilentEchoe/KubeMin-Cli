@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
 )
 
 func (w *Workflow) waitingTasks(ctx context.Context) ([]*model.WorkflowQueue, error) {

@@ -5,9 +5,9 @@ package cache
 
 import "github.com/redis/go-redis/v9"
 
-// ICache defines the interface for cache operations.
-// Implementations include MemCache (in-memory) and RedisICache (Redis-backed).
-type ICache interface {
+// Cache defines the interface for cache operations.
+// Implementations include MemCache (in-memory) and RedisCache (Redis-backed).
+type Cache interface {
 	Store(key string, data string) error
 	Load(key string) (string, error)
 	List() ([]string, error)
@@ -27,13 +27,13 @@ var (
 	CacheTypeMem   CacheType = "memory"
 )
 
-func New(noCache bool, cacheType CacheType) ICache {
+func New(noCache bool, cacheType CacheType) Cache {
 	switch cacheType {
 	case CacheTypeMem:
 		return NewMemCache(noCache)
 	case CacheTypeRedis:
 		// Use global client if available; otherwise fallback to memory cache
-		return NewRedisICacheWithClient(redisClient, noCache)
+		return NewRedisCacheWithClient(redisClient, noCache)
 
 	default:
 		return NewMemCache(noCache)

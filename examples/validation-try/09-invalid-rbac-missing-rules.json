@@ -8,12 +8,12 @@
       "name": "backend",
       "type": "webservice",
       "image": "nginx:latest",
-      "nameSpace": "default",
+      "namespace": "default",
       "replicas": 1,
       "traits": {
         "rbac": [
           {
-            "serviceAccount": "backend-sa",
+            "service_account": "backend-sa",
             "rules": []
           }
         ]

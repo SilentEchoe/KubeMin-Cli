@@ -3,7 +3,7 @@ package event
 import (
 	"context"
 
-	"KubeMin-Cli/pkg/apiserver/event/workflow"
+	"kubemin-cli/pkg/apiserver/event/workflow"
 )
 
 var workers []Worker

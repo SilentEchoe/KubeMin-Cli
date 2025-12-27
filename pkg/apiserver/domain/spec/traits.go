@@ -10,7 +10,7 @@ type Traits struct {
 	Sidecar   []SidecarTraitsSpec `json:"sidecar,omitempty"`
 	Ingress   []IngressTraitsSpec `json:"ingress,omitempty"`
 	RBAC      []RBACPolicySpec    `json:"rbac,omitempty"`
-	EnvFrom   []EnvFromSourceSpec `json:"envFrom,omitempty"`
+	EnvFrom   []EnvFromSourceSpec `json:"env_from,omitempty"`
 	Envs      []SimplifiedEnvSpec `json:"envs,omitempty"`
 	Probes    []ProbeTraitsSpec   `json:"probes,omitempty"`
 	Resources *ResourceTraitsSpec `json:"resources,omitempty"`
@@ -28,16 +28,16 @@ type InitTraitSpec struct {
 type StorageTraitSpec struct {
 	Name       string `json:"name,omitempty"`
 	Type       string `json:"type"`
-	MountPath  string `json:"mountPath"`
-	SubPath    string `json:"subPath,omitempty"`
-	ReadOnly   bool   `json:"readOnly,omitempty"`
-	SourceName string `json:"sourceName,omitempty"` // For ConfigMap/Secret volume sources
+	MountPath  string `json:"mount_path"`
+	SubPath    string `json:"sub_path,omitempty"`
+	ReadOnly   bool   `json:"read_only,omitempty"`
+	SourceName string `json:"source_name,omitempty"` // For ConfigMap/Secret volume sources
 
 	// For "persistent" type
-	TmpCreate    bool   `json:"tmpCreate,omitempty"`    // If true, create PVC. Defaults to false (referencing existing).
+	TmpCreate    bool   `json:"tmp_create,omitempty"`    // If true, create PVC. Defaults to false (referencing existing).
 	Size         string `json:"size,omitempty"`         // Used when TmpCreate is true.
-	ClaimName    string `json:"claimName,omitempty"`    // Name of existing PVC to use. If empty, defaults to Name.
-	StorageClass string `json:"storageClass,omitempty"` // StorageClass to use for the PVC.
+	ClaimName    string `json:"claim_name,omitempty"`    // Name of existing PVC to use. If empty, defaults to Name.
+	StorageClass string `json:"storage_class,omitempty"` // StorageClass to use for the PVC.
 }
 
 // SidecarTraitsSpec describes a sidecar container that may attach additional traits.
@@ -53,13 +53,13 @@ type SidecarTraitsSpec struct {
 // EnvFromSourceSpec corresponds to a single corev1.EnvFromSource.
 type EnvFromSourceSpec struct {
 	Type       string `json:"type"`       // "secret" or "configMap"
-	SourceName string `json:"sourceName"` // The name of the secret or configMap
+	SourceName string `json:"source_name"` // The name of the secret or configMap
 }
 
 // SimplifiedEnvSpec is the user-friendly, simplified way to define environment variables.
 type SimplifiedEnvSpec struct {
 	Name      string      `json:"name"`
-	ValueFrom ValueSource `json:"valueFrom"`
+	ValueFrom ValueSource `json:"value_from"`
 }
 
 // ValueSource defines the source for an environment variable's value.
@@ -101,14 +101,14 @@ type Ports struct {
 // ProbeTraitsSpec defines a health check probe for a container.
 type ProbeTraitsSpec struct {
 	Type                string          `json:"type"` // "liveness", "readiness", or "startup"
-	InitialDelaySeconds int32           `json:"initialDelaySeconds,omitempty"`
-	PeriodSeconds       int32           `json:"periodSeconds,omitempty"`
-	TimeoutSeconds      int32           `json:"timeoutSeconds,omitempty"`
-	FailureThreshold    int32           `json:"failureThreshold,omitempty"`
-	SuccessThreshold    int32           `json:"successThreshold,omitempty"`
+	InitialDelaySeconds int32           `json:"initial_delay_seconds,omitempty"`
+	PeriodSeconds       int32           `json:"period_seconds,omitempty"`
+	TimeoutSeconds      int32           `json:"timeout_seconds,omitempty"`
+	FailureThreshold    int32           `json:"failure_threshold,omitempty"`
+	SuccessThreshold    int32           `json:"success_threshold,omitempty"`
 	Exec                *ExecProbe      `json:"exec,omitempty"`
-	HTTPGet             *HTTPGetProbe   `json:"httpGet,omitempty"`
-	TCPSocket           *TCPSocketProbe `json:"tcpSocket,omitempty"`
+	HTTPGet             *HTTPGetProbe   `json:"http_get,omitempty"`
+	TCPSocket           *TCPSocketProbe `json:"tcp_socket,omitempty"`
 }
 
 // ExecProbe describes a command-line probe.
@@ -147,19 +147,19 @@ type IngressTraitsSpec struct {
 	Hosts            []string           `json:"hosts,omitempty"`
 	Label            map[string]string  `json:"label"`
 	Annotations      map[string]string  `json:"annotations,omitempty"`
-	IngressClassName string             `json:"ingressClassName,omitempty"`
-	DefaultPathType  string             `json:"defaultPathType,omitempty"`
+	IngressClassName string             `json:"ingress_class_name,omitempty"`
+	DefaultPathType  string             `json:"default_path_type,omitempty"`
 	TLS              []IngressTLSConfig `json:"tls,omitempty"`
 	Routes           []IngressRoutes    `json:"routes"`
 }
 type IngressTLSConfig struct {
-	SecretName string   `json:"secretName"`
+	SecretName string   `json:"secret_name"`
 	Hosts      []string `json:"hosts,omitempty"`
 }
 
 type IngressRoutes struct {
 	Path     string       `json:"path,omitempty"`
-	PathType string       `json:"pathType,omitempty"`
+	PathType string       `json:"path_type,omitempty"`
 	Host     string       `json:"host,omitempty"`
 	Backend  IngressRoute `json:"backend"`
 	// Route-level optional features
@@ -167,8 +167,8 @@ type IngressRoutes struct {
 }
 
 type IngressRoute struct {
-	ServiceName string            `json:"serviceName"`
-	ServicePort int32             `json:"servicePort,omitempty"`
+	ServiceName string            `json:"service_name"`
+	ServicePort int32             `json:"service_port,omitempty"`
 	Weight      int32             `json:"weight,omitempty"`
 	Headers     map[string]string `json:"headers,omitempty"`
 }
@@ -181,25 +181,25 @@ type RewritePolicy struct {
 
 // RBACPolicySpec describes an RBAC policy to be created for the component.
 type RBACPolicySpec struct {
-	ServiceAccount             string            `json:"serviceAccount,omitempty"`
+	ServiceAccount             string            `json:"service_account,omitempty"`
 	Namespace                  string            `json:"namespace,omitempty"`
-	ClusterScope               bool              `json:"clusterScope,omitempty"`
-	RoleName                   string            `json:"roleName,omitempty"`
-	BindingName                string            `json:"bindingName,omitempty"`
-	ServiceAccountLabels       map[string]string `json:"serviceAccountLabels,omitempty"`
-	ServiceAccountAnnotations  map[string]string `json:"serviceAccountAnnotations,omitempty"`
-	RoleLabels                 map[string]string `json:"roleLabels,omitempty"`
-	BindingLabels              map[string]string `json:"bindingLabels,omitempty"`
+	ClusterScope               bool              `json:"cluster_scope,omitempty"`
+	RoleName                   string            `json:"role_name,omitempty"`
+	BindingName                string            `json:"binding_name,omitempty"`
+	ServiceAccountLabels       map[string]string `json:"service_accountLabels,omitempty"`
+	ServiceAccountAnnotations  map[string]string `json:"service_accountAnnotations,omitempty"`
+	RoleLabels                 map[string]string `json:"role_labels,omitempty"`
+	BindingLabels              map[string]string `json:"binding_labels,omitempty"`
 	Rules                      []RBACRuleSpec    `json:"rules"`
-	ServiceAccountAutomountSAT *bool             `json:"automountServiceAccountToken,omitempty"`
+	ServiceAccountAutomountSAT *bool             `json:"automount_service_account_token,omitempty"`
 }
 
 // RBACRuleSpec mirrors rbacv1.PolicyRule with common fields exposed.
 type RBACRuleSpec struct {
-	APIGroups       []string `json:"apiGroups,omitempty"`
+	APIGroups       []string `json:"api_groups,omitempty"`
 	Resources       []string `json:"resources,omitempty"`
-	ResourceNames   []string `json:"resourceNames,omitempty"`
-	NonResourceURLs []string `json:"nonResourceURLs,omitempty"`
+	ResourceNames   []string `json:"resource_names,omitempty"`
+	NonResourceURLs []string `json:"non_resource_urls,omitempty"`
 	Verbs           []string `json:"verbs"`
 }
 

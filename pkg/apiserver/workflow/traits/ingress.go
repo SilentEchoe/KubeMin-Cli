@@ -1,15 +1,15 @@
 package traits
 
 import (
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/utils"
 
 	"fmt"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"strings"
 
-	spec "KubeMin-Cli/pkg/apiserver/domain/spec"
+	spec "kubemin-cli/pkg/apiserver/domain/spec"
 	networkingv1 "k8s.io/api/networking/v1"
 )
 

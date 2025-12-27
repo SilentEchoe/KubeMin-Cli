@@ -19,17 +19,17 @@ import (
 	"k8s.io/klog/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"KubeMin-Cli/pkg/apiserver/config"
-	"KubeMin-Cli/pkg/apiserver/domain/model"
-	"KubeMin-Cli/pkg/apiserver/domain/repository"
-	"KubeMin-Cli/pkg/apiserver/domain/spec"
-	"KubeMin-Cli/pkg/apiserver/event/workflow/job"
-	"KubeMin-Cli/pkg/apiserver/infrastructure/datastore"
-	assembler "KubeMin-Cli/pkg/apiserver/interfaces/api/assembler/v1"
-	apisv1 "KubeMin-Cli/pkg/apiserver/interfaces/api/dto/v1"
-	"KubeMin-Cli/pkg/apiserver/utils"
-	"KubeMin-Cli/pkg/apiserver/utils/bcode"
-	"KubeMin-Cli/pkg/apiserver/workflow/naming"
+	"kubemin-cli/pkg/apiserver/config"
+	"kubemin-cli/pkg/apiserver/domain/model"
+	"kubemin-cli/pkg/apiserver/domain/repository"
+	"kubemin-cli/pkg/apiserver/domain/spec"
+	"kubemin-cli/pkg/apiserver/event/workflow/job"
+	"kubemin-cli/pkg/apiserver/infrastructure/datastore"
+	assembler "kubemin-cli/pkg/apiserver/interfaces/api/assembler/v1"
+	apisv1 "kubemin-cli/pkg/apiserver/interfaces/api/dto/v1"
+	"kubemin-cli/pkg/apiserver/utils"
+	"kubemin-cli/pkg/apiserver/utils/bcode"
+	"kubemin-cli/pkg/apiserver/workflow/naming"
 )
 
 const cleanupTimeout = 10 * time.Second
@@ -103,7 +103,7 @@ func (c *applicationsServiceImpl) CreateApplications(ctx context.Context, req ap
 		application = model.NewApplications(
 			utils.RandStringByNumLowercase(24),
 			req.Name,
-			req.NameSpace,
+			req.Namespace,
 			req.Version,
 			req.Alias,
 			req.Project,
@@ -491,7 +491,7 @@ func convertComponentFromTemplate(templateComp *model.ApplicationComponent, newN
 		Name:          newName,
 		ComponentType: templateComp.ComponentType,
 		Image:         templateComp.Image,
-		NameSpace:     namespace,
+		Namespace:     namespace,
 		Replicas:      templateComp.Replicas,
 		Properties:    properties,
 		Traits:        traits,
@@ -651,8 +651,8 @@ func (c *applicationsServiceImpl) refreshExistingApplication(ctx context.Context
 	application.Project = req.Project
 	application.Description = req.Description
 	application.Icon = req.Icon
-	if req.NameSpace != "" {
-		application.Namespace = req.NameSpace
+	if req.Namespace != "" {
+		application.Namespace = req.Namespace
 	}
 	if req.TmpEnable != nil {
 		application.TmpEnable = *req.TmpEnable
@@ -667,7 +667,7 @@ func prepareComponents(appID, namespace string, reqComponents []apisv1.CreateCom
 			return nil, bcode.ErrComponentNotImageSet
 		}
 
-		reqComponent.NameSpace = namespace
+		reqComponent.Namespace = namespace
 		// 复制 ConvertComponent 逻辑，确保一致性
 		if reqComponent.Replicas <= 0 {
 			reqComponent.Replicas = 1
@@ -675,7 +675,7 @@ func prepareComponents(appID, namespace string, reqComponents []apisv1.CreateCom
 		component := &model.ApplicationComponent{
 			Name:          reqComponent.Name,
 			AppID:         appID,
-			Namespace:     reqComponent.NameSpace,
+			Namespace:     reqComponent.Namespace,
 			Image:         reqComponent.Image,
 			Replicas:      reqComponent.Replicas,
 			ComponentType: reqComponent.ComponentType,

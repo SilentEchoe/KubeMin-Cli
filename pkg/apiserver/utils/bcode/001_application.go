@@ -24,7 +24,7 @@ var ErrTemplateNotEnabled = NewBcode(400, 10007, "template application is not en
 // ErrTemplateComponentMissing template app has no components to clone
 var ErrTemplateComponentMissing = NewBcode(400, 10008, "template application has no components")
 
-// ErrTemplateIDMissing template id is required when using Tem
+// ErrTemplateIDMissing template id is required when using template
 var ErrTemplateIDMissing = NewBcode(400, 10009, "template id is required")
 
 // ErrTemplateTargetNotFound template target not found or mismatch
